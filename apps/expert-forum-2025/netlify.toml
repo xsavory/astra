@@ -1,0 +1,7 @@
+[build]
+  ignore = "npx turbo-ignore expert-forum-2025"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
