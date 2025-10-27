@@ -966,934 +966,262 @@ enum CheckinMethod { QR, MANUAL }
 
 ---
 
-## 12. Appwrite Methods Specification
+## 12. API Methods Specification
 
-> **Note:** This project uses **Appwrite SDK** directly from the frontend. No custom backend API is needed. All data operations are performed via Appwrite's database, authentication, and storage services.
+> **Note:** This project uses **Appwrite TablesDB** directly from the frontend via `src/lib/api`. All implementations are available in the API layer files.
 
 ---
 
 ### 12.1 Authentication Methods
 
-#### `loginUser(email: string, password: string)`
-**Purpose:** Authenticate user and create session
+#### `api.auth.login(email, password)`
+- **Purpose:** Authenticate user and create session
+- **Parameters:** `email: string`, `password: string`
+- **Returns:** `{ user: User, sessionId: string }`
+- **Operations:** Creates session, fetches user data from users table
 
-**Appwrite Operations:**
-```ts
-import { account } from './appwrite'
+#### `api.auth.logout()`
+- **Purpose:** End current session
+- **Returns:** `void`
 
-const loginUser = async (email: string, password: string) => {
-  const session = await account.createEmailPasswordSession(email, password)
-  const user = await account.get()
-  return { session, user }
-}
-```
-
-**Returns:** `{ session: Session, user: User }`
-
----
-
-#### `logoutUser()`
-**Purpose:** End current session
-
-**Appwrite Operations:**
-```ts
-const logoutUser = async () => {
-  await account.deleteSession('current')
-}
-```
-
----
-
-#### `getCurrentUser()`
-**Purpose:** Get currently logged-in user
-
-**Appwrite Operations:**
-```ts
-const getCurrentUser = async () => {
-  const accountUser = await account.get()
-  // Fetch user details from users collection
-  const userDoc = await databases.getDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    accountUser.$id
-  )
-  return userDoc
-}
-```
+#### `api.auth.getCurrentUser()`
+- **Purpose:** Get currently logged-in user
+- **Returns:** `User | null`
 
 ---
 
 ### 12.2 User Management Methods (Admin/Helpdesk)
 
-#### `getUsers(options)`
-**Purpose:** Fetch paginated users with filters
+#### `api.users.getUsers(options)`
+- **Purpose:** Fetch paginated users with filters
+- **Parameters:**
+  - `page?: number` (default: 1)
+  - `limit?: number` (default: 10)
+  - `filters?: { participantType?, isCheckedIn?, isEligibleToDraw?, company?, search? }`
+- **Returns:** `{ items: User[], total: number, page: number, limit: number, totalPages: number }`
 
-**Parameters:**
-```ts
-{
-  page?: number          // default: 1
-  limit?: number         // default: 10
-  participantType?: "online" | "offline"
-  isCheckedIn?: boolean
-  isEligibleToDraw?: boolean
-  company?: string
-  search?: string        // searches name and email
-}
-```
+#### `api.users.getAllUsersForExport()`
+- **Purpose:** Fetch all participants without pagination for CSV export
+- **Returns:** `User[]`
 
-**Appwrite Operations:**
-```ts
-import { databases, Query } from './appwrite'
+#### `api.users.getUserWithDetails(userId)`
+- **Purpose:** Get user with all related data (booth checkins, ideation, group)
+- **Parameters:** `userId: string`
+- **Returns:** `{ user: User, boothCheckins: BoothCheckin[], ideation?: Ideation, group?: Group }`
 
-const getUsers = async (options) => {
-  const queries = [
-    Query.equal('role', 'participant'),
-    Query.limit(options.limit || 10),
-    Query.offset((options.page - 1) * options.limit)
-  ]
+#### `api.users.createUser(data)`
+- **Purpose:** Create new participant (auth + database record)
+- **Parameters:** `{ name, email, participantType, company?, division? }`
+- **Returns:** `User`
+- **Notes:** Auto-creates auth account with env password
 
-  if (options.participantType) {
-    queries.push(Query.equal('participantType', options.participantType))
-  }
+#### `api.users.updateUser(userId, data)`
+- **Purpose:** Update participant information
+- **Parameters:** `userId: string`, `data: { name?, email?, participantType?, company?, division? }`
+- **Returns:** `User`
 
-  if (options.isCheckedIn !== undefined) {
-    queries.push(Query.equal('isCheckedIn', options.isCheckedIn))
-  }
-
-  if (options.isEligibleToDraw !== undefined) {
-    queries.push(Query.equal('isEligibleToDraw', options.isEligibleToDraw))
-  }
-
-  if (options.company) {
-    queries.push(Query.equal('company', options.company))
-  }
-
-  if (options.search) {
-    queries.push(Query.search('name', options.search))
-    // or Query.search('email', options.search)
-  }
-
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    queries
-  )
-
-  return {
-    users: response.documents,
-    total: response.total,
-    page: options.page,
-    limit: options.limit
-  }
-}
-```
-
-**Returns:** `{ users: User[], total: number, page: number, limit: number }`
-
----
-
-#### `getAllUsersForExport()`
-**Purpose:** Fetch all participants without pagination for CSV export
-
-**Appwrite Operations:**
-```ts
-const getAllUsersForExport = async () => {
-  const queries = [
-    Query.equal('role', 'participant'),
-    Query.limit(9999) // or use pagination loop
-  ]
-
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    queries
-  )
-
-  return response.documents
-}
-```
-
-**Returns:** `User[]`
-
----
-
-#### `getUserWithDetails(userId: string)`
-**Purpose:** Get user with all related data (booth checkins, ideation, group)
-
-**Appwrite Operations:**
-```ts
-const getUserWithDetails = async (userId: string) => {
-  // Get user document
-  const user = await databases.getDocument(DATABASE_ID, COLLECTION_USERS, userId)
-
-  // Get booth checkins
-  const boothCheckins = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_BOOTH_CHECKINS,
-    [Query.equal('participantId', userId), Query.orderDesc('checkinTime')]
-  )
-
-  // Get ideation (if exists)
-  const ideations = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    [Query.equal('creatorId', userId)]
-  )
-
-  // Get group (if exists)
-  let group = null
-  if (user.groupId) {
-    group = await databases.getDocument(DATABASE_ID, COLLECTION_GROUPS, user.groupId)
-  }
-
-  return {
-    user,
-    boothCheckins: boothCheckins.documents,
-    ideation: ideations.documents[0] || null,
-    group
-  }
-}
-```
-
-**Returns:** `{ user: User, boothCheckins: BoothCheckin[], ideation?: Ideation, group?: Group }`
-
----
-
-#### `createUser(data)`
-**Purpose:** Create new participant (auth + database record)
-
-**Parameters:**
-```ts
-{
-  name: string
-  email: string
-  participantType: "online" | "offline"
-  company?: string
-  division?: string
-}
-```
-
-**Appwrite Operations:**
-```ts
-import { account, databases, ID } from './appwrite'
-
-const createUser = async (data) => {
-  // 1. Create auth account
-  const password = import.meta.env.VITE_PARTICIPANT_PASSWORD || 'defaultPass123'
-  const userId = ID.unique()
-
-  await account.create(userId, data.email, password, data.name)
-
-  // 2. Create database record
-  const userDoc = await databases.createDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    userId,
-    {
-      name: data.name,
-      email: data.email,
-      role: 'participant',
-      participantType: data.participantType,
-      company: data.company || null,
-      division: data.division || null,
-      isCheckedIn: false,
-      isEligibleToDraw: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  )
-
-  return { user: userDoc, authUserId: userId }
-}
-```
-
-**Returns:** `{ user: User, authUserId: string }`
-
----
-
-#### `updateUser(userId: string, data)`
-**Purpose:** Update participant information
-
-**Parameters:**
-```ts
-{
-  name?: string
-  email?: string
-  participantType?: "online" | "offline"
-  company?: string
-  division?: string
-}
-```
-
-**Appwrite Operations:**
-```ts
-const updateUser = async (userId: string, data) => {
-  const updates = {
-    ...data,
-    updatedAt: new Date().toISOString()
-  }
-
-  const user = await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    userId,
-    updates
-  )
-
-  // If email changed, update auth email too
-  if (data.email) {
-    await account.updateEmail(data.email, data.currentPassword) // may need re-auth
-  }
-
-  return user
-}
-```
-
-**Returns:** `User`
-
----
-
-#### `deleteUser(userId: string)`
-**Purpose:** Delete participant (with validation)
-
-**Appwrite Operations:**
-```ts
-const deleteUser = async (userId: string) => {
-  // 1. Fetch user to check isCheckedIn
-  const user = await databases.getDocument(DATABASE_ID, COLLECTION_USERS, userId)
-
-  if (user.isCheckedIn) {
-    throw new Error('Participant sudah check-in, tidak dapat dihapus')
-  }
-
-  // 2. Soft delete (add deletedAt) or hard delete
-  await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    userId,
-    { deletedAt: new Date().toISOString() }
-  )
-
-  // Or hard delete:
-  // await databases.deleteDocument(DATABASE_ID, COLLECTION_USERS, userId)
-
-  return { success: true }
-}
-```
-
-**Returns:** `{ success: boolean }`
+#### `api.users.deleteUser(userId)`
+- **Purpose:** Delete participant (with validation)
+- **Parameters:** `userId: string`
+- **Returns:** `{ success: boolean }`
+- **Validation:** Cannot delete if `isCheckedIn === true`
 
 ---
 
 ### 12.3 Check-in Methods
 
-#### `checkinEvent(participantId: string, method: "qr" | "manual", staffId?: string)`
-**Purpose:** Check-in participant to event
+#### `api.checkins.checkinEvent(participantId, method, staffId?)`
+- **Purpose:** Check-in participant to event
+- **Parameters:** `participantId: string`, `method: "qr" | "manual"`, `staffId?: string`
+- **Returns:** `User`
+- **Validation:**
+  - Online participants require `events.isActive === true`
+  - Cannot check-in twice
 
-**Appwrite Operations:**
-```ts
-const checkinEvent = async (participantId, method, staffId) => {
-  // For online participants, check if event is active
-  const user = await databases.getDocument(DATABASE_ID, COLLECTION_USERS, participantId)
+#### `api.checkins.checkinBooth(participantId, data)`
+- **Purpose:** Check-in participant to booth and record answer
+- **Parameters:** `participantId: string`, `data: { boothId, answer }`
+- **Returns:** `{ checkin: BoothCheckin, user: User }`
+- **Validation:**
+  - Must be checked in to event first
+  - Each booth can only be visited once
+- **Side Effects:** Auto-updates `isEligibleToDraw` based on booth count
 
-  if (user.participantType === 'online') {
-    const event = await databases.listDocuments(DATABASE_ID, COLLECTION_EVENTS, [Query.limit(1)])
-    if (!event.documents[0]?.isActive) {
-      throw new Error('Event belum aktif')
-    }
-  }
+#### `api.checkins.getParticipantBoothCheckins(participantId)`
+- **Purpose:** Get all booth check-ins for a participant
+- **Parameters:** `participantId: string`
+- **Returns:** `BoothCheckin[]`
 
-  // Check if already checked in
-  if (user.isCheckedIn) {
-    throw new Error('Participant sudah check-in')
-  }
-
-  // Update user
-  const updatedUser = await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    participantId,
-    {
-      isCheckedIn: true,
-      eventCheckinTime: new Date().toISOString(),
-      eventCheckinMethod: method,
-      checkedInBy: staffId || null
-    }
-  )
-
-  return updatedUser
-}
-```
-
-**Returns:** `User`
-
----
-
-#### `checkinBooth(participantId: string, boothId: string, answer: string)`
-**Purpose:** Check-in participant to booth and record answer
-
-**Appwrite Operations:**
-```ts
-const checkinBooth = async (participantId, boothId, answer) => {
-  const user = await databases.getDocument(DATABASE_ID, COLLECTION_USERS, participantId)
-
-  // Validate: must be checked in to event first
-  if (!user.isCheckedIn) {
-    throw new Error('Participant belum check-in ke event')
-  }
-
-  // Check if already visited this booth
-  const existing = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_BOOTH_CHECKINS,
-    [
-      Query.equal('participantId', participantId),
-      Query.equal('boothId', boothId)
-    ]
-  )
-
-  if (existing.documents.length > 0) {
-    throw new Error('Booth sudah dikunjungi')
-  }
-
-  // Create booth checkin record
-  const checkin = await databases.createDocument(
-    DATABASE_ID,
-    COLLECTION_BOOTH_CHECKINS,
-    ID.unique(),
-    {
-      participantId,
-      boothId,
-      answer,
-      checkinTime: new Date().toISOString()
-    }
-  )
-
-  // Recalculate eligibility
-  const boothCount = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_BOOTH_CHECKINS,
-    [Query.equal('participantId', participantId)]
-  )
-
-  const threshold = user.participantType === 'offline' ? 10 : 6
-  const isEligible = boothCount.total >= threshold
-
-  const updatedUser = await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    participantId,
-    { isEligibleToDraw: isEligible }
-  )
-
-  return { checkin, user: updatedUser }
-}
-```
-
-**Returns:** `{ checkin: BoothCheckin, user: User }`
+#### `api.checkins.getBoothCheckinCount(participantId)`
+- **Purpose:** Get booth check-in count for eligibility calculation
+- **Parameters:** `participantId: string`
+- **Returns:** `number`
 
 ---
 
 ### 12.4 Booth Methods
 
-#### `getBooths()`
-**Purpose:** Fetch all booths
+#### `api.booths.getBooths()`
+- **Purpose:** Fetch all booths ordered by order field
+- **Returns:** `Booth[]`
 
-**Appwrite Operations:**
-```ts
-const getBooths = async () => {
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_BOOTHS,
-    [Query.orderAsc('order')]
-  )
+#### `api.booths.getBooth(boothId)`
+- **Purpose:** Fetch single booth
+- **Parameters:** `boothId: string`
+- **Returns:** `Booth`
 
-  return response.documents
-}
-```
-
-**Returns:** `Booth[]`
-
----
-
-#### `getBooth(boothId: string)`
-**Purpose:** Fetch single booth
-
-**Appwrite Operations:**
-```ts
-const getBooth = async (boothId: string) => {
-  const booth = await databases.getDocument(DATABASE_ID, COLLECTION_BOOTHS, boothId)
-  return booth
-}
-```
-
-**Returns:** `Booth`
+#### `api.booths.getBoothsForParticipantType(participantType)`
+- **Purpose:** Get filtered booths based on participant type
+- **Parameters:** `participantType: "online" | "offline"`
+- **Returns:** `Booth[]`
 
 ---
 
 ### 12.5 Ideation Methods
 
-#### `getIdeations()`
-**Purpose:** Fetch all ideation submissions
+#### `api.ideations.getIdeations()`
+- **Purpose:** Fetch all submitted ideations
+- **Returns:** `Ideation[]`
 
-**Appwrite Operations:**
-```ts
-const getIdeations = async () => {
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    [Query.equal('isSubmitted', true), Query.orderDesc('submittedAt')]
-  )
+#### `api.ideations.getIdeationWithDetails(ideationId)`
+- **Purpose:** Get ideation with creator and participants data
+- **Parameters:** `ideationId: string`
+- **Returns:** `{ ideation: Ideation, creator: User, participants: User[] }`
 
-  return response.documents
-}
-```
+#### `api.ideations.createIndividualIdeation(creatorId, data)`
+- **Purpose:** Create individual ideation (online participants)
+- **Parameters:** `creatorId: string`, `data: { title, description, companyCase }`
+- **Returns:** `Ideation`
+- **Validation:** Only online participants, one submission per participant
 
-**Returns:** `Ideation[]`
-
----
-
-#### `getIdeationWithDetails(ideationId: string)`
-**Purpose:** Get ideation with creator and participants data
-
-**Appwrite Operations:**
-```ts
-const getIdeationWithDetails = async (ideationId: string) => {
-  const ideation = await databases.getDocument(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    ideationId
-  )
-
-  // Fetch creator
-  const creator = await databases.getDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    ideation.creatorId
-  )
-
-  // Fetch participants (for group ideations)
-  let participants = []
-  if (ideation.isGroup && ideation.participantIds.length > 0) {
-    participants = await Promise.all(
-      ideation.participantIds.map(id =>
-        databases.getDocument(DATABASE_ID, COLLECTION_USERS, id)
-      )
-    )
-  }
-
-  return { ideation, creator, participants }
-}
-```
-
-**Returns:** `{ ideation: Ideation, creator: User, participants: User[] }`
-
----
-
-#### `createIdeation(data)`
-**Purpose:** Create ideation submission (individual or group)
-
-**Parameters:**
-```ts
-{
-  title: string
-  description: string
-  companyCase: string
-  creatorId: string
-  participantIds: string[] // for group
-  isGroup: boolean
-}
-```
-
-**Appwrite Operations:**
-```ts
-const createIdeation = async (data) => {
-  const ideation = await databases.createDocument(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    ID.unique(),
-    {
-      title: data.title,
-      description: data.description,
-      companyCase: data.companyCase,
-      creatorId: data.creatorId,
-      participantIds: data.participantIds || [],
-      isGroup: data.isGroup,
-      isSubmitted: false,
-      createdAt: new Date().toISOString()
-    }
-  )
-
-  return ideation
-}
-```
-
-**Returns:** `Ideation`
-
----
-
-#### `submitIdeation(ideationId: string, participantIds?: string[])`
-**Purpose:** Submit ideation (with group validation)
-
-**Appwrite Operations:**
-```ts
-const submitIdeation = async (ideationId: string, participantIds?: string[]) => {
-  const ideation = await databases.getDocument(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    ideationId
-  )
-
-  // For group: validate minimum 5 members
-  if (ideation.isGroup) {
-    if (participantIds.length < 5) {
-      throw new Error('Grup minimal 5 anggota')
-    }
-  }
-
-  const updatedIdeation = await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    ideationId,
-    {
-      isSubmitted: true,
-      submittedAt: new Date().toISOString()
-    }
-  )
-
-  return updatedIdeation
-}
-```
-
-**Returns:** `Ideation`
+#### `api.ideations.createGroupIdeation(groupId)`
+- **Purpose:** Create ideation from submitted group
+- **Parameters:** `groupId: string`
+- **Returns:** `Ideation`
+- **Validation:** Group must be submitted, minimum 5 members
 
 ---
 
 ### 12.6 Group Methods (Offline Participants)
 
-#### `createGroup(data)`
-**Purpose:** Create new group for offline collaboration
+#### `api.groups.createGroup(creatorId, data)`
+- **Purpose:** Create new group for offline collaboration
+- **Parameters:** `creatorId: string`, `data: { title, description, companyCase }`
+- **Returns:** `Group`
+- **Side Effects:** Auto-adds creator to `participantIds`, updates creator's `groupId`
 
-**Parameters:**
-```ts
-{
-  title: string
-  description: string
-  companyCase: string
-  creatorId: string
-}
-```
+#### `api.groups.getGroup(groupId)`
+- **Purpose:** Get group by ID
+- **Parameters:** `groupId: string`
+- **Returns:** `Group`
 
-**Appwrite Operations:**
-```ts
-const createGroup = async (data) => {
-  const group = await databases.createDocument(
-    DATABASE_ID,
-    COLLECTION_GROUPS,
-    ID.unique(),
-    {
-      title: data.title,
-      description: data.description,
-      companyCase: data.companyCase,
-      creatorId: data.creatorId,
-      participantIds: [data.creatorId], // auto-add creator
-      isSubmitted: false,
-      createdAt: new Date().toISOString()
-    }
-  )
+#### `api.groups.getGroupWithDetails(groupId)`
+- **Purpose:** Get group with all participant details
+- **Parameters:** `groupId: string`
+- **Returns:** `{ ...Group, creator: User, participants: User[] }`
 
-  // Update creator's groupId
-  await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    data.creatorId,
-    { groupId: group.$id }
-  )
+#### `api.groups.inviteToGroup(groupId, participantId)`
+- **Purpose:** Invite participant to group
+- **Parameters:** `groupId: string`, `participantId: string`
+- **Returns:** `Group`
+- **Validation:**
+  - Target must be offline participant
+  - Target must not be in any group
+  - Group must not be submitted
 
-  return group
-}
-```
+#### `api.groups.leaveGroup(groupId, participantId)`
+- **Purpose:** Remove participant from group
+- **Parameters:** `groupId: string`, `participantId: string`
+- **Returns:** `Group`
+- **Validation:** Cannot leave if group is submitted
 
-**Returns:** `Group`
+#### `api.groups.submitGroup(groupId)`
+- **Purpose:** Submit group (validate minimum size and lock)
+- **Parameters:** `groupId: string`
+- **Returns:** `Group`
+- **Validation:** Minimum 5 members required
 
----
-
-#### `inviteToGroup(groupId: string, participantId: string)`
-**Purpose:** Invite participant to group
-
-**Appwrite Operations:**
-```ts
-const inviteToGroup = async (groupId: string, participantId: string) => {
-  // Validate: participant is offline and not in any group
-  const participant = await databases.getDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    participantId
-  )
-
-  if (participant.participantType !== 'offline') {
-    throw new Error('Hanya offline participant yang bisa join grup')
-  }
-
-  if (participant.groupId) {
-    throw new Error('Participant sudah ada di grup lain')
-  }
-
-  // Update group
-  const group = await databases.getDocument(DATABASE_ID, COLLECTION_GROUPS, groupId)
-
-  const updatedGroup = await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_GROUPS,
-    groupId,
-    {
-      participantIds: [...group.participantIds, participantId]
-    }
-  )
-
-  // Update participant's groupId
-  await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    participantId,
-    { groupId }
-  )
-
-  return updatedGroup
-}
-```
-
-**Returns:** `Group`
-
----
-
-#### `leaveGroup(groupId: string, participantId: string)`
-**Purpose:** Remove participant from group
-
-**Appwrite Operations:**
-```ts
-const leaveGroup = async (groupId: string, participantId: string) => {
-  const group = await databases.getDocument(DATABASE_ID, COLLECTION_GROUPS, groupId)
-
-  if (group.isSubmitted) {
-    throw new Error('Grup sudah di-submit, tidak bisa keluar')
-  }
-
-  // Update group
-  const updatedGroup = await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_GROUPS,
-    groupId,
-    {
-      participantIds: group.participantIds.filter(id => id !== participantId)
-    }
-  )
-
-  // Clear participant's groupId
-  await databases.updateDocument(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    participantId,
-    { groupId: null }
-  )
-
-  return updatedGroup
-}
-```
-
-**Returns:** `Group`
-
----
-
-#### `getAvailableParticipants()`
-**Purpose:** Get offline participants without existing group
-
-**Appwrite Operations:**
-```ts
-const getAvailableParticipants = async () => {
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    [
-      Query.equal('participantType', 'offline'),
-      Query.isNull('groupId')
-    ]
-  )
-
-  return response.documents
-}
-```
-
-**Returns:** `User[]`
+#### `api.groups.getAvailableParticipants()`
+- **Purpose:** Get offline participants not in any group
+- **Returns:** `User[]`
 
 ---
 
 ### 12.7 Draw Methods
 
-#### `getEligibleParticipants()`
-**Purpose:** Get participants eligible for draw
+#### `api.draws.getEligibleParticipants()`
+- **Purpose:** Get participants eligible for draw (excluding past winners)
+- **Returns:** `User[]`
+- **Logic:** Filters out participants who won in previous draws
 
-**Appwrite Operations:**
-```ts
-const getEligibleParticipants = async () => {
-  // Get all draw logs to exclude past winners
-  const drawLogs = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_DRAW_LOGS
-  )
+#### `api.draws.submitDraw(winners, staffId?)`
+- **Purpose:** Save draw results
+- **Parameters:** `winners: string[]`, `staffId?: string`
+- **Returns:** `DrawLog`
+- **Validation:** All winners must be eligible
 
-  const pastWinners = drawLogs.documents.flatMap(log => log.winners)
+#### `api.draws.getDrawLogs()`
+- **Purpose:** Get all draw history
+- **Returns:** `DrawLog[]`
 
-  // Get eligible participants
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    [Query.equal('isEligibleToDraw', true)]
-  )
-
-  // Filter out past winners
-  const eligible = response.documents.filter(
-    user => !pastWinners.includes(user.$id)
-  )
-
-  return eligible
-}
-```
-
-**Returns:** `User[]`
-
----
-
-#### `submitDraw(winners: string[], staffId: string)`
-**Purpose:** Save draw results
-
-**Appwrite Operations:**
-```ts
-const submitDraw = async (winners: string[], staffId: string) => {
-  const drawLog = await databases.createDocument(
-    DATABASE_ID,
-    COLLECTION_DRAW_LOGS,
-    ID.unique(),
-    {
-      winners,
-      staffId,
-      createdAt: new Date().toISOString()
-    }
-  )
-
-  return drawLog
-}
-```
-
-**Returns:** `DrawLog`
+#### `api.draws.getDrawLogWithDetails(drawLogId)`
+- **Purpose:** Get draw log with winner details
+- **Parameters:** `drawLogId: string`
+- **Returns:** `{ ...DrawLog, winnerDetails: User[], staff?: User }`
 
 ---
 
 ### 12.8 Event Methods
 
-#### `getEvent()`
-**Purpose:** Get current event data including Zoom meeting URL
+#### `api.events.getEvent()`
+- **Purpose:** Get current event data including Zoom meeting URL
+- **Returns:** `Event`
+- **Usage:**
+  - Zoom page: Fetch `zoomMeetingUrl`
+  - Check-in validation: Check `isActive` status
+  - Display event info across the app
 
-**Appwrite Operations:**
-```ts
-const getEvent = async () => {
-  const response = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_EVENTS,
-    [Query.limit(1)]
-  )
+#### `api.events.isEventActive()`
+- **Purpose:** Check if event is currently active
+- **Returns:** `boolean`
 
-  if (response.documents.length === 0) {
-    throw new Error('Event tidak ditemukan')
-  }
-
-  return response.documents[0]
-}
-```
-
-**Returns:** `Event` (with `zoomMeetingUrl` field)
-
-**Usage:**
-- Zoom page: Fetch `zoomMeetingUrl` from event
-- Check-in validation: Check `isActive` status for online participants
-- Display event info across the app
+#### `api.events.getZoomMeetingUrl()`
+- **Purpose:** Get Zoom meeting URL
+- **Returns:** `string | null`
 
 ---
 
 ### 12.9 Statistics Methods (Admin)
 
-#### `getStats()`
-**Purpose:** Get dashboard statistics
-
-**Appwrite Operations:**
-```ts
-const getStats = async () => {
-  // Total participants
-  const allParticipants = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_USERS,
-    [Query.equal('role', 'participant'), Query.limit(9999)]
-  )
-
-  const offlineCount = allParticipants.documents.filter(
-    u => u.participantType === 'offline'
-  ).length
-
-  const onlineCount = allParticipants.documents.filter(
-    u => u.participantType === 'online'
-  ).length
-
-  // Checked-in participants
-  const checkedIn = allParticipants.documents.filter(u => u.isCheckedIn)
-  const checkedInOffline = checkedIn.filter(u => u.participantType === 'offline').length
-  const checkedInOnline = checkedIn.filter(u => u.participantType === 'online').length
-
-  // Eligible for draw
-  const eligible = allParticipants.documents.filter(u => u.isEligibleToDraw).length
-
-  // Submissions
-  const submissions = await databases.listDocuments(
-    DATABASE_ID,
-    COLLECTION_IDEATIONS,
-    [Query.equal('isSubmitted', true)]
-  )
-
-  const groupSubmissions = submissions.documents.filter(s => s.isGroup).length
-  const individualSubmissions = submissions.documents.filter(s => !s.isGroup).length
-
-  return {
-    totalParticipants: {
-      total: allParticipants.total,
-      offline: offlineCount,
-      online: onlineCount
-    },
-    checkedIn: {
-      total: checkedIn.length,
-      offline: checkedInOffline,
-      online: checkedInOnline
-    },
-    eligibleForDraw: eligible,
-    submissions: {
-      total: submissions.total,
-      group: groupSubmissions,
-      individual: individualSubmissions
-    }
-  }
-}
-```
-
-**Returns:**
+#### `api.stats.getStats()`
+- **Purpose:** Get dashboard statistics
+- **Returns:**
 ```ts
 {
-  totalParticipants: { total: number, offline: number, online: number }
-  checkedIn: { total: number, offline: number, online: number }
-  eligibleForDraw: number
-  submissions: { total: number, group: number, individual: number }
+  totalParticipants: { total, offline, online },
+  checkedIn: { total, offline, online },
+  eligibleForDraw: number,
+  submissions: { total, group, individual }
 }
 ```
 
----
+#### `api.stats.getTotalParticipants()`
+- **Purpose:** Get total participant count
+- **Returns:** `number`
 
+#### `api.stats.getCheckedInCount()`
+- **Purpose:** Get checked-in participant count
+- **Returns:** `number`
+
+#### `api.stats.getEligibleCount()`
+- **Purpose:** Get eligible for draw count
+- **Returns:** `number`
+
+#### `api.stats.getSubmissionsCount()`
+- **Purpose:** Get total submissions count
+- **Returns:** `number`
+
+---
 ## 13. Validation Rules & Business Logic
 
 ### 13.1 User Management
