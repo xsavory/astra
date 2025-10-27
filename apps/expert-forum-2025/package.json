@@ -13,7 +13,9 @@
   "dependencies": {
     "@repo/react-components": "workspace:*",
     "@tailwindcss/vite": "^4.1.13",
+    "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-router": "^1.77.3",
+    "appwrite": "^21.3.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.447.0",
     "react": "^19.1.0",
