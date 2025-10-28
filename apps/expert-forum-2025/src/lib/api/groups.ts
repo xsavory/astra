@@ -1,6 +1,5 @@
 import { supabase } from './client'
 import { BaseAPI } from './base'
-import { MIN_GROUP_SIZE } from 'src/lib/constants'
 import type {
   Group,
   GroupWithDetails,
@@ -241,57 +240,6 @@ export class GroupsAPI extends BaseAPI {
       return await this.getGroup(groupId)
     } catch (error) {
       this.handleError(error, 'leaveGroup')
-    }
-  }
-
-  /**
-   * Submit group (validate minimum size)
-   * Validates group size in API layer
-   */
-  async submitGroup(groupId: string): Promise<Group> {
-    try {
-      // Re-fetch group to ensure real-time data
-      const group = await this.getGroup(groupId)
-
-      if (group.is_submitted) {
-        throw new Error('Grup sudah di-submit')
-      }
-
-      // Get group member count (business logic in API layer)
-      const { count: memberCount, error: countError } = await supabase
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('group_id', groupId)
-
-      if (countError) {
-        throw countError
-      }
-
-      // Validate minimum group size
-      if (!memberCount || memberCount < MIN_GROUP_SIZE) {
-        throw new Error(
-          `Grup minimal ${MIN_GROUP_SIZE} anggota. Saat ini: ${memberCount || 0} anggota`
-        )
-      }
-
-      // Update group
-      const { data: updatedGroup, error: updateError } = await supabase
-        .from('groups')
-        .update({
-          is_submitted: true,
-          submitted_at: new Date().toISOString(),
-        })
-        .eq('id', groupId)
-        .select()
-        .single()
-
-      if (updateError) {
-        throw updateError
-      }
-
-      return this.ensureData(updatedGroup, 'Group not found') as Group
-    } catch (error) {
-      this.handleError(error, 'submitGroup')
     }
   }
 

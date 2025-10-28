@@ -496,19 +496,21 @@ The ideation feature enables participants to propose improvement or innovation i
    * Only offline participants **without an existing group** appear.
    * Invited participants have their `group_id` set to this group.
 
-5. Participants can **leave** a group (before submission).
+5. Participants can **leave** a group (before ideation submission).
 
-6. Once group size ≥5, the **Submit Group** button becomes enabled.
+6. Once group size ≥5, the **Submit Ideation** button becomes enabled.
 
-7. Leader clicks **Submit Group**, which:
-   * Validates group member count in real-time (to ensure no member has left).
-   * Sets `is_submitted = true`, `submitted_at = ISODateTime` on the group.
+7. Leader clicks **Submit Ideation**, which opens ideation form with fields:
+   * Title
+   * Description
+   * Company case
+
+8. Leader submits the form, system then:
+   * Validates group member count in real-time (≥5 members).
+   * Creates ideation record in `ideations` table linked to `group_id`.
+   * Sets `is_group = true` on the ideation.
+   * Updates group: `is_submitted = true`, `submitted_at = ISODateTime`.
    * Locks the group (no more invites/leaves).
-
-8. After group is submitted, leader can create the **Group Ideation**:
-   * Opens ideation form with fields: title, description, company case.
-   * Submits ideation content linked to the group via `group_id`.
-   * Ideation is stored in `ideations` table with `is_group = true`.
 
 9. Group and ideation become read-only.
 
@@ -1044,22 +1046,20 @@ CREATE TABLE draw_winners (
 - Sets `users.group_id = groupId` for the invited participant
 
 **Leave Group:**
-- Participant can leave only if `is_submitted = false`
+- Participant can leave only if `is_submitted = false` (group hasn't submitted ideation yet)
 - If creator leaves, consider deleting group or transferring ownership
 - Sets `users.group_id = null` for the participant
 
-**Submit Group (Step 1):**
+**Create Group Ideation:**
 - **Hard validation:** Group must have >= 5 members (validated in API layer)
-- Re-fetch group data in real-time before submission to ensure no member left
-- Lock group: set `is_submitted = true`, `submitted_at = now()`
-- Prevent further invites/leaves after submission (enforced by RLS policies)
-
-**Create Group Ideation (Step 2):**
-- Can only be done after group is submitted (`is_submitted = true`)
+- Re-fetch group member count in real-time before submission to ensure no member left
 - Leader fills ideation form: title, description, company_case
-- Creates ideation record in `ideations` table linked to group via `group_id`
+- System creates ideation record in `ideations` table linked to group via `group_id`
 - Sets `is_group = true` on the ideation record
+- System then updates group: set `is_submitted = true`, `submitted_at = now()`
+- Lock group: prevent further invites/leaves after ideation submission (enforced by RLS policies)
 - Each group can have only ONE ideation
+- Transaction rollback if group update fails after ideation creation
 
 **Individual Ideation:**
 - Only `participant_type = 'online'` can submit individual ideation
