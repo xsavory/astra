@@ -1,4 +1,4 @@
-import { account, tablesDB, ID, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
 import type {
   User,
@@ -6,14 +6,10 @@ import type {
   UpdateUserInput,
   UserFilters,
   PaginatedResponse,
-  UserDetail,
-  BoothCheckinWithDetails,
-  Ideation,
-  GroupWithDetails,
 } from 'src/types/schema'
 
 /**
- * Users API
+ * Users API with Supabase
  * Handles user management (CRUD operations)
  */
 export class UsersAPI extends BaseAPI {
@@ -29,47 +25,55 @@ export class UsersAPI extends BaseAPI {
       const page = options?.page || 1
       const limit = options?.limit || 10
       const filters = options?.filters || {}
+      const offset = (page - 1) * limit
 
-      const queries = [
-        Query.equal('role', ['participant']),
-        Query.limit(limit),
-        Query.offset((page - 1) * limit),
-        Query.orderDesc('createdAt'),
-      ]
+      // Build query
+      let query = supabase
+        .from('users')
+        .select('*', { count: 'exact' })
+        .eq('role', 'participant')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
 
       // Apply filters
-      if (filters.participantType) {
-        queries.push(Query.equal('participantType', [filters.participantType]))
+      if (filters.participant_type) {
+        query = query.eq('participant_type', filters.participant_type)
       }
 
-      if (filters.isCheckedIn !== undefined) {
-        queries.push(Query.equal('isCheckedIn', [filters.isCheckedIn]))
+      if (filters.is_checked_in !== undefined) {
+        query = query.eq('is_checked_in', filters.is_checked_in)
       }
 
-      if (filters.isEligibleToDraw !== undefined) {
-        queries.push(Query.equal('isEligibleToDraw', [filters.isEligibleToDraw]))
+      if (filters.is_eligible_to_draw !== undefined) {
+        query = query.eq('is_eligible_to_draw', filters.is_eligible_to_draw)
       }
 
       if (filters.company) {
-        queries.push(Query.equal('company', [filters.company]))
+        query = query.eq('company', filters.company)
       }
 
       if (filters.search) {
-        queries.push(Query.search('name', filters.search))
+        // Search by name or email using text search
+        query = query.or(
+          `name.ilike.%${filters.search}%,email.ilike.%${filters.search}%`
+        )
       }
 
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries,
-      })
+      const { data, error, count } = await query
+
+      if (error) {
+        throw error
+      }
+
+      const total = count || 0
+      const users = data as User[]
 
       return {
-        items: this.transformDocuments<User>(response.rows),
-        total: response.total,
+        items: users,
+        total,
         page,
         limit,
-        totalPages: Math.ceil(response.total / limit),
+        total_pages: Math.ceil(total / limit),
       }
     } catch (error) {
       this.handleError(error, 'getUsers')
@@ -81,15 +85,17 @@ export class UsersAPI extends BaseAPI {
    */
   async getAllUsersForExport(): Promise<User[]> {
     try {
-      const queries = [Query.equal('role', ['participant']), Query.limit(9999)]
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'participant')
+        .order('created_at', { ascending: false })
 
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries,
-      })
+      if (error) {
+        throw error
+      }
 
-      return this.transformDocuments<User>(response.rows)
+      return data as User[]
     } catch (error) {
       this.handleError(error, 'getAllUsersForExport')
     }
@@ -100,13 +106,17 @@ export class UsersAPI extends BaseAPI {
    */
   async getUser(userId: string): Promise<User> {
     try {
-      const userDoc = await tablesDB.getRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: userId,
-      })
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single()
 
-      return this.transformDocument<User>(userDoc)
+      if (error) {
+        throw error
+      }
+
+      return this.ensureData(data, 'User not found') as User
     } catch (error) {
       this.handleError(error, 'getUser')
     }
@@ -115,76 +125,8 @@ export class UsersAPI extends BaseAPI {
   /**
    * Get user with all related details (booth checkins, ideation, group)
    */
-  async getUserWithDetails(userId: string): Promise<UserDetail> {
-    try {
-      // Get user
-      const user = await this.getUser(userId)
-
-      // Get booth checkins
-      const boothCheckinsResponse = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        queries: [Query.equal('participantId', [userId]), Query.orderDesc('checkinTime')],
-      })
-
-      // For each booth checkin, fetch booth details
-      const boothCheckins: BoothCheckinWithDetails[] = await Promise.all(
-        boothCheckinsResponse.rows.map(async (doc) => {
-          const boothDoc = await tablesDB.getRow({
-            databaseId: DATABASE_ID,
-            tableId: TABLES.BOOTHS,
-            rowId: doc.boothId,
-          })
-
-          return {
-            ...this.transformDocument(doc),
-            booth: this.transformDocument(boothDoc),
-          }
-        })
-      )
-
-      // Get ideation (if exists)
-      const ideationsResponse = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.IDEATIONS,
-        queries: [Query.equal('creatorId', [userId]), Query.limit(1)],
-      })
-
-      const ideation: Ideation | null =
-        ideationsResponse.rows.length > 0
-          ? this.transformDocument<Ideation>(ideationsResponse.rows[0]!)
-          : null
-
-      // Get group (if exists)
-      let group: GroupWithDetails | null = null
-      if (user.groupId) {
-        const groupDoc = await tablesDB.getRow({
-          databaseId: DATABASE_ID,
-          tableId: TABLES.GROUPS,
-          rowId: user.groupId,
-        })
-
-        // Fetch all participants in the group
-        const groupData = this.transformDocument<GroupWithDetails>(groupDoc)
-        const participants = await Promise.all(
-          groupData.participantIds.map((id) => this.getUser(id))
-        )
-
-        group = {
-          ...groupData,
-          participants,
-        }
-      }
-
-      return {
-        user,
-        boothCheckins,
-        ideation,
-        group,
-      }
-    } catch (error) {
-      this.handleError(error, 'getUserWithDetails')
-    }
+  async getUserWithDetails() {
+    // TODO: implement this method
   }
 
   /**
@@ -192,33 +134,57 @@ export class UsersAPI extends BaseAPI {
    */
   async createUser(data: CreateUserInput): Promise<User> {
     try {
+      // Validate required fields
+      this.validateRequired(data, ['name', 'email', 'participant_type'])
+
       // Get participant password from env
-      const password = (import.meta.env.VITE_PARTICIPANT_PASSWORD as string) || 'defaultPass123'
-      const userId = ID.unique()
+      const password =
+        (import.meta.env.VITE_PARTICIPANT_DEFAULT_PASSWORD as string) ||
+        'expertforum2025'
 
       // Create auth account
-      await account.create(userId, data.email, password, data.name)
+      const { data: authData, error: authError } =
+        await supabase.auth.admin.createUser({
+          email: data.email,
+          password: password,
+          email_confirm: true,
+          user_metadata: {
+            name: data.name,
+          },
+        })
+
+      if (authError) {
+        throw authError
+      }
+
+      if (!authData.user) {
+        throw new Error('Failed to create auth user')
+      }
 
       // Create database record
-      const userDoc = await tablesDB.createRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: userId,
-        data: {
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .insert({
+          auth_id: authData.user.id,
           name: data.name,
           email: data.email,
           role: 'participant',
-          participantType: data.participantType,
+          participant_type: data.participant_type,
           company: data.company || null,
           division: data.division || null,
-          isCheckedIn: false,
-          isEligibleToDraw: false,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      })
+          is_checked_in: false,
+          is_eligible_to_draw: false,
+        })
+        .select()
+        .single()
 
-      return this.transformDocument<User>(userDoc)
+      if (userError) {
+        // Rollback: delete auth user if database insert fails
+        await supabase.auth.admin.deleteUser(authData.user.id)
+        throw userError
+      }
+
+      return userData as User
     } catch (error) {
       this.handleError(error, 'createUser')
     }
@@ -229,19 +195,26 @@ export class UsersAPI extends BaseAPI {
    */
   async updateUser(userId: string, data: UpdateUserInput): Promise<User> {
     try {
-      const updates = {
-        ...data,
-        updatedAt: new Date().toISOString(),
+      const updates: Partial<User> = {}
+
+      if (data.name !== undefined) updates.name = data.name;
+      if (data.email !== undefined) updates.email = data.email;
+      if (data.participant_type !== undefined) updates.participant_type = data.participant_type;
+      if (data.company !== undefined) updates.company = data.company;
+      if (data.division !== undefined) updates.division = data.division;
+
+      const { data: userData, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
       }
 
-      const userDoc = await tablesDB.updateRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: userId,
-        data: updates,
-      })
-
-      return this.transformDocument<User>(userDoc)
+      return userData as User
     } catch (error) {
       this.handleError(error, 'updateUser')
     }
@@ -255,19 +228,29 @@ export class UsersAPI extends BaseAPI {
       // Fetch user to check if checked in
       const user = await this.getUser(userId)
 
-      if (user.isCheckedIn) {
+      if (user.is_checked_in) {
         throw new Error('Participant sudah check-in, tidak dapat dihapus')
       }
 
-      // Soft delete: update with deletedAt timestamp
-      await tablesDB.updateRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: userId,
-        data: {
-          deletedAt: new Date().toISOString(),
-        },
-      })
+      // Hard delete from database (RLS will handle permissions)
+      const { error } = await supabase.from('users').delete().eq('id', userId)
+
+      if (error) {
+        throw error
+      }
+
+      // Also delete from auth (if auth_id exists)
+      if (user.id) {
+        const { data: authUser } = await supabase
+          .from('users')
+          .select('auth_id')
+          .eq('id', userId)
+          .single()
+
+        if (authUser && (authUser as User).auth_id) {
+          await supabase.auth.admin.deleteUser((authUser as User).auth_id!)
+        }
+      }
 
       return { success: true }
     } catch (error) {
@@ -280,17 +263,14 @@ export class UsersAPI extends BaseAPI {
    */
   async getAvailableParticipants(): Promise<User[]> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries: [
-          Query.equal('participantType', ['offline']),
-          Query.isNull('groupId'),
-          Query.equal('role', ['participant']),
-        ],
-      })
+      // Use the PostgreSQL function we created
+      const { data, error } = await supabase.rpc('get_available_participants')
 
-      return this.transformDocuments<User>(response.rows)
+      if (error) {
+        throw error
+      }
+
+      return data as User[]
     } catch (error) {
       this.handleError(error, 'getAvailableParticipants')
     }

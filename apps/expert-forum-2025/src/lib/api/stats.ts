@@ -1,65 +1,53 @@
-import { tablesDB, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
-import type { Stats, User, Ideation } from 'src/types/schema'
+import type { Stats } from 'src/types/schema'
 
 /**
- * Stats API
+ * Stats API with Supabase
  * Handles statistics calculations for admin dashboard
+ * Uses PostgreSQL views for optimized queries
  */
 export class StatsAPI extends BaseAPI {
   /**
-   * Get dashboard statistics
+   * Get dashboard statistics using PostgreSQL views
    */
   async getStats(): Promise<Stats> {
     try {
-      // Fetch all participants
-      const allParticipantsResponse = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries: [Query.equal('role', ['participant']), Query.limit(9999)],
-      })
+      // Use the views we created in schema.sql for optimized queries
+      const { data: participantStats, error: participantError } = await supabase
+        .from('participant_stats')
+        .select('*')
+        .single()
 
-      const allParticipants = this.transformDocuments<User>(allParticipantsResponse.rows)
+      if (participantError) {
+        throw participantError
+      }
 
-      // Calculate participant counts
-      const offlineCount = allParticipants.filter((u) => u.participantType === 'offline').length
-      const onlineCount = allParticipants.filter((u) => u.participantType === 'online').length
+      const { data: submissionStats, error: submissionError } = await supabase
+        .from('submission_stats')
+        .select('*')
+        .single()
 
-      // Calculate checked-in counts
-      const checkedIn = allParticipants.filter((u) => u.isCheckedIn)
-      const checkedInOffline = checkedIn.filter((u) => u.participantType === 'offline').length
-      const checkedInOnline = checkedIn.filter((u) => u.participantType === 'online').length
-
-      // Calculate eligible for draw
-      const eligible = allParticipants.filter((u) => u.isEligibleToDraw).length
-
-      // Fetch submissions
-      const submissionsResponse = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.IDEATIONS,
-        queries: [Query.equal('isSubmitted', [true]), Query.limit(9999)],
-      })
-
-      const submissions = this.transformDocuments<Ideation>(submissionsResponse.rows)
-      const groupSubmissions = submissions.filter((s) => s.isGroup).length
-      const individualSubmissions = submissions.filter((s) => !s.isGroup).length
+      if (submissionError) {
+        throw submissionError
+      }
 
       return {
         totalParticipants: {
-          total: allParticipants.length,
-          offline: offlineCount,
-          online: onlineCount,
+          total: participantStats?.total_participants || 0,
+          offline: participantStats?.total_offline || 0,
+          online: participantStats?.total_online || 0,
         },
         checkedIn: {
-          total: checkedIn.length,
-          offline: checkedInOffline,
-          online: checkedInOnline,
+          total: participantStats?.total_checked_in || 0,
+          offline: participantStats?.checked_in_offline || 0,
+          online: participantStats?.checked_in_online || 0,
         },
-        eligibleForDraw: eligible,
+        eligibleForDraw: participantStats?.total_eligible_for_draw || 0,
         submissions: {
-          total: submissions.length,
-          group: groupSubmissions,
-          individual: individualSubmissions,
+          total: submissionStats?.total_submissions || 0,
+          group: submissionStats?.group_submissions || 0,
+          individual: submissionStats?.individual_submissions || 0,
         },
       }
     } catch (error) {
@@ -72,13 +60,16 @@ export class StatsAPI extends BaseAPI {
    */
   async getTotalParticipants(): Promise<number> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries: [Query.equal('role', ['participant']), Query.limit(1)],
-      })
+      const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'participant')
 
-      return response.total
+      if (error) {
+        throw error
+      }
+
+      return count || 0
     } catch (error) {
       this.handleError(error, 'getTotalParticipants')
     }
@@ -89,17 +80,17 @@ export class StatsAPI extends BaseAPI {
    */
   async getCheckedInCount(): Promise<number> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries: [
-          Query.equal('role', ['participant']),
-          Query.equal('isCheckedIn', [true]),
-          Query.limit(1),
-        ],
-      })
+      const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'participant')
+        .eq('is_checked_in', true)
 
-      return response.total
+      if (error) {
+        throw error
+      }
+
+      return count || 0
     } catch (error) {
       this.handleError(error, 'getCheckedInCount')
     }
@@ -110,17 +101,17 @@ export class StatsAPI extends BaseAPI {
    */
   async getEligibleCount(): Promise<number> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries: [
-          Query.equal('role', ['participant']),
-          Query.equal('isEligibleToDraw', [true]),
-          Query.limit(1),
-        ],
-      })
+      const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'participant')
+        .eq('is_eligible_to_draw', true)
 
-      return response.total
+      if (error) {
+        throw error
+      }
+
+      return count || 0
     } catch (error) {
       this.handleError(error, 'getEligibleCount')
     }
@@ -131,13 +122,16 @@ export class StatsAPI extends BaseAPI {
    */
   async getSubmissionsCount(): Promise<number> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.IDEATIONS,
-        queries: [Query.equal('isSubmitted', [true]), Query.limit(1)],
-      })
+      const { count, error } = await supabase
+        .from('ideations')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_submitted', true)
 
-      return response.total
+      if (error) {
+        throw error
+      }
+
+      return count || 0
     } catch (error) {
       this.handleError(error, 'getSubmissionsCount')
     }

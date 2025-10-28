@@ -1,10 +1,13 @@
-import { tablesDB, ID, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
-import type { Ideation, IdeationWithDetails, CreateIdeationInput, User } from 'src/types/schema'
+// import type { Database } from 'src/types/database'
 import { MIN_GROUP_SIZE } from 'src/lib/constants'
+import type {
+  Ideation,
+  CreateIdeationInput,
+} from 'src/types/schema'
 
 /**
- * Ideations API
  * Handles ideation submission for both individual and group
  */
 export class IdeationsAPI extends BaseAPI {
@@ -17,47 +20,61 @@ export class IdeationsAPI extends BaseAPI {
   ): Promise<Ideation> {
     try {
       // Validate creator is online participant
-      const creatorDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.USERS,
-        creatorId
-      )
-      const creator = this.transformDocument<User>(creatorDoc)
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', creatorId)
+        .single()
 
-      if (creator.participantType !== 'online') {
-        throw new Error('Hanya online participant yang bisa submit ideation individual')
+      if (creatorError) {
+        throw creatorError
+      }
+
+      if (!creatorData) {
+        throw new Error('Creator not found')
+      }
+
+      if (creatorData.participant_type !== 'online') {
+        throw new Error(
+          'Hanya online participant yang bisa submit ideation individual'
+        )
       }
 
       // Check if already submitted
-      const existingIdeations = await tablesDB.listRows(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        [Query.equal('creatorId', creatorId), Query.limit(1)]
-      )
+      const { data: existingIdeation, error: existingError } = await supabase
+        .from('ideations')
+        .select('id')
+        .eq('creator_id', creatorId)
+        .maybeSingle()
 
-      if (existingIdeations.rows.length > 0) {
+      if (existingError) {
+        throw existingError
+      }
+
+      if (existingIdeation) {
         throw new Error('Participant sudah submit ideation')
       }
 
       // Create ideation
-      const ideationDoc = await tablesDB.createRow(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        ID.unique(),
-        {
+      const { data: ideationData, error: ideationError } = await supabase
+        .from('ideations')
+        .insert({
           title: data.title,
           description: data.description,
-          companyCase: data.companyCase,
-          creatorId,
-          participantIds: [creatorId],
-          isGroup: false,
-          isSubmitted: true,
-          submittedAt: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-        }
-      )
+          company_case: data.company_case,
+          creator_id: creatorId,
+          group_id: null, // Individual ideation
+          is_group: false,
+          submitted_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
 
-      return this.transformDocument<Ideation>(ideationDoc)
+      if (ideationError) {
+        throw ideationError
+      }
+
+      return ideationData as Ideation
     } catch (error) {
       this.handleError(error, 'createIndividualIdeation')
     }
@@ -65,56 +82,82 @@ export class IdeationsAPI extends BaseAPI {
 
   /**
    * Create group ideation from existing group
+   * Groups now only store member organization, ideation content must be provided
    */
-  async createGroupIdeation(groupId: string): Promise<Ideation> {
+  async createGroupIdeation(
+    groupId: string,
+    data: CreateIdeationInput
+  ): Promise<Ideation> {
     try {
       // Get group
-      const groupDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        groupId
-      )
-      const group = this.transformDocument<any>(groupDoc)
+      const { data: groupData, error: groupError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single()
 
-      if (!group.isSubmitted) {
+      if (groupError) {
+        throw groupError
+      }
+
+      if (!groupData) {
+        throw new Error('Group not found')
+      }
+
+      if (!groupData.is_submitted) {
         throw new Error('Grup belum di-submit')
       }
 
       // Check if group already has ideation
-      const existingIdeations = await tablesDB.listRows(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        [Query.equal('creatorId', group.creatorId), Query.equal('isGroup', true), Query.limit(1)]
-      )
+      const { data: existingIdeation, error: existingError } = await supabase
+        .from('ideations')
+        .select('id')
+        .eq('group_id', groupId)
+        .maybeSingle()
 
-      if (existingIdeations.rows.length > 0) {
+      if (existingError) {
+        throw existingError
+      }
+
+      if (existingIdeation) {
         throw new Error('Grup sudah memiliki ideation')
       }
 
+      // Get group member count (business logic in API layer)
+      const { count: memberCount, error: countError } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+
+      if (countError) {
+        throw countError
+      }
+
       // Validate minimum group size
-      if (group.participantIds.length < MIN_GROUP_SIZE) {
+      if (!memberCount || memberCount < MIN_GROUP_SIZE) {
         throw new Error(`Grup minimal ${MIN_GROUP_SIZE} anggota`)
       }
 
-      // Create ideation from group data
-      const ideationDoc = await tablesDB.createRow(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        ID.unique(),
-        {
-          title: group.title,
-          description: group.description,
-          companyCase: group.companyCase,
-          creatorId: group.creatorId,
-          participantIds: group.participantIds,
-          isGroup: true,
-          isSubmitted: true,
-          submittedAt: group.submittedAt,
-          createdAt: new Date().toISOString(),
-        }
-      )
+      // Create ideation with provided data
+      const { data: ideationData, error: ideationError } = await supabase
+        .from('ideations')
+        .insert({
+          title: data.title,
+          description: data.description,
+          company_case: data.company_case,
+          creator_id: groupData.creator_id,
+          group_id: groupId,
+          is_group: true,
+          submitted_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
 
-      return this.transformDocument<Ideation>(ideationDoc)
+      if (ideationError) {
+        throw ideationError
+      }
+
+      return ideationData as Ideation
     } catch (error) {
       this.handleError(error, 'createGroupIdeation')
     }
@@ -122,16 +165,20 @@ export class IdeationsAPI extends BaseAPI {
 
   /**
    * Get all submitted ideations
+   * All ideations in the table are submitted (submitted_at is set on insert)
    */
   async getIdeations(): Promise<Ideation[]> {
     try {
-      const response = await tablesDB.listRows(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        [Query.equal('isSubmitted', true), Query.orderDesc('submittedAt')]
-      )
+      const { data, error } = await supabase
+        .from('ideations')
+        .select('*')
+        .order('submitted_at', { ascending: false })
 
-      return this.transformDocuments<Ideation>(response.rows)
+      if (error) {
+        throw error
+      }
+
+      return data as Ideation[]
     } catch (error) {
       this.handleError(error, 'getIdeations')
     }
@@ -142,13 +189,17 @@ export class IdeationsAPI extends BaseAPI {
    */
   async getIdeation(ideationId: string): Promise<Ideation> {
     try {
-      const ideationDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        ideationId
-      )
+      const { data, error } = await supabase
+        .from('ideations')
+        .select('*')
+        .eq('id', ideationId)
+        .single()
 
-      return this.transformDocument<Ideation>(ideationDoc)
+      if (error) {
+        throw error
+      }
+
+      return this.ensureData(data, 'Ideation not found') as Ideation
     } catch (error) {
       this.handleError(error, 'getIdeation')
     }
@@ -157,36 +208,8 @@ export class IdeationsAPI extends BaseAPI {
   /**
    * Get ideation with participant details
    */
-  async getIdeationWithDetails(ideationId: string): Promise<IdeationWithDetails> {
-    try {
-      const ideation = await this.getIdeation(ideationId)
-
-      // Fetch creator
-      const creatorDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.USERS,
-        ideation.creatorId
-      )
-
-      // Fetch all participants (for group ideations)
-      let participants: User[] = []
-      if (ideation.isGroup && ideation.participantIds.length > 0) {
-        participants = await Promise.all(
-          ideation.participantIds.map(async id => {
-            const doc = await tablesDB.getRow(DATABASE_ID, TABLES.USERS, id)
-            return this.transformDocument<User>(doc)
-          })
-        )
-      }
-
-      return {
-        ...ideation,
-        creator: this.transformDocument<User>(creatorDoc),
-        participants,
-      }
-    } catch (error) {
-      this.handleError(error, 'getIdeationWithDetails')
-    }
+  async getIdeationWithDetails() {
+    // TODO: Get ideation with creator details
   }
 
   /**
@@ -194,17 +217,21 @@ export class IdeationsAPI extends BaseAPI {
    */
   async getIdeationByCreator(creatorId: string): Promise<Ideation | null> {
     try {
-      const response = await tablesDB.listRows(
-        DATABASE_ID,
-        TABLES.IDEATIONS,
-        [Query.equal('creatorId', creatorId), Query.limit(1)]
-      )
+      const { data, error } = await supabase
+        .from('ideations')
+        .select('*')
+        .eq('creator_id', creatorId)
+        .maybeSingle()
 
-      if (response.rows.length === 0) {
+      if (error) {
+        throw error
+      }
+
+      if (!data) {
         return null
       }
 
-      return this.transformDocument<Ideation>(response.rows[0]!)
+      return data as Ideation
     } catch (error) {
       this.handleError(error, 'getIdeationByCreator')
     }

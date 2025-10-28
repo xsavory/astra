@@ -1,58 +1,59 @@
-import { tablesDB, ID, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
-import type { Group, GroupWithDetails, CreateGroupInput, UpdateGroupInput, User } from 'src/types/schema'
 import { MIN_GROUP_SIZE } from 'src/lib/constants'
+import type {
+  Group,
+  GroupWithDetails,
+  CreateGroupInput,
+  UpdateGroupInput,
+  User,
+} from 'src/types/schema'
 
 /**
- * Groups API
+ * Groups API with Supabase
  * Handles group operations for offline participants
  */
 export class GroupsAPI extends BaseAPI {
   /**
    * Create new group
+   * Groups are for member organization only - ideation content goes to ideations table
    */
-  async createGroup(creatorId: string, data: CreateGroupInput): Promise<Group> {
+  async createGroup(
+    creatorId: string,
+    data: CreateGroupInput
+  ): Promise<Group> {
     try {
-      // Validate creator is offline participant
-      const creatorDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.USERS,
-        creatorId
-      )
-      const creator = this.transformDocument<User>(creatorDoc)
+      const { data: groupData, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: data.name,
+          creator_id: creatorId,
+          is_submitted: false,
+        })
+        .select()
+        .single()
 
-      if (creator.participantType !== 'offline') {
-        throw new Error('Hanya offline participant yang bisa membuat grup')
+      if (groupError) {
+        throw groupError
       }
 
-      if (creator.groupId) {
-        throw new Error('Participant sudah ada di grup lain')
+      if (!groupData) {
+        throw new Error('Failed to create group')
       }
-
-      // Create group
-      const groupDoc = await tablesDB.createRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        ID.unique(),
-        {
-          title: data.title,
-          description: data.description,
-          companyCase: data.companyCase,
-          creatorId,
-          participantIds: [creatorId], // Auto-add creator
-          isSubmitted: false,
-          createdAt: new Date().toISOString(),
-        }
-      )
-
-      const group = this.transformDocument<Group>(groupDoc)
 
       // Update creator's groupId
-      await tablesDB.updateRow(DATABASE_ID, TABLES.USERS, creatorId, {
-        groupId: group.$id,
-      })
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ group_id: groupData.id })
+        .eq('id', creatorId)
 
-      return group
+      if (updateError) {
+        // Rollback: delete the group
+        await supabase.from('groups').delete().eq('id', groupData.id)
+        throw updateError
+      }
+
+      return groupData as Group
     } catch (error) {
       this.handleError(error, 'createGroup')
     }
@@ -63,13 +64,17 @@ export class GroupsAPI extends BaseAPI {
    */
   async getGroup(groupId: string): Promise<Group> {
     try {
-      const groupDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        groupId
-      )
+      const { data, error } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('id', groupId)
+        .single()
 
-      return this.transformDocument<Group>(groupDoc)
+      if (error) {
+        throw error
+      }
+
+      return this.ensureData(data, 'Group not found') as Group
     } catch (error) {
       this.handleError(error, 'getGroup')
     }
@@ -80,27 +85,41 @@ export class GroupsAPI extends BaseAPI {
    */
   async getGroupWithDetails(groupId: string): Promise<GroupWithDetails> {
     try {
-      const group = await this.getGroup(groupId)
+      // Fetch group with creator using join
+      const { data: groupData, error: groupError } = await supabase
+        .from('groups')
+        .select(
+          `
+          *,
+          creator:users!groups_creator_id_fkey(*)
+        `
+        )
+        .eq('id', groupId)
+        .single()
 
-      // Fetch creator
-      const creatorDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.USERS,
-        group.creatorId
-      )
+      if (groupError) {
+        throw groupError
+      }
 
-      // Fetch all participants
-      const participants = await Promise.all(
-        group.participantIds.map(async id => {
-          const doc = await tablesDB.getRow(DATABASE_ID, TABLES.USERS, id)
-          return this.transformDocument<User>(doc)
-        })
-      )
+      if (!groupData) {
+        throw new Error('Group not found')
+      }
+
+      // Fetch all participants in the group
+      const { data: participantsData, error: participantsError } =
+        await supabase
+          .from('users')
+          .select('*')
+          .eq('group_id', groupId)
+
+      if (participantsError) {
+        throw participantsError
+      }
 
       return {
-        ...group,
-        creator: this.transformDocument<User>(creatorDoc),
-        participants,
+        ...groupData,
+        creator: groupData.creator as User,
+        participants: participantsData as User[],
       }
     } catch (error) {
       this.handleError(error, 'getGroupWithDetails')
@@ -108,24 +127,34 @@ export class GroupsAPI extends BaseAPI {
   }
 
   /**
-   * Update group details
+   * Update group details (only name field)
    */
-  async updateGroup(groupId: string, data: UpdateGroupInput): Promise<Group> {
+  async updateGroup(
+    groupId: string,
+    data: UpdateGroupInput
+  ): Promise<Group> {
     try {
       const group = await this.getGroup(groupId)
 
-      if (group.isSubmitted) {
+      if (group.is_submitted) {
         throw new Error('Grup sudah di-submit, tidak bisa diubah')
       }
 
-      const groupDoc = await tablesDB.updateRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        groupId,
-        data
-      )
+      const updates: Partial<Group> = {}
+      if (data.name !== undefined) updates.name = data.name
 
-      return this.transformDocument<Group>(groupDoc)
+      const { data: updatedGroup, error } = await supabase
+        .from('groups')
+        .update(updates)
+        .eq('id', groupId)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return this.ensureData(updatedGroup, 'Group not found') as Group
     } catch (error) {
       this.handleError(error, 'updateGroup')
     }
@@ -134,52 +163,54 @@ export class GroupsAPI extends BaseAPI {
   /**
    * Invite participant to group
    */
-  async inviteToGroup(groupId: string, participantId: string): Promise<Group> {
+  async inviteToGroup(
+    groupId: string,
+    participantId: string
+  ): Promise<Group> {
     try {
       // Get group
       const group = await this.getGroup(groupId)
 
-      if (group.isSubmitted) {
+      if (group.is_submitted) {
         throw new Error('Grup sudah di-submit, tidak bisa menambah anggota')
       }
 
       // Validate participant
-      const participantDoc = await tablesDB.getRow(
-        DATABASE_ID,
-        TABLES.USERS,
-        participantId
-      )
-      const participant = this.transformDocument<User>(participantDoc)
+      const { data: participantData, error: participantError } =
+        await supabase
+          .from('users')
+          .select('*')
+          .eq('id', participantId)
+          .single()
 
-      if (participant.participantType !== 'offline') {
+      if (participantError) {
+        throw participantError
+      }
+
+      if (!participantData) {
+        throw new Error('Participant not found')
+      }
+
+      if (participantData.participant_type !== 'offline') {
         throw new Error('Hanya offline participant yang bisa join grup')
       }
 
-      if (participant.groupId) {
+      if (participantData.group_id) {
         throw new Error('Participant sudah ada di grup lain')
       }
 
-      // Check if participant already in this group
-      if (group.participantIds.includes(participantId)) {
-        throw new Error('Participant sudah ada di grup ini')
+      // Update participant's groupId
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ group_id: groupId })
+        .eq('id', participantId)
+
+      if (updateError) {
+        throw updateError
       }
 
-      // Update group
-      const updatedGroupDoc = await tablesDB.updateRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        groupId,
-        {
-          participantIds: [...group.participantIds, participantId],
-        }
-      )
-
-      // Update participant's groupId
-      await tablesDB.updateRow(DATABASE_ID, TABLES.USERS, participantId, {
-        groupId,
-      })
-
-      return this.transformDocument<Group>(updatedGroupDoc)
+      // Re-fetch group (participants are now updated via group_id foreign key)
+      return await this.getGroup(groupId)
     } catch (error) {
       this.handleError(error, 'inviteToGroup')
     }
@@ -192,26 +223,22 @@ export class GroupsAPI extends BaseAPI {
     try {
       const group = await this.getGroup(groupId)
 
-      if (group.isSubmitted) {
+      if (group.is_submitted) {
         throw new Error('Grup sudah di-submit, tidak bisa keluar')
       }
 
-      // Update group
-      const updatedGroupDoc = await tablesDB.updateRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        groupId,
-        {
-          participantIds: group.participantIds.filter(id => id !== participantId),
-        }
-      )
-
       // Clear participant's groupId
-      await tablesDB.updateRow(DATABASE_ID, TABLES.USERS, participantId, {
-        groupId: null,
-      })
+      const { error } = await supabase
+        .from('users')
+        .update({ group_id: null })
+        .eq('id', participantId)
 
-      return this.transformDocument<Group>(updatedGroupDoc)
+      if (error) {
+        throw error
+      }
+
+      // Re-fetch group
+      return await this.getGroup(groupId)
     } catch (error) {
       this.handleError(error, 'leaveGroup')
     }
@@ -219,33 +246,50 @@ export class GroupsAPI extends BaseAPI {
 
   /**
    * Submit group (validate minimum size)
+   * Validates group size in API layer
    */
   async submitGroup(groupId: string): Promise<Group> {
     try {
       // Re-fetch group to ensure real-time data
       const group = await this.getGroup(groupId)
 
-      if (group.isSubmitted) {
+      if (group.is_submitted) {
         throw new Error('Grup sudah di-submit')
       }
 
+      // Get group member count (business logic in API layer)
+      const { count: memberCount, error: countError } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('group_id', groupId)
+
+      if (countError) {
+        throw countError
+      }
+
       // Validate minimum group size
-      if (group.participantIds.length < MIN_GROUP_SIZE) {
-        throw new Error(`Grup minimal ${MIN_GROUP_SIZE} anggota`)
+      if (!memberCount || memberCount < MIN_GROUP_SIZE) {
+        throw new Error(
+          `Grup minimal ${MIN_GROUP_SIZE} anggota. Saat ini: ${memberCount || 0} anggota`
+        )
       }
 
       // Update group
-      const updatedGroupDoc = await tablesDB.updateRow(
-        DATABASE_ID,
-        TABLES.GROUPS,
-        groupId,
-        {
-          isSubmitted: true,
-          submittedAt: new Date().toISOString(),
-        }
-      )
+      const { data: updatedGroup, error: updateError } = await supabase
+        .from('groups')
+        .update({
+          is_submitted: true,
+          submitted_at: new Date().toISOString(),
+        })
+        .eq('id', groupId)
+        .select()
+        .single()
 
-      return this.transformDocument<Group>(updatedGroupDoc)
+      if (updateError) {
+        throw updateError
+      }
+
+      return this.ensureData(updatedGroup, 'Group not found') as Group
     } catch (error) {
       this.handleError(error, 'submitGroup')
     }
@@ -253,20 +297,24 @@ export class GroupsAPI extends BaseAPI {
 
   /**
    * Get available participants (offline, not in any group)
+   * Filters in API layer
    */
   async getAvailableParticipants(): Promise<User[]> {
     try {
-      const response = await tablesDB.listRows(
-        DATABASE_ID,
-        TABLES.USERS,
-        [
-          Query.equal('participantType', 'offline'),
-          Query.isNull('groupId'),
-          Query.equal('role', 'participant'),
-        ]
-      )
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'participant')
+        .eq('participant_type', 'offline')
+        .eq('is_checked_in', true)
+        .is('group_id', null)
+        .order('name', { ascending: true })
 
-      return this.transformDocuments<User>(response.rows)
+      if (error) {
+        throw error
+      }
+
+      return (data || []) as User[]
     } catch (error) {
       this.handleError(error, 'getAvailableParticipants')
     }

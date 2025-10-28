@@ -1,13 +1,25 @@
-import { tablesDB, ID, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
-import type { User, BoothCheckin, CheckinMethod, CreateBoothCheckinInput } from 'src/types/schema'
+import type { Database } from 'src/types/database'
+import type {
+  User,
+  BoothCheckin,
+  CheckinMethod,
+  CreateBoothCheckinInput,
+} from 'src/types/schema'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
+import type { RealtimeChannel } from '@supabase/supabase-js'
+
+type DBUser = Database['public']['Tables']['users']['Row']
+type DBBoothCheckin = Database['public']['Tables']['booth_checkins']['Row']
 
 /**
- * Checkins API
- * Handles event and booth check-in operations
+ * Checkins API with Supabase
+ * Handles event and booth check-in operations with realtime progress tracking
  */
 export class CheckinsAPI extends BaseAPI {
+  private progressChannel: RealtimeChannel | null = null
+
   /**
    * Check-in participant to event
    */
@@ -18,48 +30,58 @@ export class CheckinsAPI extends BaseAPI {
   ): Promise<User> {
     try {
       // Get user data
-      const userDoc = await tablesDB.getRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: participantId,
-      })
-      const user = this.transformDocument<User>(userDoc)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', participantId)
+        .single()
+
+      if (userError) {
+        throw userError
+      }
+
+      if (!userData) {
+        throw new Error('User not found')
+      }
+
+      const user = userData as DBUser
 
       // For online participants, check if event is active
-      if (user.participantType === 'online') {
-        const eventResponse = await tablesDB.listRows({
-          databaseId: DATABASE_ID,
-          tableId: TABLES.EVENTS,
-          queries: [Query.limit(1)],
-        })
+      if (user.participant_type === 'online') {
+        const { data: eventData, error: eventError } = await supabase
+          .from('events')
+          .select('is_active')
+          .limit(1)
+          .single()
 
-        if (
-          eventResponse.rows.length === 0 ||
-          !eventResponse.rows[0]?.isActive
-        ) {
+        if (eventError || !eventData || !eventData.is_active) {
           throw new Error('Event belum aktif')
         }
       }
 
       // Check if already checked in
-      if (user.isCheckedIn) {
+      if (user.is_checked_in) {
         throw new Error('Participant sudah check-in')
       }
 
       // Update user check-in status
-      const updatedUserDoc = await tablesDB.updateRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: participantId,
-        data: {
-          isCheckedIn: true,
-          eventCheckinTime: new Date().toISOString(),
-          eventCheckinMethod: method,
-          checkedInBy: staffId || null,
-        },
-      })
+      const { data: updatedUser, error: updateError } = await supabase
+        .from('users')
+        .update({
+          is_checked_in: true,
+          event_checkin_time: new Date().toISOString(),
+          event_checkin_method: method,
+          checked_in_by: staffId || null,
+        })
+        .eq('id', participantId)
+        .select()
+        .single()
 
-      return this.transformDocument<User>(updatedUserDoc)
+      if (updateError) {
+        throw updateError
+      }
+
+      return this.ensureData(updatedUser, 'Failed to update user') as User
     } catch (error) {
       this.handleError(error, 'checkinEvent')
     }
@@ -67,6 +89,7 @@ export class CheckinsAPI extends BaseAPI {
 
   /**
    * Check-in participant to booth
+   * Calculates and updates eligibility in API layer
    */
   async checkinBooth(
     participantId: string,
@@ -74,69 +97,84 @@ export class CheckinsAPI extends BaseAPI {
   ): Promise<{ checkin: BoothCheckin; user: User }> {
     try {
       // Get user data
-      const userDoc = await tablesDB.getRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: participantId,
-      })
-      const user = this.transformDocument<User>(userDoc)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', participantId)
+        .single()
+
+      if (userError) {
+        throw userError
+      }
+
+      if (!userData) {
+        throw new Error('User not found')
+      }
+
+      const user = userData as DBUser
 
       // Validate: must be checked in to event first
-      if (!user.isCheckedIn) {
+      if (!user.is_checked_in) {
         throw new Error('Participant belum check-in ke event')
       }
 
-      // Check if already visited this booth
-      const existingCheckins = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        queries: [
-          Query.equal('participantId', [participantId]),
-          Query.equal('boothId', [data.boothId]),
-        ],
-      })
+      // Check if already visited this booth (unique constraint will also catch this)
+      const { data: existingCheckin, error: checkError } = await supabase
+        .from('booth_checkins')
+        .select('id')
+        .eq('participant_id', participantId)
+        .eq('booth_id', data.booth_id)
+        .maybeSingle()
 
-      if (existingCheckins.rows.length > 0) {
+      if (checkError) {
+        throw checkError
+      }
+
+      if (existingCheckin) {
         throw new Error('Booth sudah dikunjungi')
       }
 
       // Create booth checkin record
-      const checkinDoc = await tablesDB.createRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        rowId: ID.unique(),
-        data: {
-          participantId,
-          boothId: data.boothId,
+      const { data: checkinData, error: checkinError } = await supabase
+        .from('booth_checkins')
+        .insert({
+          participant_id: participantId,
+          booth_id: data.booth_id,
           answer: data.answer,
-          checkinTime: new Date().toISOString(),
-        },
-      })
+        })
+        .select()
+        .single()
 
-      const checkin = this.transformDocument<BoothCheckin>(checkinDoc)
+      if (checkinError) {
+        throw checkinError
+      }
 
-      // Recalculate eligibility
-      const allBoothCheckins = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        queries: [Query.equal('participantId', [participantId])],
-      })
+      const checkin = this.ensureData(checkinData, 'Failed to create booth checkin') as BoothCheckin
 
-      const threshold =
-        user.participantType === 'offline' ? BOOTH_THRESHOLD.offline : BOOTH_THRESHOLD.online
-      const isEligible = allBoothCheckins.total >= threshold
+      // Calculate eligibility in API layer (business logic)
+      const boothCount = await this.getBoothCheckinCount(participantId)
+      const threshold = user.participant_type === 'offline'
+        ? BOOTH_THRESHOLD.offline
+        : BOOTH_THRESHOLD.online
+      const isEligible = boothCount >= threshold
 
-      // Update user eligibility
-      const updatedUserDoc = await tablesDB.updateRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        rowId: participantId,
-        data: { isEligibleToDraw: isEligible },
-      })
+      // Update user's eligibility status
+      const { data: updatedUserData, error: updatedUserError } = await supabase
+        .from('users')
+        .update({
+          is_eligible_to_draw: isEligible
+        })
+        .eq('id', participantId)
+        .select()
+        .single()
+
+      if (updatedUserError) {
+        throw updatedUserError
+      }
 
       return {
         checkin,
-        user: this.transformDocument<User>(updatedUserDoc),
+        user: this.ensureData(updatedUserData, 'Failed to update user eligibility') as User,
       }
     } catch (error) {
       this.handleError(error, 'checkinBooth')
@@ -146,18 +184,21 @@ export class CheckinsAPI extends BaseAPI {
   /**
    * Get booth checkins for a participant
    */
-  async getParticipantBoothCheckins(participantId: string): Promise<BoothCheckin[]> {
+  async getParticipantBoothCheckins(
+    participantId: string
+  ): Promise<BoothCheckin[]> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        queries: [
-          Query.equal('participantId', [participantId]),
-          Query.orderDesc('checkinTime'),
-        ],
-      })
+      const { data, error } = await supabase
+        .from('booth_checkins')
+        .select('*')
+        .eq('participant_id', participantId)
+        .order('checkin_time', { ascending: false })
 
-      return this.transformDocuments<BoothCheckin>(response.rows)
+      if (error) {
+        throw error
+      }
+
+      return (data || []).map((checkin) => checkin as BoothCheckin)
     } catch (error) {
       this.handleError(error, 'getParticipantBoothCheckins')
     }
@@ -168,13 +209,16 @@ export class CheckinsAPI extends BaseAPI {
    */
   async getBoothCheckinCount(participantId: string): Promise<number> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        queries: [Query.equal('participantId', [participantId]), Query.limit(1)],
-      })
+      const { count, error } = await supabase
+        .from('booth_checkins')
+        .select('*', { count: 'exact', head: true })
+        .eq('participant_id', participantId)
 
-      return response.total
+      if (error) {
+        throw error
+      }
+
+      return count || 0
     } catch (error) {
       this.handleError(error, 'getBoothCheckinCount')
     }
@@ -183,21 +227,129 @@ export class CheckinsAPI extends BaseAPI {
   /**
    * Check if participant has visited a specific booth
    */
-  async hasVisitedBooth(participantId: string, boothId: string): Promise<boolean> {
+  async hasVisitedBooth(
+    participantId: string,
+    boothId: string
+  ): Promise<boolean> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.BOOTH_CHECKINS,
-        queries: [
-          Query.equal('participantId', [participantId]),
-          Query.equal('boothId', [boothId]),
-          Query.limit(1),
-        ],
-      })
+      const { data, error } = await supabase
+        .from('booth_checkins')
+        .select('id')
+        .eq('participant_id', participantId)
+        .eq('booth_id', boothId)
+        .maybeSingle()
 
-      return response.rows.length > 0
+      if (error) {
+        throw error
+      }
+
+      return data !== null
     } catch (error) {
       this.handleError(error, 'hasVisitedBooth')
+    }
+  }
+
+  /**
+   * Subscribe to progress updates for a participant (Realtime Feature #2)
+   *
+   * This enables real-time progress tracking:
+   * - Automatically updates booth completion count
+   * - Triggers when new booth check-ins are created
+   * - Updates eligibility status in real-time
+   * - Powers live progress bars on participant dashboard
+   *
+   * @param participantId - The participant to track
+   * @param callback - Called when progress changes with updated booth count and eligibility
+   * @returns Unsubscribe function
+   */
+  subscribeToProgress(
+    participantId: string,
+    callback: (data: {
+      boothCount: number
+      isEligible: boolean
+      latestCheckin?: BoothCheckin
+    }) => void
+  ): () => void {
+    // Subscribe to booth_checkins for this participant
+    this.progressChannel = supabase
+      .channel(`progress:${participantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'booth_checkins',
+          filter: `participant_id=eq.${participantId}`,
+        },
+        async (payload) => {
+          // New booth checkin inserted
+          const newCheckin = payload.new as DBBoothCheckin
+
+          // Get updated booth count
+          const boothCount = await this.getBoothCheckinCount(participantId)
+
+          // Get updated user to check eligibility
+          const { data: userData } = await supabase
+            .from('users')
+            .select('is_eligible_to_draw')
+            .eq('id', participantId)
+            .single()
+
+          const isEligible = userData?.is_eligible_to_draw || false
+
+          callback({
+            boothCount,
+            isEligible,
+            latestCheckin: newCheckin as BoothCheckin,
+          })
+        }
+      )
+      .subscribe()
+
+    // Return unsubscribe function
+    return () => {
+      if (this.progressChannel) {
+        supabase.removeChannel(this.progressChannel)
+        this.progressChannel = null
+      }
+    }
+  }
+
+  /**
+   * Subscribe to user eligibility changes (triggered by booth checkins)
+   *
+   * This enables real-time eligibility tracking:
+   * - Watches for changes to is_eligible_to_draw field
+   * - Triggers when eligibility status changes
+   * - Can be used to show congratulations UI when eligible
+   *
+   * @param participantId - The participant to track
+   * @param callback - Called when eligibility changes
+   * @returns Unsubscribe function
+   */
+  subscribeToEligibilityChanges(
+    participantId: string,
+    callback: (isEligible: boolean) => void
+  ): () => void {
+    const channel = supabase
+      .channel(`eligibility:${participantId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${participantId}`,
+        },
+        (payload) => {
+          const updatedUser = payload.new as DBUser
+          callback(updatedUser.is_eligible_to_draw)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
   }
 }

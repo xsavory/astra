@@ -2,9 +2,9 @@
 
 ## 1. Overview
 
-The Microsite Event Platform is a hybrid (offline + online) engagement microsite for Astra Group’s corporate event.
+The Microsite Event Platform is a hybrid (offline + online) engagement microsite for Astra Group's corporate event.
 It enables participants to check in, interact with booth content, submit ideation ideas, and join a lucky draw.
-Built with **React + Vite + Tanstack Router** frontend and **Appwrite** backend.
+Built with **React + Vite + Tanstack Router** frontend and **Supabase** (PostgreSQL + Realtime) backend.
 
 ---
 
@@ -23,13 +23,13 @@ Built with **React + Vite + Tanstack Router** frontend and **Appwrite** backend.
 
 ### 3.1 Overview
 
-All users (admin, staff, and participants) login through the same landing page `/`. Authentication is handled via **Appwrite Auth** with a conditional flow based on email detection.
+All users (admin, staff, and participants) login through the same landing page `/`. Authentication is handled via **Supabase Auth** with a conditional flow based on email detection.
 
 ### 3.2 User Registration
 
 All users (admin, staff, participants) are **manually registered** by the admin team before the event:
-- Create auth account in **Appwrite Auth**
-- Insert user record into `users` collection with appropriate role
+- Create auth account in **Supabase Auth**
+- Insert user record into `users` table with appropriate role
 
 ### 3.3 Login Flow
 
@@ -57,7 +57,7 @@ User sees:
    - System detects email in `ADMIN_EMAILS` or `STAFF_EMAILS`
    - Password input field appears
    - User enters password
-   - Submit → Appwrite login with email + password
+   - Submit → Supabase Auth login with email + password
    - Redirect based on role:
      - Admin → `/admin`
      - Staff → `/staff/index` (staff landing page)
@@ -67,22 +67,23 @@ User sees:
    - **No password input shown**
    - Automatically use hardcoded password from `.env`:
      ```
-     VITE_PARTICIPANT_PASSWORD=your_hardcoded_password
+     VITE_PARTICIPANT_DEFAULT_PASSWORD=your_hardcoded_password
      ```
-   - Submit → Appwrite login with email + env password
+   - Submit → Supabase Auth login with email + env password
    - Redirect to `/participant`
 
 #### 3.3.3 Error Handling
 
-- **Invalid email (not found in Appwrite):** Show error "Email tidak terdaftar"
+- **Invalid email (not found in Supabase):** Show error "Email tidak terdaftar"
 - **Wrong password (admin/staff):** Show error "Password salah" (no attempt limit)
-- **Appwrite connection error:** Show error "Gagal terhubung ke server"
+- **Supabase connection error:** Show error "Gagal terhubung ke server"
 
 #### 3.3.4 Session Management
 
-- Use Appwrite session for auth state
+- Use Supabase session for auth state
 - Store user data in React Context/Zustand
 - Implement protected routes based on `role`
+- **Realtime Auth Sync:** Subscribe to auth state changes for automatic session sync across browser tabs
 
 ---
 
@@ -113,7 +114,7 @@ After successful check-in, participant landing page (`/participant`) displays:
 - **Progress bar** showing booth completion percentage
   - **Offline participants:** x/10 booths completed (100% = 10 booths)
   - **Online participants:** x/6 booths completed (100% = 6 booths)
-- Progress bar visually updates in real-time as booths are completed
+- **Realtime Updates:** Progress bar automatically updates in real-time as booths are completed (Supabase Realtime)
 - Display progress text: "X dari Y booth selesai"
 
 #### Section 3: Voucher Display (Conditional)
@@ -457,9 +458,9 @@ This page displays different UI based on participant type (offline vs online).
 ```
 
 **Validation (Both Offline & Online):**
-- Each booth can be answered only once and cannot be edited
-- Progress updates in real-time after each booth check-in
-- Voucher unlocks when threshold is met
+- Each booth can be answered only once and cannot be edited (enforced by database unique constraint)
+- **Realtime Progress:** Progress updates automatically in real-time after each booth check-in (Supabase Realtime)
+- Voucher unlocks when threshold is met (auto-calculated by database trigger)
 
 ---
 
@@ -482,34 +483,34 @@ The ideation feature enables participants to propose improvement or innovation i
 
 1. Offline participant opens **Collaboration** menu.
 
-2. If no group yet → CTA “Create Group”.
+2. If no group yet → CTA "Create Group".
 
-   * Fills Astra company sub options, title, and ideation content description.
+   * Fills group name only (e.g., "Tim Inovasi Astra").
    * Becomes **creatorId** (group leader).
+   * Group is created for member organization only.
 
-3. If group exist, there is  a card that represent the group.
+3. If group exists, there is a card that represents the group.
 
 4. Leader can **invite participants** using a search field:
 
    * Only offline participants **without an existing group** appear.
-   * Invited participants are added to `participantIds`.
+   * Invited participants have their `group_id` set to this group.
 
 5. Participants can **leave** a group (before submission).
 
-6. Once group size ≥5, the ideation form becomes enabled.
+6. Once group size ≥5, the **Submit Group** button becomes enabled.
 
-7. Before submission, system checks group member count in real-time (to ensure no member has left).
+7. Leader clicks **Submit Group**, which:
+   * Validates group member count in real-time (to ensure no member has left).
+   * Sets `is_submitted = true`, `submitted_at = ISODateTime` on the group.
+   * Locks the group (no more invites/leaves).
 
-8. Leader clicks **Submit**, locking the group:
+8. After group is submitted, leader can create the **Group Ideation**:
+   * Opens ideation form with fields: title, description, company case.
+   * Submits ideation content linked to the group via `group_id`.
+   * Ideation is stored in `ideations` table with `is_group = true`.
 
-   ```ts
-   {
-     isSubmitted: true,
-     submittedAt: ISODateTime
-   }
-   ```
-
-9. Group becomes read-only.
+9. Group and ideation become read-only.
 
 ---
 
@@ -667,8 +668,8 @@ Admin dashboard is a **single-page interface** with the following layout structu
 - **Read:** View all participants with pagination (default: 10 per page)
 - **Create:** Add new participant via "Add Participant" button
   - Opens form drawer
-  - Creates Appwrite Auth account
-  - Inserts record into `users` collection
+  - Creates Supabase Auth account
+  - Inserts record into `users` table
 - **Update:** Edit participant details
   - Click on row → opens detail drawer with inline edit
 - **Delete:** Soft delete participant (with validation)
@@ -810,9 +811,9 @@ Display chronological list of participant activities:
 - Company Case
 - Creator Name
 - **Group Members List:**
-  - Display all `participantIds` from `groups.participantIds`
+  - Display all participants where `users.group_id = groups.id`
   - Show name, email, company for each member
-  - Fetch via join query or multiple lookups
+  - Fetch via join query
 - Submitted At
 
 **Actions:**
@@ -847,384 +848,148 @@ Helpdesk has **exact same CRUD functionality** as Admin Participant Management, 
 
 ---
 
-## 11. Database Schema
+## 11. Database Schema (PostgreSQL)
 
 ### Enums
 
-```ts
-enum UserRole { ADMIN, STAFF, PARTICIPANT }
-enum ParticipantType { ONLINE, OFFLINE }
-enum CheckinMethod { QR, MANUAL }
+```sql
+CREATE TYPE user_role AS ENUM ('admin', 'staff', 'participant');
+CREATE TYPE participant_type AS ENUM ('online', 'offline');
+CREATE TYPE checkin_method AS ENUM ('qr', 'manual');
 ```
 
 ---
 
-### Collections
+### Tables
 
 #### `events`
 
-```ts
-{
-  $id: string
-  name: string
-  date: string
-  isActive: boolean
-  zoomMeetingUrl: string
-  createdAt: string
-  updatedAt: string
-}
+```sql
+CREATE TABLE events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  date DATE NOT NULL,
+  is_active BOOLEAN DEFAULT false,
+  zoom_meeting_url TEXT,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
 ```
 
 #### `users`
 
-```ts
-{
-  $id: string
-  name: string
-  email: string
-  role: "admin" | "staff" | "participant"
-  participantType?: "online" | "offline"
-  company?: string
-  division?: string
-  isCheckedIn?: boolean
-  isEligibleToDraw?: boolean
-  eventCheckinTime?: string
-  eventCheckinMethod?: "qr" | "manual"
-  groupId?: string
-  createdAt: string
-  updatedAt: string
-}
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  role user_role DEFAULT 'participant',
+  participant_type participant_type,
+  company TEXT,
+  division TEXT,
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  is_checked_in BOOLEAN DEFAULT false,
+  event_checkin_time TIMESTAMP,
+  event_checkin_method checkin_method,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
 ```
 
 #### `groups`
 
-```ts
-{
-  $id: string
-  title: string
-  description: string
-  companyCase: string
-  creatorId: string
-  participantIds: string[]
-  isSubmitted: boolean
-  submittedAt?: string
-  createdAt: string
-}
+```sql
+-- Groups Table: For member organization only
+-- Ideation content is stored in ideations table
+CREATE TABLE groups (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  creator_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  is_submitted BOOLEAN DEFAULT false,
+  submitted_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
 ```
 
 #### `booths`
 
-```ts
-{
-  $id: string
-  name: string
-  description?: string
-  posterUrl?: string
-  questionText?: string
-  order: number
-}
+```sql
+CREATE TABLE booths (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  poster_url TEXT,
+  question_text TEXT,
+  order INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now()
+);
 ```
 
 #### `booth_checkins`
 
-```ts
-{
-  $id: string
-  participantId: string
-  boothId: string
-  answer?: string
-  checkinTime: string
-}
+```sql
+CREATE TABLE booth_checkins (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  participant_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  booth_id UUID REFERENCES booths(id) ON DELETE CASCADE,
+  answer TEXT,
+  checkin_time TIMESTAMP DEFAULT now(),
+  UNIQUE(participant_id, booth_id) -- Each booth can only be visited once
+);
 ```
 
 #### `ideations`
 
-```ts
-{
-  $id: string
-  title: string
-  description: string
-  companyCase: string
-  creatorId: string
-  participantIds: string[]
-  isGroup: boolean
-  isSubmitted: boolean
-  submittedAt?: string
-  createdAt: string
-}
+```sql
+-- Ideations Table: Single source of truth for ideation content
+-- Links to groups table via group_id for group ideations
+-- group_id is NULL for individual ideations
+CREATE TABLE ideations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  company_case TEXT NOT NULL,
+  creator_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  group_id UUID REFERENCES groups(id) ON DELETE SET NULL,
+  is_group BOOLEAN DEFAULT false,
+  submitted_at TIMESTAMP DEFAULT now(),
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP DEFAULT now(),
+
+  -- Constraint: group ideations must have group_id
+  CONSTRAINT group_ideation_consistency CHECK (
+    (is_group = false AND group_id IS NULL) OR
+    (is_group = true AND group_id IS NOT NULL)
+  )
+);
 ```
 
-#### `draw_logs`
+#### `draw`
 
-```ts
-{
-  $id: string
-  winners: string[]
-  createdAt: string
-}
+```sql
+CREATE TABLE draw_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  staff_id UUID REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT now()
+);
 ```
 
----
+#### `draw_winners`
 
-## 12. API Methods Specification
-
-> **Note:** This project uses **Appwrite TablesDB** directly from the frontend via `src/lib/api`. All implementations are available in the API layer files.
-
----
-
-### 12.1 Authentication Methods
-
-#### `api.auth.login(email, password)`
-- **Purpose:** Authenticate user and create session
-- **Parameters:** `email: string`, `password: string`
-- **Returns:** `{ user: User, sessionId: string }`
-- **Operations:** Creates session, fetches user data from users table
-
-#### `api.auth.logout()`
-- **Purpose:** End current session
-- **Returns:** `void`
-
-#### `api.auth.getCurrentUser()`
-- **Purpose:** Get currently logged-in user
-- **Returns:** `User | null`
-
----
-
-### 12.2 User Management Methods (Admin/Helpdesk)
-
-#### `api.users.getUsers(options)`
-- **Purpose:** Fetch paginated users with filters
-- **Parameters:**
-  - `page?: number` (default: 1)
-  - `limit?: number` (default: 10)
-  - `filters?: { participantType?, isCheckedIn?, isEligibleToDraw?, company?, search? }`
-- **Returns:** `{ items: User[], total: number, page: number, limit: number, totalPages: number }`
-
-#### `api.users.getAllUsersForExport()`
-- **Purpose:** Fetch all participants without pagination for CSV export
-- **Returns:** `User[]`
-
-#### `api.users.getUserWithDetails(userId)`
-- **Purpose:** Get user with all related data (booth checkins, ideation, group)
-- **Parameters:** `userId: string`
-- **Returns:** `{ user: User, boothCheckins: BoothCheckin[], ideation?: Ideation, group?: Group }`
-
-#### `api.users.createUser(data)`
-- **Purpose:** Create new participant (auth + database record)
-- **Parameters:** `{ name, email, participantType, company?, division? }`
-- **Returns:** `User`
-- **Notes:** Auto-creates auth account with env password
-
-#### `api.users.updateUser(userId, data)`
-- **Purpose:** Update participant information
-- **Parameters:** `userId: string`, `data: { name?, email?, participantType?, company?, division? }`
-- **Returns:** `User`
-
-#### `api.users.deleteUser(userId)`
-- **Purpose:** Delete participant (with validation)
-- **Parameters:** `userId: string`
-- **Returns:** `{ success: boolean }`
-- **Validation:** Cannot delete if `isCheckedIn === true`
-
----
-
-### 12.3 Check-in Methods
-
-#### `api.checkins.checkinEvent(participantId, method, staffId?)`
-- **Purpose:** Check-in participant to event
-- **Parameters:** `participantId: string`, `method: "qr" | "manual"`, `staffId?: string`
-- **Returns:** `User`
-- **Validation:**
-  - Online participants require `events.isActive === true`
-  - Cannot check-in twice
-
-#### `api.checkins.checkinBooth(participantId, data)`
-- **Purpose:** Check-in participant to booth and record answer
-- **Parameters:** `participantId: string`, `data: { boothId, answer }`
-- **Returns:** `{ checkin: BoothCheckin, user: User }`
-- **Validation:**
-  - Must be checked in to event first
-  - Each booth can only be visited once
-- **Side Effects:** Auto-updates `isEligibleToDraw` based on booth count
-
-#### `api.checkins.getParticipantBoothCheckins(participantId)`
-- **Purpose:** Get all booth check-ins for a participant
-- **Parameters:** `participantId: string`
-- **Returns:** `BoothCheckin[]`
-
-#### `api.checkins.getBoothCheckinCount(participantId)`
-- **Purpose:** Get booth check-in count for eligibility calculation
-- **Parameters:** `participantId: string`
-- **Returns:** `number`
-
----
-
-### 12.4 Booth Methods
-
-#### `api.booths.getBooths()`
-- **Purpose:** Fetch all booths ordered by order field
-- **Returns:** `Booth[]`
-
-#### `api.booths.getBooth(boothId)`
-- **Purpose:** Fetch single booth
-- **Parameters:** `boothId: string`
-- **Returns:** `Booth`
-
-#### `api.booths.getBoothsForParticipantType(participantType)`
-- **Purpose:** Get filtered booths based on participant type
-- **Parameters:** `participantType: "online" | "offline"`
-- **Returns:** `Booth[]`
-
----
-
-### 12.5 Ideation Methods
-
-#### `api.ideations.getIdeations()`
-- **Purpose:** Fetch all submitted ideations
-- **Returns:** `Ideation[]`
-
-#### `api.ideations.getIdeationWithDetails(ideationId)`
-- **Purpose:** Get ideation with creator and participants data
-- **Parameters:** `ideationId: string`
-- **Returns:** `{ ideation: Ideation, creator: User, participants: User[] }`
-
-#### `api.ideations.createIndividualIdeation(creatorId, data)`
-- **Purpose:** Create individual ideation (online participants)
-- **Parameters:** `creatorId: string`, `data: { title, description, companyCase }`
-- **Returns:** `Ideation`
-- **Validation:** Only online participants, one submission per participant
-
-#### `api.ideations.createGroupIdeation(groupId)`
-- **Purpose:** Create ideation from submitted group
-- **Parameters:** `groupId: string`
-- **Returns:** `Ideation`
-- **Validation:** Group must be submitted, minimum 5 members
-
----
-
-### 12.6 Group Methods (Offline Participants)
-
-#### `api.groups.createGroup(creatorId, data)`
-- **Purpose:** Create new group for offline collaboration
-- **Parameters:** `creatorId: string`, `data: { title, description, companyCase }`
-- **Returns:** `Group`
-- **Side Effects:** Auto-adds creator to `participantIds`, updates creator's `groupId`
-
-#### `api.groups.getGroup(groupId)`
-- **Purpose:** Get group by ID
-- **Parameters:** `groupId: string`
-- **Returns:** `Group`
-
-#### `api.groups.getGroupWithDetails(groupId)`
-- **Purpose:** Get group with all participant details
-- **Parameters:** `groupId: string`
-- **Returns:** `{ ...Group, creator: User, participants: User[] }`
-
-#### `api.groups.inviteToGroup(groupId, participantId)`
-- **Purpose:** Invite participant to group
-- **Parameters:** `groupId: string`, `participantId: string`
-- **Returns:** `Group`
-- **Validation:**
-  - Target must be offline participant
-  - Target must not be in any group
-  - Group must not be submitted
-
-#### `api.groups.leaveGroup(groupId, participantId)`
-- **Purpose:** Remove participant from group
-- **Parameters:** `groupId: string`, `participantId: string`
-- **Returns:** `Group`
-- **Validation:** Cannot leave if group is submitted
-
-#### `api.groups.submitGroup(groupId)`
-- **Purpose:** Submit group (validate minimum size and lock)
-- **Parameters:** `groupId: string`
-- **Returns:** `Group`
-- **Validation:** Minimum 5 members required
-
-#### `api.groups.getAvailableParticipants()`
-- **Purpose:** Get offline participants not in any group
-- **Returns:** `User[]`
-
----
-
-### 12.7 Draw Methods
-
-#### `api.draws.getEligibleParticipants()`
-- **Purpose:** Get participants eligible for draw (excluding past winners)
-- **Returns:** `User[]`
-- **Logic:** Filters out participants who won in previous draws
-
-#### `api.draws.submitDraw(winners, staffId?)`
-- **Purpose:** Save draw results
-- **Parameters:** `winners: string[]`, `staffId?: string`
-- **Returns:** `DrawLog`
-- **Validation:** All winners must be eligible
-
-#### `api.draws.getDrawLogs()`
-- **Purpose:** Get all draw history
-- **Returns:** `DrawLog[]`
-
-#### `api.draws.getDrawLogWithDetails(drawLogId)`
-- **Purpose:** Get draw log with winner details
-- **Parameters:** `drawLogId: string`
-- **Returns:** `{ ...DrawLog, winnerDetails: User[], staff?: User }`
-
----
-
-### 12.8 Event Methods
-
-#### `api.events.getEvent()`
-- **Purpose:** Get current event data including Zoom meeting URL
-- **Returns:** `Event`
-- **Usage:**
-  - Zoom page: Fetch `zoomMeetingUrl`
-  - Check-in validation: Check `isActive` status
-  - Display event info across the app
-
-#### `api.events.isEventActive()`
-- **Purpose:** Check if event is currently active
-- **Returns:** `boolean`
-
-#### `api.events.getZoomMeetingUrl()`
-- **Purpose:** Get Zoom meeting URL
-- **Returns:** `string | null`
-
----
-
-### 12.9 Statistics Methods (Admin)
-
-#### `api.stats.getStats()`
-- **Purpose:** Get dashboard statistics
-- **Returns:**
-```ts
-{
-  totalParticipants: { total, offline, online },
-  checkedIn: { total, offline, online },
-  eligibleForDraw: number,
-  submissions: { total, group, individual }
-}
+```sql
+CREATE TABLE draw_winners (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  draw_log_id UUID REFERENCES draw_logs(id) ON DELETE CASCADE,
+  participant_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT now()
+);
 ```
-
-#### `api.stats.getTotalParticipants()`
-- **Purpose:** Get total participant count
-- **Returns:** `number`
-
-#### `api.stats.getCheckedInCount()`
-- **Purpose:** Get checked-in participant count
-- **Returns:** `number`
-
-#### `api.stats.getEligibleCount()`
-- **Purpose:** Get eligible for draw count
-- **Returns:** `number`
-
-#### `api.stats.getSubmissionsCount()`
-- **Purpose:** Get total submissions count
-- **Returns:** `number`
-
 ---
-## 13. Validation Rules & Business Logic
+## 12. Validation Rules & Business Logic
 
-### 13.1 User Management
+### 12.1 User Management
 
 **Create User:**
 - `email` must be unique across all users
@@ -1245,77 +1010,88 @@ enum CheckinMethod { QR, MANUAL }
 
 ---
 
-### 13.2 Check-in
+### 12.2 Check-in
 
 **Event Check-in:**
 - Can only check in once per participant
-- Online participants: require `events.isActive === true`
+- Online participants: require `events.is_active = true`
 - Offline participants: no event active check (QR scan works anytime)
-- Update: `isCheckedIn = true`, `eventCheckinTime = now()`, `eventCheckinMethod`
+- Update: `is_checked_in = true`, `event_checkin_time = now()`, `event_checkin_method`
 
 **Booth Check-in:**
-- Participant must be checked in to event first (`isCheckedIn === true`)
-- Each booth can be visited only once per participant
+- Participant must be checked in to event first (`is_checked_in = true`)
+- Each booth can be visited only once per participant (enforced by unique constraint)
 - `answer` is required for booth check-in
-- After booth check-in, recalculate `isEligibleToDraw`:
+- After booth check-in, `is_eligible_to_draw` is auto-calculated by database trigger:
   - Offline: 10 booths completed
   - Online: 6 booths completed
 
 ---
 
-### 13.3 Ideation & Groups
+### 12.3 Ideation & Groups
 
 **Group Creation:**
-- Only `participantType = "offline"` can create groups
+- Only `participant_type = 'offline'` can create groups
 - Each offline participant can only be in ONE group at a time
-- `creatorId` automatically added to `participantIds`
+- Creator automatically has `group_id` set to the new group
+- Groups store only organizational data: `name`, `creator_id`, submission status
+- Ideation content (title, description, company_case) is NOT stored in groups table
 
 **Invite to Group:**
-- Target participant must be `participantType = "offline"`
-- Target participant must NOT have `groupId` (not in any group)
+- Target participant must be `participant_type = 'offline'`
+- Target participant must NOT have `group_id` (not in any group)
 - Target participant must NOT have submitted individual ideation
+- Sets `users.group_id = groupId` for the invited participant
 
 **Leave Group:**
-- Participant can leave only if `isSubmitted = false`
+- Participant can leave only if `is_submitted = false`
 - If creator leaves, consider deleting group or transferring ownership
-- Remove participant from `participantIds`, clear `groupId`
+- Sets `users.group_id = null` for the participant
 
-**Submit Group Ideation:**
-- **Hard validation:** `participantIds.length >= 5`
+**Submit Group (Step 1):**
+- **Hard validation:** Group must have >= 5 members (validated in API layer)
 - Re-fetch group data in real-time before submission to ensure no member left
-- Lock group: set `isSubmitted = true`, `submittedAt = now()`
-- Prevent further edits/invites/leaves after submission
+- Lock group: set `is_submitted = true`, `submitted_at = now()`
+- Prevent further invites/leaves after submission (enforced by RLS policies)
+
+**Create Group Ideation (Step 2):**
+- Can only be done after group is submitted (`is_submitted = true`)
+- Leader fills ideation form: title, description, company_case
+- Creates ideation record in `ideations` table linked to group via `group_id`
+- Sets `is_group = true` on the ideation record
+- Each group can have only ONE ideation
 
 **Individual Ideation:**
-- Only `participantType = "online"` can submit individual ideation
+- Only `participant_type = 'online'` can submit individual ideation
 - Each online participant can submit only once
-- Lock submission: set `isSubmitted = true`, `submittedAt = now()`
+- Creates ideation record with `is_group = false` and `group_id = NULL`
+- Ideation content stored directly in `ideations` table
 
 ---
 
-### 13.4 Lucky Draw
+### 12.4 Lucky Draw
 
 **Eligible Participants:**
-- `isEligibleToDraw === true`
-- Have not won in previous draws (check `draw_logs.winners`)
+- `is_eligible_to_draw = true`
+- Have not won in previous draws (check `draw_winners` table)
 
 **Submit Draw:**
 - Validate all `winners` are eligible
 - Create `draw_logs` record
-- Consider updating `users` with `hasWon` flag or similar
+- Insert winners into `draw_winners` table with references to draw_log_id and participant_id
 
 ---
 
-### 13.5 Event Activation
+### 12.5 Event Activation
 
 **Event Active Status:**
-- Controlled via Appwrite Console (direct database update)
-- Online participant check-in disabled when `events.isActive = false`
+- Controlled via Supabase Dashboard (direct database update)
+- Online participant check-in disabled when `events.is_active = false`
 - No UI control needed in admin panel
 
 ---
 
-## 14. Routing Structure
+## 13. Routing Structure
 
 ```
 /                   # landing (login popup)
@@ -1340,7 +1116,7 @@ enum CheckinMethod { QR, MANUAL }
 
 ---
 
-## 15. Access Control & Route Guards
+## 14. Access Control & Route Guards
 
 | Role        | Path           | Description                             |
 | ----------- | -------------- | --------------------------------------- |
@@ -1350,16 +1126,18 @@ enum CheckinMethod { QR, MANUAL }
 
 ---
 
-## 16. Frontend Technical Requirements
+## 15. Frontend Technical Requirements
 
-### 16.1 Tech Stack
+### 15.1 Tech Stack
 
 **Framework & Build:**
-- **Framework:** React 18+ with Vite
+- **Framework:** React 19+ with Vite
 - **Routing:** Tanstack Router (file-based routing)
-- **State Management:** Zustand or React Context + useReducer
+- **State Management:** Zustand & React Context + useReducer
 - **Data Fetching:** Tanstack Query (React Query)
-- **Backend:** Appwrite SDK (direct from frontend)
+- **Backend:** Supabase Client (direct from frontend)
+- **Database:** PostgreSQL via Supabase
+- **Realtime:** Supabase Realtime (WebSocket-based subscriptions)
 
 **UI & Components (Monorepo):**
 - **UI Library:** Shadcn UI via `@repo/react-components`
@@ -1378,27 +1156,17 @@ enum CheckinMethod { QR, MANUAL }
 
 **Note:** This is a monorepo project. UI components, utilities, and shared logic are centralized in `@repo/react-components` package.
 
-### 16.2 Environment Variables
+### 15.2 Environment Variables
 ```env
-# Appwrite
-VITE_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-VITE_APPWRITE_PROJECT_ID=your_project_id
-VITE_APPWRITE_DATABASE_ID=your_database_id
-
-# Collections
-VITE_COLLECTION_USERS=users
-VITE_COLLECTION_BOOTHS=booths
-VITE_COLLECTION_BOOTH_CHECKINS=booth_checkins
-VITE_COLLECTION_IDEATIONS=ideations
-VITE_COLLECTION_GROUPS=groups
-VITE_COLLECTION_DRAW_LOGS=draw_logs
-VITE_COLLECTION_EVENTS=events
+# Supabase
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-public-key-here
 
 # Auth
-VITE_PARTICIPANT_PASSWORD=default_participant_password
+VITE_PARTICIPANT_DEFAULT_PASSWORD=expertforum2025
 ```
 
-### 16.3 Constants File Structure
+### 15.3 Constants File Structure
 ```ts
 // src/lib/constants.ts
 
@@ -1427,7 +1195,7 @@ export const COMPANY_OPTIONS = [
 ] as const
 ```
 
-### 16.4 Protected Route Implementation
+### 15.4 Protected Route Implementation
 ```tsx
 // Pseudo-code
 <Route path="/participant" component={ParticipantLayout}>
@@ -1447,12 +1215,13 @@ export const COMPANY_OPTIONS = [
 </Route>
 ```
 
-### 16.5 Key Features to Implement
+### 15.5 Key Features to Implement
 
-**Real-time Updates:**
-- Consider Appwrite Realtime for live stats updates on admin dashboard
-- Live progress bar updates for participants
-- Group member updates for offline collaboration
+**Real-time Updates (Supabase Realtime):**
+- **Auth State Sync:** Automatic session sync across browser tabs using `api.auth.subscribeToAuthChanges()`
+- **Progress Tracking:** Live progress bar updates as participants complete booths using `api.checkins.subscribeToProgress()`
+- **Booth Management:** Real-time booth data updates for admin panel using `api.booths.subscribeToBooths()`
+- **Eligibility Status:** Live eligibility status updates using `api.checkins.subscribeToEligibilityChanges()`
 
 **Responsive Design:**
 - Mobile-first approach (most participants will use mobile)
@@ -1471,50 +1240,34 @@ export const COMPANY_OPTIONS = [
 
 ---
 
-## 17. Backend Technical Notes
+## 16. Backend Technical Notes
 
-### 17.1 Appwrite Configuration
+### 16.1 Supabase Configuration
 
-**Collections to Create:**
-1. `events` - Single record for event config
-2. `users` - All users (synced with Appwrite Auth)
-3. `booths` - Pre-populated booth data
-4. `booth_checkins` - Participant booth interactions
-5. `ideations` - All ideation submissions
-6. `groups` - Group formations (offline participants)
-7. `draw_logs` - Draw history
+**Database Setup:**
+1. Run `supabase/schema.sql` to create:
+   - Enums (user_role, participant_type, checkin_method)
+   - Tables (events, users, booths, booth_checkins, groups, ideations, draw_logs, draw_winners)
+   - Foreign keys with proper CASCADE/RESTRICT policies
+   - Triggers for auto-updating timestamps and eligibility
+   - Views for pre-calculated statistics
 
-**Indexes Required:**
-- `users`: `email` (unique), `role`, `participantType`, `isCheckedIn`, `isEligibleToDraw`
-- `booth_checkins`: `participantId`, `boothId`, composite (`participantId` + `boothId`)
-- `ideations`: `creatorId`, `isGroup`, `isSubmitted`
-- `groups`: `creatorId`, `isSubmitted`
+2. Run `supabase/rls-policies.sql` to set up Row Level Security:
+   - Admin: Full access to all tables
+   - Staff: Limited to check-ins, draws, helpdesk
+   - Participants: Only their own data
 
-**Permissions:**
-- Use Appwrite's built-in role-based permissions
-- Separate read/write permissions for each role
-- Staff and Admin get broader access
+**Indexes:**
+- Primary keys (UUID) on all tables
+- Unique constraints:
+  - `users.email`
+  - `booth_checkins(participant_id, booth_id)`
+- Foreign key indexes automatically created by PostgreSQL
 
-### 17.2 Key Backend Logic
-
-**Auto-Calculate isEligibleToDraw:**
-- Trigger: After booth check-in
-- Logic:
-  ```ts
-  const boothCount = await getBoothCheckinCount(participantId)
-  const threshold = participantType === 'offline' ? 10 : 6
-  const isEligible = boothCount >= threshold
-
-  await updateUser(participantId, { isEligibleToDraw: isEligible })
-  ```
-
-**Group Validation Before Submit:**
-- Re-fetch group in real-time
-- Count `participantIds.length`
-- Ensure >= 5 before allowing submission
-
-**Prevent Duplicate Booth Check-ins:**
-- Query `booth_checkins` for existing record with same `participantId` + `boothId`
-- Return error if exists
+**Realtime Setup:**
+- Enable Realtime on required tables in Supabase Dashboard:
+  - `users` (for auth state sync)
+  - `booth_checkins` (for progress tracking)
+  - `booths` (for booth management)
 
 ---

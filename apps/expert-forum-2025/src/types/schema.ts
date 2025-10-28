@@ -7,40 +7,41 @@ export type CheckinMethod = 'qr' | 'manual'
 // ==================== Event Types ====================
 
 export interface Event {
-  $id: string
+  id: string
   name: string
   date: string
-  isActive: boolean
-  zoomMeetingUrl?: string
-  createdAt: string
-  updatedAt: string
+  is_active: boolean
+  zoom_meeting_url?: string
+  created_at: string
+  updated_at: string
 }
 
 // ==================== User Types ====================
 
 export interface User {
-  $id: string
+  id: string
+  auth_id?: string
   name: string
   email: string
   role: UserRole
-  participantType?: ParticipantType
+  participant_type?: ParticipantType
   company?: string | null
   division?: string | null
-  isCheckedIn?: boolean
-  isEligibleToDraw?: boolean
-  eventCheckinTime?: string | null
-  eventCheckinMethod?: CheckinMethod | null
-  checkedInBy?: string | null // Staff ID who checked in the participant
-  groupId?: string | null
-  createdAt: string
-  updatedAt: string
+  is_checked_in?: boolean
+  is_eligible_to_draw?: boolean
+  event_checkin_time?: string | null
+  event_checkin_method?: CheckinMethod | null
+  checked_in_by?: string | null // Staff ID who checked in the participant
+  group_id?: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Create/Update User Input Types
 export interface CreateUserInput {
   name: string
   email: string
-  participantType: ParticipantType
+  participant_type: ParticipantType
   company?: string
   division?: string
 }
@@ -48,7 +49,7 @@ export interface CreateUserInput {
 export interface UpdateUserInput {
   name?: string
   email?: string
-  participantType?: ParticipantType
+  participant_type?: ParticipantType
   company?: string
   division?: string
 }
@@ -56,24 +57,24 @@ export interface UpdateUserInput {
 // ==================== Booth Types ====================
 
 export interface Booth {
-  $id: string
+  id: string
   name: string
   description?: string | null
-  posterUrl?: string | null
-  questionText?: string | null
+  poster_url?: string | null
+  question_text?: string | null
   order: number
-  isOnlineOnly?: boolean
-  isOfflineOnly?: boolean
+  created_at: string
+  updated_at: string
 }
 
 // ==================== Booth Check-in Types ====================
 
 export interface BoothCheckin {
-  $id: string
-  participantId: string
-  boothId: string
+  id: string
+  participant_id: string
+  booth_id: string
   answer?: string | null
-  checkinTime: string
+  checkin_time: string
 }
 
 // Booth Check-in with populated data
@@ -84,22 +85,20 @@ export interface BoothCheckinWithDetails extends BoothCheckin {
 
 // Create Booth Check-in Input
 export interface CreateBoothCheckinInput {
-  boothId: string
+  booth_id: string
   answer: string
 }
 
 // ==================== Group Types ====================
 
 export interface Group {
-  $id: string
-  title: string
-  description: string
-  companyCase: string
-  creatorId: string
-  participantIds: string[]
-  isSubmitted: boolean
-  submittedAt?: string | null
-  createdAt: string
+  id: string
+  name: string
+  creator_id: string
+  is_submitted: boolean
+  submitted_at?: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Group with populated participants
@@ -110,35 +109,32 @@ export interface GroupWithDetails extends Group {
 
 // Create/Update Group Input
 export interface CreateGroupInput {
-  title: string
-  description: string
-  companyCase: string
+  name: string
 }
 
 export interface UpdateGroupInput {
-  title?: string
-  description?: string
-  companyCase?: string
+  name?: string
 }
 
 // ==================== Ideation Types ====================
 
 export interface Ideation {
-  $id: string
+  id: string
   title: string
   description: string
-  companyCase: string
-  creatorId: string
-  participantIds: string[] // For group ideations
-  isGroup: boolean
-  isSubmitted: boolean
-  submittedAt?: string | null
-  createdAt: string
+  company_case: string
+  creator_id: string
+  group_id?: string | null
+  is_group: boolean
+  submitted_at?: string | null
+  created_at: string
+  updated_at: string
 }
 
 // Ideation with populated data
 export interface IdeationWithDetails extends Ideation {
   creator?: User
+  group?: GroupWithDetails
   participants?: User[]
 }
 
@@ -146,21 +142,28 @@ export interface IdeationWithDetails extends Ideation {
 export interface CreateIdeationInput {
   title: string
   description: string
-  companyCase: string
+  company_case: string
 }
 
 // ==================== Draw Log Types ====================
 
 export interface DrawLog {
-  $id: string
-  winners: string[] // Array of participant IDs
-  staffId?: string | null // Staff who created the draw
-  createdAt: string
+  id: string
+  staff_id?: string | null // Staff who created the draw
+  created_at: string
+}
+
+// Draw Winner (join table)
+export interface DrawWinner {
+  id: string
+  draw_log_id: string
+  participant_id: string
+  created_at: string
 }
 
 // Draw Log with populated winners
 export interface DrawLogWithDetails extends DrawLog {
-  winnerDetails?: User[]
+  winners?: User[]
   staff?: User
 }
 
@@ -197,15 +200,15 @@ export interface PaginatedResponse<T> {
   total: number
   page: number
   limit: number
-  totalPages: number
+  total_pages: number
 }
 
 // ==================== Query Filters Types ====================
 
 export interface UserFilters {
-  participantType?: ParticipantType
-  isCheckedIn?: boolean
-  isEligibleToDraw?: boolean
+  participant_type?: ParticipantType
+  is_checked_in?: boolean
+  is_eligible_to_draw?: boolean
   company?: string
   search?: string // Searches name and email
 }
@@ -218,8 +221,8 @@ export interface LoginInput {
 }
 
 export interface AuthSession {
-  userId: string
-  sessionId: string
+  user_id: string
+  session_id: string
   user: User
 }
 
@@ -227,7 +230,7 @@ export interface AuthSession {
 
 export interface UserDetail {
   user: User
-  boothCheckins: BoothCheckinWithDetails[]
+  booth_checkins: BoothCheckinWithDetails[]
   ideation?: Ideation | null
   group?: GroupWithDetails | null
 }

@@ -1,40 +1,51 @@
-import { tablesDB, ID, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
 import type { User, DrawLog, DrawLogWithDetails } from 'src/types/schema'
 
 /**
- * Draws API
- * Handles lucky draw operations
+ * Draws API with Supabase
+ * Handles lucky draw operations using draw_winners join table
  */
 export class DrawsAPI extends BaseAPI {
   /**
    * Get eligible participants for draw
-   * (eligible and not yet won in previous draws)
+   * Returns participants who:
+   * - Have is_eligible_to_draw = true
+   * - Have NOT won in any previous draws
    */
   async getEligibleParticipants(): Promise<User[]> {
     try {
-      // Get all draw logs to find past winners
-      const drawLogsResponse = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.DRAW_LOGS,
-      })
+      // Get all participant IDs who have won before
+      const { data: winners, error: winnersError } = await supabase
+        .from('draw_winners')
+        .select('participant_id')
 
-      // Flatten all winners from previous draws
-      const pastWinners = drawLogsResponse.rows.flatMap(log => log.winners || [])
+      if (winnersError) {
+        throw winnersError
+      }
 
-      // Get all eligible participants
-      const eligibleResponse = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.USERS,
-        queries: [Query.equal('isEligibleToDraw', [true]), Query.limit(9999)],
-      })
+      const previousWinnerIds = (winners || []).map((w) => w.participant_id)
 
-      const allEligible = this.transformDocuments<User>(eligibleResponse.rows)
+      // Get eligible participants, excluding previous winners
+      let query = supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'participant')
+        .eq('is_eligible_to_draw', true)
+        .order('name', { ascending: true })
 
-      // Filter out past winners
-      const eligible = allEligible.filter(user => !pastWinners.includes(user.$id))
+      // Exclude previous winners if any exist
+      if (previousWinnerIds.length > 0) {
+        query = query.not('id', 'in', `(${previousWinnerIds.join(',')})`)
+      }
 
-      return eligible
+      const { data, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      return (data || []) as User[]
     } catch (error) {
       this.handleError(error, 'getEligibleParticipants')
     }
@@ -42,48 +53,83 @@ export class DrawsAPI extends BaseAPI {
 
   /**
    * Submit draw results
+   * Creates a draw_log entry and inserts winners into draw_winners table
    */
-  async submitDraw(winners: string[], staffId?: string): Promise<DrawLog> {
+  async submitDraw(
+    winnerIds: string[],
+    staffId?: string
+  ): Promise<DrawLog> {
     try {
-      // Validate winners are eligible
-      const eligible = await this.getEligibleParticipants()
-      const eligibleIds = eligible.map(u => u.$id)
-
-      const invalidWinners = winners.filter(id => !eligibleIds.includes(id))
-      if (invalidWinners.length > 0) {
-        throw new Error('Beberapa pemenang tidak eligible atau sudah pernah menang')
+      // Validate winners array
+      if (!winnerIds || winnerIds.length === 0) {
+        throw new Error('Tidak ada pemenang yang dipilih')
       }
 
-      // Create draw log
-      const drawLogDoc = await tablesDB.createRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.DRAW_LOGS,
-        rowId: ID.unique(),
-        data: {
-          winners,
-          staffId: staffId || null,
-          createdAt: new Date().toISOString(),
-        },
-      })
+      // Validate all winners are eligible
+      const eligibleParticipants = await this.getEligibleParticipants()
+      const eligibleIds = eligibleParticipants.map((p) => p.id)
 
-      return this.transformDocument<DrawLog>(drawLogDoc)
+      const invalidWinners = winnerIds.filter((id) => !eligibleIds.includes(id))
+      if (invalidWinners.length > 0) {
+        throw new Error(
+          `Beberapa pemenang tidak eligible atau sudah pernah menang: ${invalidWinners.length} orang`
+        )
+      }
+
+      // Create draw_log entry
+      const { data: drawLogData, error: drawLogError } = await supabase
+        .from('draw_logs')
+        .insert({
+          staff_id: staffId || null,
+        })
+        .select()
+        .single()
+
+      if (drawLogError) {
+        throw drawLogError
+      }
+
+      if (!drawLogData) {
+        throw new Error('Failed to create draw log')
+      }
+
+      // Insert winners into draw_winners table
+      const winnersData = winnerIds.map((participantId) => ({
+        draw_log_id: drawLogData.id,
+        participant_id: participantId,
+      }))
+
+      const { error: winnersError } = await supabase
+        .from('draw_winners')
+        .insert(winnersData)
+
+      if (winnersError) {
+        // Rollback: delete the draw_log
+        await supabase.from('draw_logs').delete().eq('id', drawLogData.id)
+        throw winnersError
+      }
+
+      return drawLogData as DrawLog
     } catch (error) {
       this.handleError(error, 'submitDraw')
     }
   }
 
   /**
-   * Get all draw logs
+   * Get all draw logs (with basic info)
    */
   async getDrawLogs(): Promise<DrawLog[]> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.DRAW_LOGS,
-        queries: [Query.orderDesc('createdAt')],
-      })
+      const { data, error } = await supabase
+        .from('draw_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
 
-      return this.transformDocuments<DrawLog>(response.rows)
+      if (error) {
+        throw error
+      }
+
+      return (data || []) as DrawLog[]
     } catch (error) {
       this.handleError(error, 'getDrawLogs')
     }
@@ -94,40 +140,66 @@ export class DrawsAPI extends BaseAPI {
    */
   async getDrawLogWithDetails(drawLogId: string): Promise<DrawLogWithDetails> {
     try {
-      const drawLogDoc = await tablesDB.getRow({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.DRAW_LOGS,
-        rowId: drawLogId,
-      })
+      // Get draw log
+      const { data: drawLogData, error: drawLogError } = await supabase
+        .from('draw_logs')
+        .select('*')
+        .eq('id', drawLogId)
+        .single()
 
-      const drawLog = this.transformDocument<DrawLog>(drawLogDoc)
+      if (drawLogError) {
+        throw drawLogError
+      }
 
-      // Fetch winner details
-      const winnerDetails = await Promise.all(
-        drawLog.winners.map(async (winnerId) => {
-          const doc = await tablesDB.getRow({
-            databaseId: DATABASE_ID,
-            tableId: TABLES.USERS,
-            rowId: winnerId,
-          })
-          return this.transformDocument<User>(doc)
-        })
-      )
+      if (!drawLogData) {
+        throw new Error('Draw log not found')
+      }
 
-      // Fetch staff details if exists
+      // Get winners with user details using join
+      const { data: winnersData, error: winnersError } = await supabase
+        .from('draw_winners')
+        .select('participant_id')
+        .eq('draw_log_id', drawLogId)
+
+      if (winnersError) {
+        throw winnersError
+      }
+
+      // Get full user details for each winner
+      const winnerIds = (winnersData || []).map((w) => w.participant_id)
+      let winners: User[] = []
+
+      if (winnerIds.length > 0) {
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('*')
+          .in('id', winnerIds)
+
+        if (usersError) {
+          throw usersError
+        }
+
+        winners = (usersData || []) as User[]
+      }
+
+      // Get staff details if staff_id exists
       let staff: User | undefined
-      if (drawLog.staffId) {
-        const staffDoc = await tablesDB.getRow({
-          databaseId: DATABASE_ID,
-          tableId: TABLES.USERS,
-          rowId: drawLog.staffId,
-        })
-        staff = this.transformDocument<User>(staffDoc)
+
+      if (drawLogData.staff_id) {
+        const { data: staffData, error: staffError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', drawLogData.staff_id)
+          .single()
+
+        if (!staffError && staffData) {
+          staff = staffData as User
+        }
       }
 
       return {
-        ...drawLog,
-        winnerDetails,
+        ...(drawLogData as DrawLog),
+        winners,
         staff,
       }
     } catch (error) {
@@ -140,19 +212,101 @@ export class DrawsAPI extends BaseAPI {
    */
   async getLatestDrawLog(): Promise<DrawLog | null> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.DRAW_LOGS,
-        queries: [Query.orderDesc('createdAt'), Query.limit(1)],
-      })
+      const { data, error } = await supabase
+        .from('draw_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      if (response.rows.length === 0) {
-        return null
+      if (error) {
+        throw error
       }
 
-      return this.transformDocument<DrawLog>(response.rows[0]!)
+      return data ? (data as DrawLog) : null
     } catch (error) {
       this.handleError(error, 'getLatestDrawLog')
+    }
+  }
+
+  /**
+   * Get draw history with all details
+   * Returns all draws with their winners
+   */
+  async getDrawHistory(): Promise<DrawLogWithDetails[]> {
+    try {
+      const drawLogs = await this.getDrawLogs()
+
+      // Fetch details for each draw log
+      const drawHistoryPromises = drawLogs.map((log) =>
+        this.getDrawLogWithDetails(log.id)
+      )
+
+      const drawHistory = await Promise.all(drawHistoryPromises)
+
+      return drawHistory
+    } catch (error) {
+      this.handleError(error, 'getDrawHistory')
+    }
+  }
+
+  /**
+   * Check if a participant has won before
+   */
+  async hasParticipantWon(participantId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('draw_winners')
+        .select('id')
+        .eq('participant_id', participantId)
+        .limit(1)
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+
+      return data !== null
+    } catch (error) {
+      this.handleError(error, 'hasParticipantWon')
+    }
+  }
+
+  /**
+   * Get total number of draws conducted
+   */
+  async getTotalDraws(): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('draw_logs')
+        .select('id', { count: 'exact', head: true })
+
+      if (error) {
+        throw error
+      }
+
+      return count || 0
+    } catch (error) {
+      this.handleError(error, 'getTotalDraws')
+    }
+  }
+
+  /**
+   * Get total number of winners across all draws
+   */
+  async getTotalWinners(): Promise<number> {
+    try {
+      const { count, error } = await supabase
+        .from('draw_winners')
+        .select('id', { count: 'exact', head: true })
+
+      if (error) {
+        throw error
+      }
+
+      return count || 0
+    } catch (error) {
+      this.handleError(error, 'getTotalWinners')
     }
   }
 }

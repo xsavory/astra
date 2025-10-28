@@ -1,9 +1,9 @@
-import { tablesDB, Query, DATABASE_ID, TABLES } from './client'
+import { supabase } from './client'
 import { BaseAPI } from './base'
 import type { Event } from 'src/types/schema'
 
 /**
- * Events API
+ * Events API with Supabase
  * Handles event data operations
  */
 export class EventsAPI extends BaseAPI {
@@ -12,17 +12,17 @@ export class EventsAPI extends BaseAPI {
    */
   async getEvent(): Promise<Event> {
     try {
-      const response = await tablesDB.listRows({
-        databaseId: DATABASE_ID,
-        tableId: TABLES.EVENTS,
-        queries: [Query.limit(1)],
-      })
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .limit(1)
+        .single()
 
-      if (response.rows.length === 0) {
-        throw new Error('Event tidak ditemukan')
+      if (error) {
+        throw error
       }
 
-      return this.transformDocument<Event>(response.rows[0]!)
+      return this.ensureData(data, 'Event tidak ditemukan') as Event
     } catch (error) {
       this.handleError(error, 'getEvent')
     }
@@ -34,8 +34,8 @@ export class EventsAPI extends BaseAPI {
   async isEventActive(): Promise<boolean> {
     try {
       const event = await this.getEvent()
-      return event.isActive
-    } catch (error) {
+      return event.is_active
+    } catch {
       return false
     }
   }
@@ -46,8 +46,8 @@ export class EventsAPI extends BaseAPI {
   async getZoomMeetingUrl(): Promise<string | null> {
     try {
       const event = await this.getEvent()
-      return event.zoomMeetingUrl || null
-    } catch (error) {
+      return event.zoom_meeting_url || null
+    } catch {
       return null
     }
   }
