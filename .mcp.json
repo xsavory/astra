@@ -11,6 +11,10 @@
         "mcp-remote",
         "https://www.kibo-ui.com/api/mcp/mcp"
       ]
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=zvksbrznosksestopxlh&features=docs%2Cstorage%2Cbranching%2Cfunctions%2Cdevelopment%2Cdebugging%2Cdatabase%2Caccount"
     }
   }
 }
