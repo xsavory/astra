@@ -137,17 +137,22 @@ After successful check-in, participant landing page (`/participant`) displays:
 #### Navigation Menu
 - **Booth** → `/participant/booth/index`
 - **Collaboration** → `/participant/collaboration/index`
-- **Zoom** → `/participant/zoom/index`
+- **Zoom** → Opens Zoom dialog/drawer (offline participants only)
 
-### 4.3 Zoom Page
+### 4.3 Zoom Dialog/Drawer
 
-**Path:** `/participant/zoom/index`
+**Trigger:** Click "Zoom" menu button on participant landing page (`/participant`)
 
-**Purpose:** Provide access to event Zoom meeting
+**Visibility:** Only shown for **offline participants** (`participant_type = 'offline'`)
+- Online participants do NOT see this menu option
+
+**UI Component:** Dialog/Drawer/Sheet (not a separate page/route)
+
+**Purpose:** Provide quick access to event Zoom meeting for offline participants
 
 **Data Source:**
-- Zoom meeting URL fetched from `events.zoomMeetingUrl` field
-- Query event record on page load
+- Zoom meeting URL fetched from `events.zoom_meeting_url` field
+- Query event record when dialog opens
 
 **Content:**
 - Display Zoom logo (large, centered)
@@ -157,6 +162,7 @@ After successful check-in, participant landing page (`/participant`) displays:
   - Deeplink format: `zoommtg://zoom.us/join?confno=[MEETING_ID]`
   - Fallback to web URL: `https://zoom.us/j/[MEETING_ID]`
 - If Zoom URL not found in database, show message: "Zoom meeting belum tersedia"
+- Close button to dismiss dialog
 
 **UI Example:**
 ```
@@ -170,6 +176,8 @@ After successful check-in, participant landing page (`/participant`) displays:
 │  [Copy URL Button]      │
 │                         │
 │  [Join Zoom Meeting]    │
+│                         │
+│  [Close]                │
 └─────────────────────────┘
 ```
 
@@ -1098,12 +1106,11 @@ CREATE TABLE draw_winners (
 
 /participant
   ├── index         # landing page (with progress & voucher sections)
+  │               # zoom dialog opened from this page (offline only)
   ├── booth/
   │   └── index     # booth list (offline: FAB scanner, online: grid cards)
-  ├── collaboration/
-  │   └── index
-  └── zoom/
-      └── index     # zoom meeting page with URL & join button
+  └── collaboration/
+      └── index     # group/individual ideation management
 
 /staff
   ├── index         # staff landing menu (checkin, draw, helpdesk)

@@ -1,16 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@repo/react-components/ui'
-
-import { LandingBanner } from 'src/components/landing-banner'
+import { Button } from '@repo/react-components/ui'
 
 export const Route = createFileRoute('/')({
-  component: Index,
+  component: Landing,
 })
 
-function Index() {
+function Landing() {
   return (
     <div>
-      Index
+      <div>Landing Page</div>
+      <Button>Login</Button>
     </div>
   )
 }
