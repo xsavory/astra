@@ -8,7 +8,9 @@
     "build": "vite build && tsc",
     "lint": "eslint .",
     "preview": "vite preview",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "seed:participants": "tsx --env-file=.env supabase/scripts/seed-participants.ts",
+    "seed:admin": "tsx --env-file=.env supabase/scripts/seed-admin-staff.ts"
   },
   "dependencies": {
     "@repo/react-components": "workspace:*",
@@ -34,6 +36,7 @@
     "autoprefixer": "^10.4.20",
     "eslint": "^9.13.0",
     "postcss": "^8.5.6",
+    "tsx": "^4.20.6",
     "typescript": "~5.9.2",
     "vite": "^5.4.10"
   }

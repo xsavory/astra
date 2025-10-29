@@ -1,12 +1,12 @@
 // Email Lists for Authentication
 export const ADMIN_EMAILS = [
-  'admin1@astra.com',
-  'admin2@astra.com',
+  'admin1@expert-forum.com',
+  'admin2@expert-forum.com',
 ] as const
 
 export const STAFF_EMAILS = [
-  'staff1@astra.com',
-  'staff2@astra.com',
+  'staff1@expert-forum.com',
+  'staff2@expert-forum.com',
 ] as const
 
 // Booth Completion Thresholds

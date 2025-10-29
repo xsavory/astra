@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import PageLoader from 'src/components/page-loader'
 
-export const Route = createFileRoute('/staff')({
+export const Route = createFileRoute('/staff/')({
   component: StaffIndexPage,
   pendingComponent: PageLoader,
 })

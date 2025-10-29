@@ -1,5 +1,7 @@
--- ==================== Simplified Row Level Security (RLS) Policies ====================
--- Simple, pragmatic approach - avoid overkill complexity
+-- ==================== Expert Forum 2025 - Initial RLS Policies ====================
+-- Migration: 20250129000002_initial_rls
+-- Description: Enable RLS and create policies for all tables
+-- Date: 2025-01-29
 -- Principle: Admin = full access, Staff = limited, Participant = own data
 
 -- ==================== Enable RLS ====================
@@ -13,17 +15,20 @@ ALTER TABLE ideations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE draw_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE draw_winners ENABLE ROW LEVEL SECURITY;
 
--- ==================== Helper Functions ====================
+-- ==================== Events Table ====================
+-- Admin: full access
+-- Staff and Participants: read-only
 
-CREATE OR REPLACE FUNCTION get_current_user_id()
-RETURNS UUID AS $$
-  SELECT id FROM users WHERE auth_id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER;
+CREATE POLICY "Admin full access on events"
+ON events FOR ALL
+TO authenticated
+USING (get_current_user_role() = 'admin')
+WITH CHECK (get_current_user_role() = 'admin');
 
-CREATE OR REPLACE FUNCTION get_current_user_role()
-RETURNS user_role AS $$
-  SELECT role FROM users WHERE auth_id = auth.uid();
-$$ LANGUAGE sql SECURITY DEFINER;
+CREATE POLICY "Anyone authenticated can view events"
+ON events FOR SELECT
+TO authenticated
+USING (true);
 
 -- ==================== Users Table ====================
 -- Admin: full access
@@ -125,7 +130,7 @@ WITH CHECK (
 );
 
 -- ==================== Draw Logs Table ====================
--- Everyone can read, staff can create
+-- Everyone can read, staff/admin can create
 
 CREATE POLICY "Users can view all draw logs"
 ON draw_logs FOR SELECT
@@ -141,7 +146,7 @@ WITH CHECK (
 );
 
 -- ==================== Draw Winners Table ====================
--- Everyone can read, staff can create
+-- Everyone can read, staff/admin can create
 
 CREATE POLICY "Users can view all draw winners"
 ON draw_winners FOR SELECT

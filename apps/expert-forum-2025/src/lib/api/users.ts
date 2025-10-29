@@ -257,22 +257,4 @@ export class UsersAPI extends BaseAPI {
       this.handleError(error, 'deleteUser')
     }
   }
-
-  /**
-   * Get available offline participants (not in any group)
-   */
-  async getAvailableParticipants(): Promise<User[]> {
-    try {
-      // Use the PostgreSQL function we created
-      const { data, error } = await supabase.rpc('get_available_participants')
-
-      if (error) {
-        throw error
-      }
-
-      return data as User[]
-    } catch (error) {
-      this.handleError(error, 'getAvailableParticipants')
-    }
-  }
 }

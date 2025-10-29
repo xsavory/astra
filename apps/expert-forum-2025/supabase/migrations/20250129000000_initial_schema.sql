@@ -1,6 +1,7 @@
--- ==================== Expert Forum 2025 - Database Schema ====================
--- PostgreSQL Schema for Supabase
--- Features: Proper foreign keys, constraints, indexes, triggers, and RLS
+-- ==================== Expert Forum 2025 - Initial Schema Migration ====================
+-- Migration: 20250129000000_initial_schema
+-- Description: Create tables, enums, indexes, and constraints for Expert Forum 2025
+-- Date: 2025-01-29
 
 -- ==================== Enable Extensions ====================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -74,13 +75,11 @@ CREATE TABLE booths (
   question_text TEXT,
   "order" INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Create indexes for booths
 CREATE INDEX idx_booths_order ON booths("order");
-CREATE INDEX idx_booths_online_only ON booths(is_online_only);
-CREATE INDEX idx_booths_offline_only ON booths(is_offline_only);
 
 -- Booth Checkins Table (Many-to-Many: users ↔ booths)
 CREATE TABLE booth_checkins (
@@ -190,14 +189,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ==================== Note: Business Logic Moved to API Layer ====================
--- Functions like calculate_eligibility, get_available_participants, and
--- get_group_member_count have been moved to the API layer for:
--- - Easier debugging and testing
--- - More flexible business logic changes
--- - Better error handling
--- - No database migrations needed for logic changes
-
 -- ==================== Triggers ====================
 
 -- Trigger to auto-update updated_at for all tables
@@ -216,37 +207,9 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_ideations_updated_at BEFORE UPDATE ON ideations
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Note: Business logic validations are now handled in API layer
+-- ==================== Notes ====================
+-- Business logic validations are handled in API layer:
 -- - Eligibility calculation (booth completion thresholds)
 -- - Group size validation (minimum 5 members)
 -- - Available participants filtering
 -- This allows for more flexible business logic and easier debugging
-
--- ==================== Views ====================
-
--- View for participant statistics
-CREATE OR REPLACE VIEW participant_stats AS
-SELECT
-  COUNT(*) FILTER (WHERE role = 'participant') as total_participants,
-  COUNT(*) FILTER (WHERE role = 'participant' AND participant_type = 'offline') as total_offline,
-  COUNT(*) FILTER (WHERE role = 'participant' AND participant_type = 'online') as total_online,
-  COUNT(*) FILTER (WHERE role = 'participant' AND is_checked_in = true) as total_checked_in,
-  COUNT(*) FILTER (WHERE role = 'participant' AND is_checked_in = true AND participant_type = 'offline') as checked_in_offline,
-  COUNT(*) FILTER (WHERE role = 'participant' AND is_checked_in = true AND participant_type = 'online') as checked_in_online,
-  COUNT(*) FILTER (WHERE role = 'participant' AND is_eligible_to_draw = true) as total_eligible_for_draw
-FROM users;
-
--- View for submission statistics
--- All ideations in the table are submitted (submitted_at is NOT NULL)
-CREATE OR REPLACE VIEW submission_stats AS
-SELECT
-  COUNT(*) as total_submissions,
-  COUNT(*) FILTER (WHERE is_group = true) as group_submissions,
-  COUNT(*) FILTER (WHERE is_group = false) as individual_submissions
-FROM ideations;
-
--- ==================== Initial Data ====================
-
--- Insert default event (you'll need to update this)
-INSERT INTO events (name, date, is_active, zoom_meeting_url)
-VALUES ('Expert Forum 2025', '2025-10-27', false, NULL);
