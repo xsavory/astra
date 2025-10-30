@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { QrCode, X, AlertCircle } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 
 import {
   Dialog,
@@ -27,6 +28,7 @@ interface BoothQRScannerDialogProps {
 
 function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps) {
   const isMobile = useIsMobile()
+  const navigate = useNavigate()
 
   const [scanError, setScanError] = useState<string | null>(null)
   const [isScanning, setIsScanning] = useState(false)
@@ -44,16 +46,30 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
     console.log('QR Code scanned:', data)
     console.log('Parsed data:', parsedData)
 
-    // TODO: Implement booth validation and check-in logic
-    // 1. Validate booth ID from QR data
-    // 2. Check if booth already visited
-    // 3. If valid and not visited -> open booth question dialog
-    // 4. If already visited -> show error message
-    // 5. If invalid -> show error message
+    try {
+      // Parse URL from QR code
+      const url = new URL(data)
+      const boothId = url.searchParams.get('booth_id')
 
-    // Close dialog after successful scan
-    onOpenChange(false)
-  }, [onOpenChange])
+      if (boothId) {
+        // Close scanner dialog
+        onOpenChange(false)
+
+        // Navigate to participant/booth page with booth_id query parameter
+        // This will trigger booth-detail-dialog to open
+        navigate({
+          to: '/participant/booth',
+          search: { booth_id: boothId },
+        })
+      } else {
+        setScanError('QR Code tidak valid. Booth ID tidak ditemukan.')
+      }
+    } catch (error) {
+      // If URL parsing fails, show error
+      console.error('Failed to parse QR code URL:', error)
+      setScanError('QR Code tidak valid. Pastikan Anda scan QR code booth yang benar.')
+    }
+  }, [onOpenChange, navigate])
 
   // Handler: Scanner error
   const handleScanError = useCallback((error: string | Error) => {

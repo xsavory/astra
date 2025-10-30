@@ -7,9 +7,19 @@ import BoothOnlinePage from 'src/components/booth-online-page'
 import api from 'src/lib/api'
 import type { User } from 'src/types/schema'
 
+// Define search params type
+type BoothSearchParams = {
+  booth_id?: string
+}
+
 export const Route = createFileRoute('/participant/booth')({
   component: ParticipantBoothPage,
   pendingComponent: PageLoader,
+  validateSearch: (search: Record<string, unknown>): BoothSearchParams => {
+    return {
+      booth_id: typeof search.booth_id === 'string' ? search.booth_id : undefined,
+    }
+  },
 })
 
 function ParticipantBoothPage() {

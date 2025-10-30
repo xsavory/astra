@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { CheckCircle, Building2 } from 'lucide-react'
 
 import {
@@ -10,6 +11,7 @@ import {
   Badge,
   Skeleton,
 } from '@repo/react-components/ui'
+import BoothDetailDialog from './booth-detail-dialog'
 import api from 'src/lib/api'
 import type { User, Booth, BoothCheckin } from 'src/types/schema'
 
@@ -44,6 +46,9 @@ function BoothOnlinePageSkeleton() {
 }
 
 function BoothOnlinePage({ user }: BoothOnlinePageProps) {
+  const navigate = useNavigate()
+  const searchParams = useSearch({ strict: false }) as { booth_id?: string }
+
   // Fetch all booths
   const { data: booths = [], isLoading: isLoadingBooths } = useQuery<Booth[]>({
     queryKey: ['booths'],
@@ -114,8 +119,10 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                     : 'hover:border-primary/50'
                 }`}
                 onClick={() => {
-                  // TODO: Open booth detail drawer/dialog
-                  console.log('Open booth:', booth.id, 'Completed:', isCompleted)
+                  navigate({
+                    to: '/participant/booth',
+                    search: { booth_id: booth.id },
+                  })
                 }}
               >
                 <CardHeader className="pb-3">
@@ -172,6 +179,21 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
           })}
         </div>
       )}
+
+      {/* Booth Detail Dialog - Controlled by URL query params */}
+      <BoothDetailDialog
+        open={!!searchParams.booth_id}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            // Clear booth_id when closing
+            navigate({
+              to: '/participant/booth',
+              search: {},
+              replace: true,
+            })
+          }
+        }}
+      />
     </div>
   )
 }

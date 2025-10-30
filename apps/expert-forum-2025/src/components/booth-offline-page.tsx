@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { QrCode, CheckCircle, Clock, ChevronRight } from 'lucide-react'
 
 import {
@@ -12,6 +13,7 @@ import {
   Skeleton,
 } from '@repo/react-components/ui'
 import BoothQRScannerDialog from './booth-qr-scanner-dialog'
+import BoothDetailDialog from './booth-detail-dialog'
 import api from 'src/lib/api'
 import type { User, BoothCheckin } from 'src/types/schema'
 
@@ -50,6 +52,8 @@ function BoothOfflinePageSkeleton() {
 }
 
 function BoothOfflinePage({ user }: BoothOfflinePageProps) {
+  const navigate = useNavigate()
+  const searchParams = useSearch({ strict: false }) as { booth_id?: string }
   const [isScannerOpen, setIsScannerOpen] = useState(false)
 
   // Fetch booth checkins for current user
@@ -114,8 +118,10 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
               key={checkin.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => {
-                // TODO: Open booth detail drawer
-                console.log('Open booth detail:', checkin.id)
+                navigate({
+                  to: '/participant/booth',
+                  search: { booth_id: checkin.booth_id },
+                })
               }}
             >
               <CardHeader className="pb-3">
@@ -166,6 +172,21 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
       <BoothQRScannerDialog
         open={isScannerOpen}
         onOpenChange={setIsScannerOpen}
+      />
+
+      {/* Booth Detail Dialog - Controlled by URL query params */}
+      <BoothDetailDialog
+        open={!!searchParams.booth_id}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            // Clear booth_id when closing
+            navigate({
+              to: '/participant/booth',
+              search: {},
+              replace: true,
+            })
+          }
+        }}
       />
     </div>
   )
