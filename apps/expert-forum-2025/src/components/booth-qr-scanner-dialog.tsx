@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { QrCode, X, AlertCircle } from 'lucide-react'
 
 import {
@@ -16,8 +16,9 @@ import {
   Button,
   Alert,
   AlertDescription,
+  QRCodeScanner
 } from '@repo/react-components/ui'
-import { QRCodeScanner } from '@repo/react-components/ui'
+import { useIsMobile } from '@repo/react-components/hooks'
 
 interface BoothQRScannerDialogProps {
   open: boolean
@@ -25,32 +26,21 @@ interface BoothQRScannerDialogProps {
 }
 
 function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps) {
-  const [isDesktop, setIsDesktop] = useState(false)
-  const [scannerReady, setScannerReady] = useState(false)
+  const isMobile = useIsMobile()
+
   const [scanError, setScanError] = useState<string | null>(null)
-
-  // Detect screen size
-  useEffect(() => {
-    const checkDesktop = () => {
-      setIsDesktop(window.innerWidth >= 768) // md breakpoint
-    }
-
-    checkDesktop()
-    window.addEventListener('resize', checkDesktop)
-
-    return () => window.removeEventListener('resize', checkDesktop)
-  }, [])
+  const [isScanning, setIsScanning] = useState(false)
 
   // Reset states when dialog opens/closes
   useEffect(() => {
     if (!open) {
-      setScannerReady(false)
       setScanError(null)
+      setIsScanning(false)
     }
   }, [open])
 
-  // Handle QR scan
-  const handleScan = (data: string, parsedData?: unknown) => {
+  // Handler: QR Code scan
+  const handleScan = useCallback((data: string, parsedData?: unknown) => {
     console.log('QR Code scanned:', data)
     console.log('Parsed data:', parsedData)
 
@@ -60,28 +50,37 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
     // 3. If valid and not visited -> open booth question dialog
     // 4. If already visited -> show error message
     // 5. If invalid -> show error message
-  }
 
-  // Handle scanner errors
-  const handleScanError = (error: string | Error) => {
+    // Close dialog after successful scan
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  // Handler: Scanner error
+  const handleScanError = useCallback((error: string | Error) => {
     const errorMessage = typeof error === 'string' ? error : error.message
     console.error('Scanner error:', errorMessage)
     setScanError(errorMessage)
-  }
+  }, [])
 
-  // Scanner content component
-  const ScannerContent = () => (
+  // Handler: Scanner ready
+  const handleScannerReady = useCallback(() => {
+    setScanError(null)
+  }, [])
+
+  // Handler: Scanning state change
+  const handleScanningChange = useCallback((scanning: boolean) => {
+    setIsScanning(scanning)
+  }, [])
+
+  // Handler: Idle timeout
+  const handleIdleTimeout = useCallback(() => {
+    console.info('⏱️ Scanner idle timeout - closing modal')
+    onOpenChange(false)
+  }, [onOpenChange])
+
+  // Scanner content - Memoized to prevent unnecessary re-renders
+  const scannerContent = useMemo(() => (
     <div className="space-y-4">
-      {/* Scanner Status */}
-      {!scannerReady && !scanError && (
-        <Alert>
-          <QrCode className="size-4" />
-          <AlertDescription>
-            Memuat kamera...
-          </AlertDescription>
-        </Alert>
-      )}
-
       {/* Scanner Error */}
       {scanError && (
         <Alert variant="destructive">
@@ -93,26 +92,33 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
       )}
 
       {/* Scanner View */}
-      <div className="relative aspect-square w-full max-w-md mx-auto overflow-hidden rounded-lg bg-black">
-        {open && (
-          <QRCodeScanner
-            open={open}
-            onScan={handleScan}
-            onError={handleScanError}
-            onScannerReady={() => {
-              setScannerReady(true)
-              setScanError(null)
-            }}
-            preferredCamera="environment"
-            highlightScanRegion={true}
-            highlightCodeOutline={true}
-            maxScansPerSecond={5}
-          />
+      <div className="relative w-full max-w-md mx-auto overflow-hidden rounded-lg bg-black" style={{ height: '500px' }}>
+        <QRCodeScanner
+          open={open}
+          maxScansPerSecond={1}
+          onScan={handleScan}
+          onError={handleScanError}
+          onScannerReady={handleScannerReady}
+          onScanningChange={handleScanningChange}
+          onIdleTimeout={handleIdleTimeout}
+          preferredCamera="environment"
+          highlightScanRegion={true}
+          highlightCodeOutline={true}
+        />
+
+        {/* Loading State */}
+        {!isScanning && !scanError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+            <div className="text-center text-white">
+              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
+              <p className="text-sm">Memuat kamera...</p>
+            </div>
+          </div>
         )}
       </div>
 
       {/* Instructions */}
-      {scannerReady && !scanError && (
+      {isScanning && !scanError && (
         <div className="text-center space-y-2">
           <p className="text-sm font-medium">Arahkan kamera ke QR Code booth</p>
           <p className="text-xs text-muted-foreground">
@@ -121,23 +127,34 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
         </div>
       )}
     </div>
-  )
+  ), [open, scanError, isScanning, handleScan, handleScanError, handleScannerReady, handleScanningChange, handleIdleTimeout])
 
   // Render Dialog for desktop
-  if (isDesktop) {
+  if (!isMobile) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <QrCode className="size-5" />
-              Scan Booth QR Code
+            <DialogTitle className="flex items-center justify-between mr-6">
+              <div className="flex items-center gap-3">
+                <QrCode className="size-5" />
+                Scan Booth QR Code
+              </div>
+              {/* Scanner Active Indicator */}
+              {isScanning && (
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                  <span className="text-green-600 text-sm font-medium">
+                    Active
+                  </span>
+                </div>
+              )}
             </DialogTitle>
             <DialogDescription>
               Scan QR code pada booth untuk check-in
             </DialogDescription>
           </DialogHeader>
-          <ScannerContent />
+          {scannerContent}
         </DialogContent>
       </Dialog>
     )
@@ -148,16 +165,27 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <DrawerHeader className="text-left">
-          <DrawerTitle className="flex items-center gap-2">
-            <QrCode className="size-5" />
-            Scan Booth QR Code
+          <DrawerTitle className="flex items-center justify-between mr-6">
+            <div className="flex items-center gap-3">
+              <QrCode className="size-5" />
+              Scan Booth QR Code
+            </div>
+            {/* Scanner Active Indicator */}
+            {isScanning && (
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                <span className="text-green-600 text-sm font-medium">
+                  Active
+                </span>
+              </div>
+            )}
           </DrawerTitle>
           <DrawerDescription>
             Scan QR code pada booth untuk check-in
           </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
-          <ScannerContent />
+          {scannerContent}
         </div>
         <div className="p-4 border-t">
           <DrawerClose asChild>
