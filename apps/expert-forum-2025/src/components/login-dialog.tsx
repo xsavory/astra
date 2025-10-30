@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -22,9 +22,36 @@ export default function LoginDialog() {
   const [showPasswordField, setShowPasswordField] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isLoggingIn = useRef(false)
 
-  const { login } = useAuth()
+  const { login, user, isAuthenticated, isLoading: isAuthLoading } = useAuth()
   const navigate = useNavigate()
+
+  // Listen to user changes after login
+  useEffect(() => {
+    // Only handle redirect if we're in the middle of login process
+    if (!isLoggingIn.current || !isAuthenticated || !user || isAuthLoading) {
+      return
+    }
+
+    // Reset flag
+    isLoggingIn.current = false
+    setIsLoading(false)
+
+    // Close dialog
+    setOpen(false)
+
+    // Redirect based on role
+    if (user.role === 'admin') {
+      navigate({ to: '/admin' })
+    } else if (user.role === 'staff') {
+      navigate({ to: '/staff' })
+    } else if (user.role === 'participant') {
+      navigate({ to: '/participant' })
+    } else {
+      navigate({ to: '/' })
+    }
+  }, [user, isAuthenticated, navigate, isAuthLoading])
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,26 +81,18 @@ export default function LoginDialog() {
   const handleParticipantLogin = async () => {
     setIsLoading(true)
     setError(null)
+    isLoggingIn.current = true
 
     try {
       // Use hardcoded password from env for participants
       const participantPassword = import.meta.env.VITE_PARTICIPANT_DEFAULT_PASSWORD
-      const { user } = await login(email, participantPassword)
+      await login(email, participantPassword)
 
-      // Close dialog and redirect
-      setOpen(false)
-
-      // Redirect based on role
-      if (user.role === 'participant') {
-        navigate({ to: '/participant' })
-      } else {
-        // Fallback if somehow user is not a participant
-        navigate({ to: '/' })
-      }
+      // Redirect will be handled by useEffect when user state updates
     } catch (err) {
       console.error('Participant login error:', err)
       setError(err instanceof Error ? err.message : 'Login gagal. Silakan coba lagi.')
-    } finally {
+      isLoggingIn.current = false
       setIsLoading(false)
     }
   }
@@ -81,26 +100,16 @@ export default function LoginDialog() {
   const handleAdminStaffLogin = async () => {
     setIsLoading(true)
     setError(null)
+    isLoggingIn.current = true
 
     try {
-      const { user } = await login(email, password)
+      await login(email, password)
 
-      // Close dialog and redirect
-      setOpen(false)
-
-      // Redirect based on role
-      if (user.role === 'admin') {
-        navigate({ to: '/admin' })
-      } else if (user.role === 'staff') {
-        navigate({ to: '/staff' })
-      } else {
-        // Fallback
-        navigate({ to: '/' })
-      }
+      // Redirect will be handled by useEffect when user state updates
     } catch (err) {
       console.error('Admin/Staff login error:', err)
       setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password Anda.')
-    } finally {
+      isLoggingIn.current = false
       setIsLoading(false)
     }
   }

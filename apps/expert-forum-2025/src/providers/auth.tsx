@@ -4,63 +4,79 @@ import type { User } from 'src/types/schema';
 
 import { AuthContext } from 'src/contexts/auth';
 
-const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const isInitialized = useRef(false);
-  const initPromise = useRef<Promise<User | null> | null>(null);
-  const userRef = useRef<User | null>(null);
+// Module-level state to persist across React StrictMode remounts
+// These survive component unmount/remount cycles
+let cachedUser: User | null = null;
+let isInitialized = false;
+let initPromise: Promise<User | null> | null = null;
 
-  // Sync userRef with user state
+const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // Initialize state from cached value to maintain data across remounts
+  const [user, setUser] = useState<User | null>(() => cachedUser);
+  const [isLoading, setIsLoading] = useState(true);
+  const userRef = useRef<User | null>(cachedUser);
+
+  // Sync userRef and cachedUser with user state
   useEffect(() => {
     userRef.current = user;
+    cachedUser = user;
   }, [user]);
 
   const initAuth = useCallback(async () => {
-    // Use ref to get fresh user value, not closure
-    const currentUser = userRef.current;
+    // If initialization is in progress, return the same promise
+    // This MUST be the first check to prevent race conditions
+    if (initPromise) {
+      return initPromise;
+    }
+
+    // Use cached value to get fresh user value
+    const currentUser = cachedUser;
 
     // If already initialized and has user, return cached user
-    if (isInitialized.current && currentUser) {
+    if (isInitialized && currentUser) {
       return currentUser;
     }
 
     // If already initialized but user is null (logged out), don't re-fetch
-    if (isInitialized.current && currentUser === null) {
+    if (isInitialized && currentUser === null) {
       return null;
-    }
-
-    // If initialization is in progress, return the same promise
-    if (initPromise.current) {
-      return initPromise.current;
     }
 
     // Start new initialization
     setIsLoading(true);
 
-    initPromise.current = (async () => {
+    initPromise = (async () => {
       try {
         const userData = await api.auth.getCurrentUser();
+
+        // Update module-level cache IMMEDIATELY before state update
+        // This ensures cache is in sync even if setState is delayed
+        cachedUser = userData;
+        isInitialized = true;
+
         setUser(userData);
-        isInitialized.current = true;
         return userData;
       } catch (error) {
-        console.error('Error initializing auth:', error);
+        console.error('[AuthProvider] Error initializing auth:', error);
+
+        // Update module-level cache IMMEDIATELY before state update
+        cachedUser = null;
+        isInitialized = true;
+
         setUser(null);
-        isInitialized.current = true;
         return null;
       } finally {
         setIsLoading(false);
-        initPromise.current = null;
+        initPromise = null;
       }
     })();
 
-    return initPromise.current;
+    return initPromise;
   }, []);
 
   // Initialize auth once on mount
   useEffect(() => {
-    if (!isInitialized.current) {
+    if (!isInitialized) {
       initAuth();
     }
   }, [initAuth]);
@@ -69,15 +85,20 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const unsubscribe = api.auth.subscribeToAuthChanges((event, userData) => {
       if (event === 'SIGNED_OUT') {
-        console.log('Auth event: SIGNED_OUT, clearing user');
+        // Update module-level cache first
+        cachedUser = null;
+        isInitialized = false;
+
         setUser(null);
         setIsLoading(false);
-        isInitialized.current = false;
         return;
       }
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        console.log(`Auth event: ${event}, updating user`);
+        // Update module-level cache first
+        cachedUser = userData;
+        isInitialized = true;
+
         setUser(userData);
         setIsLoading(false);
       }
@@ -89,14 +110,13 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = useCallback(async (email: string, password?: string) => {
     setIsLoading(true);
     try {
-      const result = await api.auth.login({ email, password });
-      setUser(result.user);
-      return result;
+      await api.auth.login({ email, password });
+      // User will be set via SIGNED_IN event callback
+      // Don't set isLoading to false here - let the callback handle it
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
-    } finally {
       setIsLoading(false);
+      throw error;
     }
   }, []);
 
@@ -106,12 +126,12 @@ const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await api.auth.logout();
       setUser(null);
-      isInitialized.current = false;
+      isInitialized = false;
     } catch (error) {
       console.error('Logout error:', error);
       // Even on error, clear user state
       setUser(null);
-      isInitialized.current = false;
+      isInitialized = false;
     } finally {
       setIsLoading(false);
     }

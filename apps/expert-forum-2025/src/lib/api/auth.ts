@@ -9,11 +9,12 @@ import type { User, LoginInput } from 'src/types/schema'
 export class AuthAPI extends BaseAPI {
   /**
    * Login user with email and password
+   * User data will be populated via SIGNED_IN event in subscribeToAuthChanges
    */
-  async login(credentials: LoginInput): Promise<{ user: User }> {
+  async login(credentials: LoginInput): Promise<void> {
     try {
-      // Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // Sign in with Supabase Auth only
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email: credentials.email,
         password: credentials.password!,
       })
@@ -22,26 +23,8 @@ export class AuthAPI extends BaseAPI {
         throw authError
       }
 
-      if (!authData.user) {
-        throw new Error('Authentication failed')
-      }
-
-      // Fetch user data from users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', authData.user.id)
-        .single()
-
-      if (userError) {
-        throw userError
-      }
-
-      if (!userData) {
-        throw new Error('User data not found')
-      }
-
-      return { user: userData as User }
+      // User data will be fetched and set via SIGNED_IN event callback
+      // This prevents duplicate fetch and maintains single source of truth
     } catch (error) {
       this.handleError(error, 'login')
     }
@@ -75,7 +58,7 @@ export class AuthAPI extends BaseAPI {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
       if (sessionError) {
-        console.error('Error getting session:', sessionError)
+        console.error('[AuthAPI] Error getting session:', sessionError)
         throw sessionError
       }
 
@@ -91,13 +74,13 @@ export class AuthAPI extends BaseAPI {
         .single()
 
       if (userError || !userData) {
-        console.error('Error fetching user data:', userError)
+        console.error('[AuthAPI] Error fetching user data:', userError)
         return null
       }
 
       return userData as User
     } catch(error) {
-      console.error('Error getting current user:', error)
+      console.error('[AuthAPI] Error getting current user:', error)
       // Return null if no session exists or any error occurs
       return null
     }
