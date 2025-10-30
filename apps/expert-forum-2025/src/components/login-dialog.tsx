@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
+import { useNavigate } from '@tanstack/react-router'
 import {
   Button,
   Input,
@@ -12,6 +13,7 @@ import {
   DialogTrigger,
 } from '@repo/react-components/ui'
 import { requiresPasswordInput } from 'src/lib/constants'
+import useAuth from 'src/hooks/use-auth'
 
 export default function LoginDialog() {
   const [open, setOpen] = useState(false)
@@ -19,9 +21,14 @@ export default function LoginDialog() {
   const [password, setPassword] = useState('')
   const [showPasswordField, setShowPasswordField] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
     if (!email) return
 
@@ -36,6 +43,7 @@ export default function LoginDialog() {
 
   const handlePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
     if (!password) return
 
@@ -43,24 +51,58 @@ export default function LoginDialog() {
     handleAdminStaffLogin()
   }
 
-  const handleParticipantLogin = () => {
+  const handleParticipantLogin = async () => {
     setIsLoading(true)
-    // TODO: Implement participant login with hardcoded password
-    console.log('Participant login:', email)
-    setTimeout(() => {
+    setError(null)
+
+    try {
+      // Use hardcoded password from env for participants
+      const participantPassword = import.meta.env.VITE_PARTICIPANT_DEFAULT_PASSWORD
+      const { user } = await login(email, participantPassword)
+
+      // Close dialog and redirect
+      setOpen(false)
+
+      // Redirect based on role
+      if (user.role === 'participant') {
+        navigate({ to: '/participant' })
+      } else {
+        // Fallback if somehow user is not a participant
+        navigate({ to: '/' })
+      }
+    } catch (err) {
+      console.error('Participant login error:', err)
+      setError(err instanceof Error ? err.message : 'Login gagal. Silakan coba lagi.')
+    } finally {
       setIsLoading(false)
-      // TODO: Redirect to /participant
-    }, 1000)
+    }
   }
 
-  const handleAdminStaffLogin = () => {
+  const handleAdminStaffLogin = async () => {
     setIsLoading(true)
-    // TODO: Implement admin/staff login with password
-    console.log('Admin/Staff login:', { email, password })
-    setTimeout(() => {
+    setError(null)
+
+    try {
+      const { user } = await login(email, password)
+
+      // Close dialog and redirect
+      setOpen(false)
+
+      // Redirect based on role
+      if (user.role === 'admin') {
+        navigate({ to: '/admin' })
+      } else if (user.role === 'staff') {
+        navigate({ to: '/staff' })
+      } else {
+        // Fallback
+        navigate({ to: '/' })
+      }
+    } catch (err) {
+      console.error('Admin/Staff login error:', err)
+      setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password Anda.')
+    } finally {
       setIsLoading(false)
-      // TODO: Redirect based on role
-    }, 1000)
+    }
   }
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -89,6 +131,12 @@ export default function LoginDialog() {
         </DialogHeader>
 
         <div className="space-y-4">
+          {error && (
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
           {!showPasswordField ? (
             // Email input step
             <form onSubmit={handleEmailSubmit} className="space-y-4">

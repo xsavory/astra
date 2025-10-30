@@ -9,6 +9,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const noOpLock = async (__name: string, __acquireTimeout: number, fn: () => Promise<any>) => {
+  return await fn()
+}
+
 // Create Supabase client with TypeScript support
 export const supabase: SupabaseClient<Database> = createClient<Database>(
   supabaseUrl,
@@ -19,6 +24,7 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
       autoRefreshToken: true,
       detectSessionInUrl: true,
       storage: localStorage,
+      lock: noOpLock,
     },
     realtime: {
       params: {

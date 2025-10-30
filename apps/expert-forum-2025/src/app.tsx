@@ -2,6 +2,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router'
 
 import PageLoader from 'src/components/page-loader'
 import { routeTree } from './routeTree.gen'
+import useAuth from 'src/hooks/use-auth'
 
 // Register the router instance for type safety
 declare module '@tanstack/react-router' {
@@ -13,16 +14,18 @@ declare module '@tanstack/react-router' {
 // Create a new router instance
 const router = createRouter({
   routeTree,
-  context: {},
-  scrollRestoration: true,
-  defaultPreload: 'intent',
-  defaultPreloadDelay: 100,
+  context: { auth: undefined },
   defaultPendingComponent: PageLoader,
+  defaultPreload: "intent",
+  scrollRestoration: true,
+  defaultStructuralSharing: true,
+  defaultPreloadStaleTime: 100,
 })
 
 export default function AppRouter() {
+  const auth = useAuth()
 
   return (
-    <RouterProvider router={router} />
+    <RouterProvider router={router} context={{ auth }} />
   )
 }

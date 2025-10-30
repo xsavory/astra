@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@repo/react-components/provider'
-import { AuthProvider } from 'src/contexts/auth'
+import AuthProvider from 'src/providers/auth'
 
 import App from 'src/app'
 

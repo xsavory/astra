@@ -1,9 +1,15 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { Outlet, createRootRouteWithContext } from '@tanstack/react-router'
 
-export const Route = createRootRoute({
+import type { AuthContextType } from 'src/contexts/auth'
+
+interface RootRouterContext {
+  auth: AuthContextType | undefined,
+}
+
+export const Route = createRootRouteWithContext<RootRouterContext>()({
   component: () => (
-    <main className="min-h-screen bg-background">
+    <>
       <Outlet />
-    </main>
+    </>
   ),
 })
