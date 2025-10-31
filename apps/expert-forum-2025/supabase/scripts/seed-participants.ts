@@ -7,7 +7,9 @@
  * Environment variables required:
  *   VITE_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   VITE_PARTICIPANT_DEFAULT_PASSWORD (optional, defaults to 'expertforum2025')
+ *
+ * NOTE: Each participant will get a randomly generated 8-character alphanumeric password
+ * Passwords are displayed in the console output for distribution to participants
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -24,8 +26,6 @@ interface ParticipantData {
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
 // @ts-expect-error: Defined in environment
 const SUPABASE_SERVICE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
-// @ts-expect-error: Defined in environment
-const DEFAULT_PASSWORD = process.env.VITE_PARTICIPANT_DEFAULT_PASSWORD || 'expertforum2025'
 const BATCH_SIZE = 50
 
 // Sample data - replace this with your actual data or load from JSON
@@ -66,6 +66,33 @@ const PARTICIPANTS_DATA: ParticipantData[] = [
     division: 'Strategy',
   },
 ]
+
+/**
+ * Generate random 8-character alphanumeric password
+ * No special characters for ease of input
+ */
+function generatePassword(): string {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789' // Excluding ambiguous chars like 0, O, 1, l, I
+  let password = ''
+
+  // Ensure at least one uppercase, one lowercase, and one number
+  const upper = chars.charAt(Math.floor(Math.random() * 26))
+  const lower = chars.charAt(26 + Math.floor(Math.random() * 23))
+  const number = chars.charAt(49 + Math.floor(Math.random() * 8))
+
+  password = upper + lower + number
+
+  // Fill remaining 5 characters randomly
+  for (let i = 0; i < 5; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+
+  // Shuffle the password
+  return password
+    .split('')
+    .sort(() => Math.random() - 0.5)
+    .join('')
+}
 
 async function main() {
   console.log('\n========================================')
@@ -123,38 +150,36 @@ async function main() {
     }
   }
 
-  console.log(`Valid participants: ${validParticipants.length}\n`)
+  const onlineCount = validParticipants.filter((p) => p.participant_type === 'online').length
+  const offlineCount = validParticipants.filter((p) => p.participant_type === 'offline').length
+  console.log(
+    `Valid participants: ${validParticipants.length} (${onlineCount} online, ${offlineCount} offline)\n`
+  )
 
   // Process participants
   let success = 0
   let failed = 0
-  let skipped = 0
   const errors: Array<{ email: string; error: string }> = []
+  const credentials: Array<{ name: string; email: string; password: string }> = []
 
   console.log('Starting seed process...\n')
+  console.log('========================================')
+  console.log('PARTICIPANT CREDENTIALS')
+  console.log('========================================\n')
 
   for (let i = 0; i < validParticipants.length; i++) {
     const participant = validParticipants[i]
     const progress = `[${i + 1}/${validParticipants.length}]`
+    const typePrefix = participant.participant_type === 'online' ? 'ONLINE' : 'OFFLINE'
+
+    // Generate random password for this participant
+    const password = generatePassword()
 
     try {
-      // Check if email already exists
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('email', participant.email)
-        .maybeSingle()
-
-      if (existingUser) {
-        console.log(`${progress} SKIP: ${participant.email} (already exists)`)
-        skipped++
-        continue
-      }
-
-      // Create Supabase Auth user
+      // Create Supabase Auth user with generated password
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: participant.email,
-        password: DEFAULT_PASSWORD,
+        password: password,
         email_confirm: true,
       })
 
@@ -177,11 +202,21 @@ async function main() {
         throw dbError
       }
 
-      console.log(`${progress} OK: ${participant.name} (${participant.email})`)
+      // Log credentials for distribution
+      console.log(`${progress} [${typePrefix}] ${participant.name}`)
+      console.log(`  Email:    ${participant.email}`)
+      console.log(`  Password: ${password}\n`)
+
+      credentials.push({
+        name: participant.name,
+        email: participant.email,
+        password: password,
+      })
+
       success++
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      console.error(`${progress} FAIL: ${participant.email} - ${errorMessage}`)
+      console.error(`${progress} FAIL: ${participant.email} - ${errorMessage}\n`)
       failed++
       errors.push({ email: participant.email, error: errorMessage })
     }
@@ -194,12 +229,11 @@ async function main() {
   }
 
   // Summary
-  console.log('\n========================================')
+  console.log('========================================')
   console.log('Summary')
   console.log('========================================')
   console.log(`Success: ${success}`)
   console.log(`Failed:  ${failed}`)
-  console.log(`Skipped: ${skipped}`)
   console.log('========================================\n')
 
   if (errors.length > 0) {
@@ -209,6 +243,22 @@ async function main() {
     })
     console.log('')
   }
+
+  // Export credentials to CSV format for easy distribution
+  if (credentials.length > 0) {
+    console.log('========================================')
+    console.log('CREDENTIALS CSV FORMAT')
+    console.log('========================================\n')
+    console.log('Name,Email,Password')
+    credentials.forEach(({ name, email, password }) => {
+      console.log(`"${name}","${email}","${password}"`)
+    })
+    console.log('')
+  }
+
+  console.log('IMPORTANT: Save these credentials securely!')
+  console.log('Passwords are randomly generated and not stored in the database.')
+  console.log('Participants will need these passwords to login.\n')
 
   // @ts-expect-error: Running with script
   process.exit(failed > 0 ? 1 : 0)

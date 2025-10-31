@@ -15,6 +15,7 @@ export class BoothsAPI extends BaseAPI {
 
   /**
    * Get all booths ordered by order field
+   * Questions are stored as JSONB array and returned as string[]
    */
   async getBooths(): Promise<Booth[]> {
     try {
@@ -27,14 +28,28 @@ export class BoothsAPI extends BaseAPI {
         throw error
       }
 
-      return (data || []).map((booth) => booth as Booth)
+      return (data || []).map((booth) => this.transformBooth(booth))
     } catch (error) {
       this.handleError(error, 'getBooths')
     }
   }
 
   /**
+   * Transform database booth to schema Booth
+   * Converts JSONB questions to string array
+   */
+  private transformBooth(dbBooth: DBBooth): Booth {
+    return {
+      ...dbBooth,
+      questions: Array.isArray(dbBooth.questions)
+        ? dbBooth.questions as string[]
+        : [],
+    } as Booth
+  }
+
+  /**
    * Get booth by ID
+   * Questions are stored as JSONB array and returned as string[]
    */
   async getBooth(boothId: string): Promise<Booth> {
     try {
@@ -48,43 +63,24 @@ export class BoothsAPI extends BaseAPI {
         throw error
       }
 
-      return this.ensureData(data, 'Booth not found') as Booth
+      const booth = this.ensureData(data, 'Booth not found') as DBBooth
+      return this.transformBooth(booth)
     } catch (error) {
       this.handleError(error, 'getBooth')
     }
   }
 
   /**
-   * Get booths for specific participant type
+   * Get a random question from booth's questions array
+   * Frontend helper to randomly select one question for participant
    */
-  async getBoothsForParticipantType(
-    participantType: 'online' | 'offline'
-  ): Promise<Booth[]> {
-    try {
-      let query = supabase
-        .from('booths')
-        .select('*')
-        .order('order', { ascending: true })
-
-      // Filter booths based on participant type
-      if (participantType === 'online') {
-        // Online participants: exclude offline-only booths
-        query = query.eq('is_offline_only', false)
-      } else {
-        // Offline participants: exclude online-only booths
-        query = query.eq('is_online_only', false)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        throw error
-      }
-
-      return (data || []).map((booth) => booth as Booth)
-    } catch (error) {
-      this.handleError(error, 'getBoothsForParticipantType')
+  getRandomQuestion(booth: Booth): string {
+    if (!booth.questions || booth.questions.length === 0) {
+      throw new Error('Booth has no questions')
     }
+
+    const randomIndex = Math.floor(Math.random() * booth.questions.length)
+    return booth.questions[randomIndex] as string
   }
 
   /**

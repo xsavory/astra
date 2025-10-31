@@ -32,10 +32,11 @@ export interface User {
   event_checkin_time?: string | null
   event_checkin_method?: CheckinMethod | null
   checked_in_by?: string | null // Staff ID who checked in the participant
-  group_id?: string | null
   created_at: string
   updated_at: string
 }
+
+// Note: group_id removed - participants can be in multiple groups via group_members table
 
 // Create/Update User Input Types
 export interface CreateUserInput {
@@ -61,7 +62,7 @@ export interface Booth {
   name: string
   description?: string | null
   poster_url?: string | null
-  question_text?: string | null
+  questions: string[] // Array of question strings (stored as JSONB in database)
   order: number
   created_at: string
   updated_at: string
@@ -101,10 +102,19 @@ export interface Group {
   updated_at: string
 }
 
-// Group with populated participants
+// Group member (junction table entry)
+export interface GroupMember {
+  id: string
+  group_id: string
+  participant_id: string
+  joined_at: string
+}
+
+// Group with populated participants (via group_members junction table)
 export interface GroupWithDetails extends Group {
   creator?: User
-  participants?: User[]
+  members?: GroupMember[] // Junction table entries
+  participants?: User[] // Populated participant data
 }
 
 // Create/Update Group Input
@@ -114,6 +124,12 @@ export interface CreateGroupInput {
 
 export interface UpdateGroupInput {
   name?: string
+}
+
+// Group validation input for ideation submission
+export interface ValidateGroupSubmissionInput {
+  group_id: string
+  company_case: string
 }
 
 // ==================== Ideation Types ====================

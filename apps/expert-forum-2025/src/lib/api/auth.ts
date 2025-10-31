@@ -5,10 +5,11 @@ import type { User, LoginInput } from 'src/types/schema'
 /**
  * Authentication API with Supabase Auth
  * Handles user login, logout, session management, and realtime auth state
+ * Supports both password-based login (staff, participants) and OTP login (admins)
  */
 export class AuthAPI extends BaseAPI {
   /**
-   * Login user with email and password
+   * Login user with email and password (staff and participants)
    * User data will be populated via SIGNED_IN event in subscribeToAuthChanges
    */
   async login(credentials: LoginInput): Promise<void> {
@@ -27,6 +28,49 @@ export class AuthAPI extends BaseAPI {
       // This prevents duplicate fetch and maintains single source of truth
     } catch (error) {
       this.handleError(error, 'login')
+    }
+  }
+
+  /**
+   * Request OTP (One-Time Password) for admin login
+   * Sends OTP code to admin email via Supabase Auth
+   */
+  async requestOTP(email: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email,
+        options: {
+          shouldCreateUser: false, // Don't create new users, only existing admins can login
+        },
+      })
+
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      this.handleError(error, 'requestOTP')
+    }
+  }
+
+  /**
+   * Verify OTP code for admin login
+   * Completes the OTP login flow after user enters the code from their email
+   */
+  async verifyOTP(email: string, token: string): Promise<void> {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email: email,
+        token: token,
+        type: 'email',
+      })
+
+      if (error) {
+        throw error
+      }
+
+      // User data will be fetched and set via SIGNED_IN event callback
+    } catch (error) {
+      this.handleError(error, 'verifyOTP')
     }
   }
 

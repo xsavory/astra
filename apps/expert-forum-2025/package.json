@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "check-types": "tsc --noEmit",
     "seed:participants": "tsx --env-file=.env supabase/scripts/seed-participants.ts",
-    "seed:admin": "tsx --env-file=.env supabase/scripts/seed-admin-staff.ts"
+    "seed:admin": "tsx --env-file=.env supabase/scripts/seed-admin-staff.ts",
+    "seed:booths": "tsx --env-file=.env supabase/scripts/seed-booths.ts"
   },
   "dependencies": {
     "@repo/react-components": "workspace:*",

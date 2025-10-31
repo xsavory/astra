@@ -52,7 +52,8 @@ export const PARTICIPANT_TYPES = {
 } as const
 
 // Group Validation
-export const MIN_GROUP_SIZE = 5
+export const MIN_GROUP_SIZE = 2 // Changed from 5 to 2 as per new requirements
+export const MAX_GROUP_SIZE = 2 // Exactly 2 members required for offline groups
 
 // Draw Configuration
 export const DRAW_CONFIG = {
@@ -79,9 +80,14 @@ export const isStaffEmail = (email: string): boolean => {
   return STAFF_EMAILS.includes(email as typeof STAFF_EMAILS[number])
 }
 
+// Helper function to determine if email requires OTP login
+export const requiresOTPLogin = (email: string): boolean => {
+  return isAdminEmail(email)
+}
+
 // Helper function to determine if email needs password input
 export const requiresPasswordInput = (email: string): boolean => {
-  return isAdminEmail(email) || isStaffEmail(email)
+  return isStaffEmail(email) || (!isAdminEmail(email) && !isStaffEmail(email))
 }
 
 // Helper function to get user role from email

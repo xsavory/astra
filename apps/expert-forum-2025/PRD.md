@@ -30,6 +30,7 @@ All users (admin, staff, and participants) login through the same landing page `
 All users (admin, staff, participants) are **manually registered** by the admin team before the event:
 - Create auth account in **Supabase Auth**
 - Insert user record into `users` table with appropriate role
+- **Participant passwords**: Randomly generated (8 alphanumeric characters) during seeding and provided to participants via external communication (no storage in database beyond Supabase Auth)
 
 ### 3.3 Login Flow
 
@@ -53,23 +54,27 @@ User sees:
 
 4. **Conditional Flow:**
 
-   **Case A: Email is Admin or Staff**
-   - System detects email in `ADMIN_EMAILS` or `STAFF_EMAILS`
+   **Case A: Email is Admin**
+   - System detects email in `ADMIN_EMAILS`
+   - OTP code input field appears
+   - User requests OTP via Supabase Auth (`signInWithOtp`)
+   - User receives OTP code via email
+   - User enters OTP code
+   - Submit → Supabase Auth verify OTP with email + token
+   - Redirect to `/admin`
+
+   **Case B: Email is Staff**
+   - System detects email in `STAFF_EMAILS`
    - Password input field appears
    - User enters password
    - Submit → Supabase Auth login with email + password
-   - Redirect based on role:
-     - Admin → `/admin`
-     - Staff → `/staff/index` (staff landing page)
+   - Redirect to `/staff/index` (staff landing page)
 
-   **Case B: Email is Participant**
+   **Case C: Email is Participant**
    - System detects email NOT in admin/staff lists
-   - **No password input shown**
-   - Automatically use hardcoded password from `.env`:
-     ```
-     VITE_PARTICIPANT_DEFAULT_PASSWORD=your_hardcoded_password
-     ```
-   - Submit → Supabase Auth login with email + env password
+   - Password input field appears
+   - User enters their randomly generated password (provided during registration)
+   - Submit → Supabase Auth login with email + password
    - Redirect to `/participant`
 
 #### 3.3.3 Error Handling
@@ -316,8 +321,9 @@ After successful check-in, participant landing page (`/participant`) displays:
   * **Booth name**
   * **Description**
   * **Poster image URL**
-  * **Question text**
-* Purpose: Introduce Astra subsidiaries, educate about company products and nutrition awareness.
+  * **Multiple questions** (stored as JSON array, one randomly selected per participant)
+* Purpose: Introduce Astra subsidiaries, educate about company products.
+* **Question Display Logic:** When participant accesses a booth, frontend randomly selects ONE question from the available questions array to display
 
 ---
 
@@ -339,13 +345,20 @@ This page displays different UI based on participant type (offline vs online).
 2. Opens QR Scanner dialog/drawer
 3. Scans booth QR code
 4. System validates booth and checks if already visited
-5. If valid and not visited → Opens booth question dialog:
-   - Display booth name
-   - Display question text
-   - Text input for answer
+5. If valid and not visited:
+   - QR scanner dialog closes
+   - **Booth Detail Dialog opens** showing:
+     - Booth name
+     - Booth description
+     - Booth poster image
+     - **CTA button: "Check-in"**
+6. Participant clicks **"Check-in"** button
+7. **Nested dialog opens** (booth check-in form) showing:
+   - Question text (randomly selected from booth questions)
+   - Text input field for answer
    - Submit button
-6. Participant types answer and submits
-7. System records booth check-in:
+8. Participant types answer and clicks Submit
+9. System records booth check-in:
    ```ts
    {
      boothId,
@@ -354,9 +367,9 @@ This page displays different UI based on participant type (offline vs online).
      answer
    }
    ```
-8. Success toast/notification appears
-9. QR scanner dialog closes
-10. Booth card appears in the list
+10. Success toast/notification appears
+11. Both dialogs close (nested dialog + booth detail dialog)
+12. Booth card appears in the list
 
 **After Booth Check-ins:**
 - Display **card list** of checked-in booths (newest first)
@@ -364,13 +377,14 @@ This page displays different UI based on participant type (offline vs online).
   - Booth name
   - Check-in timestamp
   - Status badge: "Completed"
-- Click on card → Opens booth detail drawer:
+- Click on card → Opens **Booth Detail Dialog** showing:
   - Booth name
   - Booth description
   - Poster image (if available)
   - Question text
   - Answer that was submitted (read-only)
   - Check-in timestamp
+  - No check-in button (already completed)
 
 **FAB remains visible** at all times for scanning more booths.
 
@@ -416,23 +430,26 @@ This page displays different UI based on participant type (offline vs online).
 
 **Interaction Flow (Not Visited Booth):**
 1. Participant clicks on booth card
-2. Opens booth detail drawer/dialog:
+2. Opens **Booth Detail Dialog** showing:
    - Booth poster image (full)
    - Booth name
    - Full description
-   - Question text
-   - Text input for answer
+   - **CTA button: "Check-in"**
+3. Participant clicks **"Check-in"** button
+4. **Nested dialog opens** (booth check-in form) showing:
+   - Question text (randomly selected from booth questions)
+   - Text input field for answer
    - Submit button
-3. Participant types answer and submits
-4. System records booth check-in
-5. Success notification
-6. Drawer closes
-7. Booth card updates to "Completed" state
-8. Progress bar updates
+5. Participant types answer and clicks Submit
+6. System records booth check-in
+7. Success notification
+8. Both dialogs close (nested dialog + booth detail dialog)
+9. Booth card updates to "Completed" state
+10. Progress bar updates
 
 **Interaction Flow (Completed Booth):**
 1. Participant clicks on completed booth card
-2. Opens booth detail drawer (read-only):
+2. Opens **Booth Detail Dialog** (read-only):
    - Booth poster image
    - Booth name
    - Full description
@@ -440,6 +457,7 @@ This page displays different UI based on participant type (offline vs online).
    - Answer that was submitted (read-only, no edit)
    - Check-in timestamp
    - "Completed" badge
+   - No check-in button (already completed)
 3. No edit or re-submit allowed
 
 **Example UI:**
@@ -478,10 +496,16 @@ This page displays different UI based on participant type (offline vs online).
 
 The ideation feature enables participants to propose improvement or innovation ideas.
 
-| Mode                    | Type    | Description                          |
-| ----------------------- | ------- | ------------------------------------ |
-| **Group Ideation**      | Offline | Requires a group of ≥5 participants. |
-| **Individual Ideation** | Online  | Solo submission (no group).          |
+| Mode                    | Type    | Description                                                                 |
+| ----------------------- | ------- | --------------------------------------------------------------------------- |
+| **Group Ideation**      | Offline | Requires exactly 2 participants from different companies.                   |
+| **Individual Ideation** | Online  | Solo submission (no group). Can submit multiple times with different cases. |
+
+**Key Features:**
+- Each participant (both online and offline) can submit **multiple ideations**
+- Offline participants must form groups of exactly **2 members** from **different companies**
+- Offline participants can create multiple groups and submit multiple ideations with the rule: group partner must not have submitted the same company case before
+- Online participants can submit multiple ideations but each must target a **different company case**
 
 ---
 
@@ -491,36 +515,42 @@ The ideation feature enables participants to propose improvement or innovation i
 
 1. Offline participant opens **Collaboration** menu.
 
-2. If no group yet → CTA "Create Group".
+2. Participant can create multiple groups. CTA "Create Group" or "Create New Group".
 
    * Fills group name only (e.g., "Tim Inovasi Astra").
    * Becomes **creatorId** (group leader).
    * Group is created for member organization only.
 
-3. If group exists, there is a card that represents the group.
+3. All groups (active and past) are displayed as cards.
 
 4. Leader can **invite participants** using a search field:
 
-   * Only offline participants **without an existing group** appear.
-   * Invited participants have their `group_id` set to this group.
+   * Only offline participants who have **checked in** appear in the list.
+   * System does NOT filter by existing group membership or previous submissions (for performance).
+   * Invited participant joins the group via `group_members` database junction table.
+   * **Cannot invite to a group that has already submitted** (`is_submitted = true`).
 
-5. Participants can **leave** a group (before ideation submission).
+5. Participants can **leave** a group anytime:
 
-6. Once group size ≥5, the **Submit Ideation** button becomes enabled.
+   * **Cannot leave a group that has already submitted** (`is_submitted = true`).
+
+6. Once group size = **2 members exactly**, the **Submit Ideation** button becomes enabled.
 
 7. Leader clicks **Submit Ideation**, which opens ideation form with fields:
    * Title
    * Description
-   * Company case
+   * Company case (dropdown/select)
 
-8. Leader submits the form, system then:
-   * Validates group member count in real-time (≥5 members).
+8. Leader submits the form, system then validates:
+   * **Group has exactly 2 members** (real-time check).
+   * **Group has not submitted before** (`is_submitted = false`).
+   * **Both members are from different companies** (compare `users.company` field).
+   * **Neither member has submitted an ideation for the same company case before** (check all ideations by both participants for matching `company_case`).
    * Creates ideation record in `ideations` table linked to `group_id`.
    * Sets `is_group = true` on the ideation.
-   * Updates group: `is_submitted = true`, `submitted_at = ISODateTime`.
-   * Locks the group (no more invites/leaves).
+   * **Updates group:** Sets `is_submitted = true` and `submitted_at = now()`.
 
-9. Group and ideation become read-only.
+9. **Group is locked** after submission. The group cannot be used for additional submissions. To submit another ideation, participants must create a new group (can be with the same members).
 
 ---
 
@@ -528,25 +558,19 @@ The ideation feature enables participants to propose improvement or innovation i
 
 1. Online participant opens **Collaboration** menu.
 
-2. If no submission yet → CTA “Create Submission".
+2. Participant can submit multiple ideations. CTA "Create Submission" or "Submit New Ideation".
 
-3. If submission exist, there is  a card that represent the submission.
+3. All submissions (past and present) are displayed as cards.
 
 4. Sees direct submission form (no group flow).
 
 5. Fills Astra company sub options, title, and ideation content description.
 
-6. Clicks **Submit**, creates ideation record with:
+6. Clicks **Submit**, system validates:
+   * **Company case must be different** from participant's previous submissions.
+   * Creates ideation record with `is_group = false`.
 
-   ```ts
-   {
-     isGroup: false,
-     isSubmitted: true,
-     submittedAt: ISODateTime
-   }
-   ```
-
-7. Confirmation appears, and submission locks.
+7. Confirmation appears. Participant can submit additional ideations for different company cases.
 
 ---
 
@@ -644,7 +668,9 @@ Admin dashboard is a **single-page interface** with the following layout structu
      - Individual submissions
 
 **Auto-refresh:**
-- Stats refresh on page load or manual refresh button
+- **Real-time updates** via Supabase Realtime subscriptions
+- Stats automatically update when data changes
+- **Manual refresh button** also available for forced refresh
 
 **Example UI:**
 ```
@@ -804,7 +830,17 @@ Display chronological list of participant activities:
 **Display:**
 - List all ideations from `ideations` collection
 - Show: Title, Company Case, Creator Name, Group/Individual, Submitted At
-- Simple list with scroll (or pagination if many submissions)
+- **Pagination:** Page size options (10, 25, 50, 100) with total count
+- **Next/Previous navigation**
+
+**Filters (Above Table):**
+- **Type:** Dropdown (All / Group / Individual)
+- **Company Case:** Multi-select dropdown (dynamic options)
+- **Search:** Text input (search by title or creator name)
+
+**Export:**
+- **"Export CSV" button** to download all submissions
+- CSV includes: ID, Title, Description, Company Case, Type (Group/Individual), Creator Name, Creator Email, Group Members (if group), Submitted At
 
 **Click on submission item → Expands detail within drawer:**
 
@@ -828,8 +864,6 @@ Display chronological list of participant activities:
 
 **Actions:**
 - **No edit/delete** — submissions are read-only for admin
-
-**No filters/search** — simple scrollable list.
 
 ---
 
@@ -897,10 +931,10 @@ CREATE TABLE users (
   participant_type participant_type,
   company TEXT,
   division TEXT,
-  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
   is_checked_in BOOLEAN DEFAULT false,
   event_checkin_time TIMESTAMP,
   event_checkin_method checkin_method,
+  checked_in_by UUID REFERENCES users(id),
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
 );
@@ -911,6 +945,7 @@ CREATE TABLE users (
 ```sql
 -- Groups Table: For member organization only
 -- Ideation content is stored in ideations table
+-- Groups are NOT reusable - one group can only submit one ideation
 CREATE TABLE groups (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
@@ -919,6 +954,23 @@ CREATE TABLE groups (
   submitted_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP DEFAULT now()
+);
+
+-- Note: is_submitted and submitted_at added back - groups are NOT reusable
+```
+
+#### `group_members`
+
+```sql
+-- Group Members Junction Table: Many-to-many relationship
+-- Allows participants to be in multiple groups (not simultaneously, but over time)
+CREATE TABLE group_members (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  participant_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  joined_at TIMESTAMP DEFAULT now(),
+
+  UNIQUE(group_id, participant_id)
 );
 ```
 
@@ -930,11 +982,16 @@ CREATE TABLE booths (
   name TEXT NOT NULL,
   description TEXT,
   poster_url TEXT,
-  question_text TEXT,
+  questions JSONB NOT NULL, -- Array of question strings, e.g., ["Question 1", "Question 2"]
   order INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT now(),
-  updated_at TIMESTAMP DEFAULT now()
+  updated_at TIMESTAMP DEFAULT now(),
+
+  -- Constraint: questions must be a non-empty array
+  CONSTRAINT questions_not_empty CHECK (jsonb_array_length(questions) > 0)
 );
+
+-- Note: question_text renamed to questions and changed to JSONB array
 ```
 
 #### `booth_checkins`
@@ -956,6 +1013,7 @@ CREATE TABLE booth_checkins (
 -- Ideations Table: Single source of truth for ideation content
 -- Links to groups table via group_id for group ideations
 -- group_id is NULL for individual ideations
+-- Participants can submit multiple ideations (removed unique constraint on creator_id)
 CREATE TABLE ideations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
@@ -972,8 +1030,15 @@ CREATE TABLE ideations (
   CONSTRAINT group_ideation_consistency CHECK (
     (is_group = false AND group_id IS NULL) OR
     (is_group = true AND group_id IS NOT NULL)
-  )
+  ),
+
+  -- Constraint: online participants cannot submit same company case twice
+  CONSTRAINT unique_online_company_case UNIQUE NULLS NOT DISTINCT (creator_id, company_case, is_group)
+    WHERE (is_group = false)
 );
+
+-- Note: Removed unique constraint on creator_id to allow multiple submissions
+-- Added partial unique constraint on (creator_id, company_case) for online participants
 ```
 
 #### `draw`
@@ -1005,7 +1070,7 @@ CREATE TABLE draw_winners (
 - `email` must be unique across all users
 - `email` format validation (RFC 5322)
 - `participantType` required if `role = "participant"`
-- Auto-generate password or use default from env for participants
+- Auto-generate password
 
 **Update User:**
 - Cannot change `role`
@@ -1042,37 +1107,43 @@ CREATE TABLE draw_winners (
 
 **Group Creation:**
 - Only `participant_type = 'offline'` can create groups
-- Each offline participant can only be in ONE group at a time
-- Creator automatically has `group_id` set to the new group
-- Groups store only organizational data: `name`, `creator_id`, submission status
+- Participants can create multiple groups
+- Creator automatically becomes the first member via `group_members` table
+- Groups store only organizational data: `name`, `creator_id`
 - Ideation content (title, description, company_case) is NOT stored in groups table
+- **Groups are NOT reusable** - one group can only submit one ideation
+- After submission, the group is marked as `is_submitted = true` and locked
+- To submit another ideation, participants must create a new group (can be with the same members)
 
 **Invite to Group:**
 - Target participant must be `participant_type = 'offline'`
-- Target participant must NOT have `group_id` (not in any group)
-- Target participant must NOT have submitted individual ideation
-- Sets `users.group_id = groupId` for the invited participant
+- Target participant must have `is_checked_in = true`
+- No restriction on existing group membership (participants can be in multiple groups over time)
+- Creates entry in `group_members` table: `(group_id, participant_id, joined_at)`
 
 **Leave Group:**
-- Participant can leave only if `is_submitted = false` (group hasn't submitted ideation yet)
-- If creator leaves, consider deleting group or transferring ownership
-- Sets `users.group_id = null` for the participant
+- Participants can leave groups anytime
+- Deletes entry from `group_members` table
+- If creator leaves, group remains active (other members can still use it)
 
 **Create Group Ideation:**
-- **Hard validation:** Group must have >= 5 members (validated in API layer)
-- Re-fetch group member count in real-time before submission to ensure no member left
+- **Hard validation:** Group must have exactly 2 members (validated in API layer)
+- **Group submission validation:** Group must not have submitted before (`is_submitted = false`)
+- **Company validation:** Both members must be from different companies (compare `users.company` field)
+- **Company case validation:** Neither group member can have submitted an ideation with the same `company_case` before (check all previous ideations by both participants)
 - Leader fills ideation form: title, description, company_case
 - System creates ideation record in `ideations` table linked to group via `group_id`
 - Sets `is_group = true` on the ideation record
-- System then updates group: set `is_submitted = true`, `submitted_at = now()`
-- Lock group: prevent further invites/leaves after ideation submission (enforced by RLS policies)
-- Each group can have only ONE ideation
-- Transaction rollback if group update fails after ideation creation
+- **Updates group:** Sets `is_submitted = true` and `submitted_at = now()`
+- **Group is locked** after submission - no more submissions allowed
+- To submit another ideation, participants must create a new group (can be with the same members)
 
 **Individual Ideation:**
 - Only `participant_type = 'online'` can submit individual ideation
-- Each online participant can submit only once
+- Each online participant can submit multiple ideations
+- **Company case validation:** Participant cannot submit two ideations with the same `company_case`
 - Creates ideation record with `is_group = false` and `group_id = NULL`
+- Database enforces uniqueness via partial unique constraint on `(creator_id, company_case)` for individual ideations
 - Ideation content stored directly in `ideations` table
 
 ---
@@ -1168,9 +1239,6 @@ CREATE TABLE draw_winners (
 # Supabase
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-public-key-here
-
-# Auth
-VITE_PARTICIPANT_DEFAULT_PASSWORD=expertforum2025
 ```
 
 ### 15.3 Constants File Structure
@@ -1229,6 +1297,7 @@ export const COMPANY_OPTIONS = [
 - **Progress Tracking:** Live progress bar updates as participants complete booths using `api.checkins.subscribeToProgress()`
 - **Booth Management:** Real-time booth data updates for admin panel using `api.booths.subscribeToBooths()`
 - **Eligibility Status:** Live eligibility status updates using `api.checkins.subscribeToEligibilityChanges()`
+- **Admin Stats Dashboard:** Real-time statistics updates as data changes using subscriptions to `users`, `booth_checkins`, and `ideations` tables
 
 **Responsive Design:**
 - Mobile-first approach (most participants will use mobile)
