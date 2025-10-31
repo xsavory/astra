@@ -1,16 +1,20 @@
 import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2,
   Lock,
   Building2,
   Video,
-  Lightbulb
+  Lightbulb,
+  QrCode,
+  LogIn,
+  Loader2,
 } from 'lucide-react'
 
 import PageLoader from 'src/components/page-loader'
 import ZoomDialog from 'src/components/zoom-dialog'
+import ParticipantQRDialog from 'src/components/participant-qr-dialog'
 import {
   Card,
   CardContent,
@@ -20,6 +24,8 @@ import {
   Badge,
   Progress,
   Skeleton,
+  Button,
+  toast
 } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
@@ -97,8 +103,11 @@ function ParticipantIndexSkeleton() {
 }
 
 function ParticipantIndexPage() {
-  // State for zoom dialog
+  const queryClient = useQueryClient()
+
+  // State for dialogs
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false)
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false)
 
   // Fetch current user
   const { data: user, isLoading: isLoadingUser } = useQuery<User | null>({
@@ -106,20 +115,109 @@ function ParticipantIndexPage() {
     queryFn: () => api.auth.getCurrentUser(),
   })
 
-  // Fetch booth checkins for current user
+  // Fetch booth checkins for current user (only if checked in)
   const { data: boothCheckins = [], isLoading: isLoadingCheckins } = useQuery<BoothCheckin[]>({
     queryKey: ['boothCheckins', user?.id],
     queryFn: () => api.checkins.getParticipantBoothCheckins(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && user.is_checked_in === true,
   })
 
-  const isLoading = isLoadingUser || isLoadingCheckins
+  // Manual check-in mutation for online participants
+  const checkInMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error('User not found')
+      return api.checkins.checkinEvent(user.id, 'manual')
+    },
+    onSuccess: () => {
+      // Invalidate user query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['currentUser'] })
+
+      toast.success('Check-in berhasil! Selamat datang di Expert Forum 2025')
+    },
+    onError: (error) => {
+      toast.warning(error instanceof Error ? error.message : 'Terjadi kesalahan saat check-in')
+    },
+  })
+
+  const isLoading = isLoadingUser || (user?.is_checked_in && isLoadingCheckins)
 
   // Show skeleton while loading
   if (isLoading || !user) {
     return <ParticipantIndexSkeleton />
   }
 
+  // PRE CHECK-IN STATE: Show only CTA button
+  if (!user.is_checked_in) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 px-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Selamat Datang!</CardTitle>
+            <CardDescription>
+              {user.name}
+            </CardDescription>
+            <Badge
+              variant={user.participant_type === 'offline' ? 'default' : 'secondary'}
+              className="mx-auto mt-2"
+            >
+              {user.participant_type === 'offline' ? 'Offline' : 'Online'}
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-center text-sm text-muted-foreground">
+              {user.participant_type === 'offline'
+                ? 'Tunjukkan QR Code Anda kepada staff untuk melakukan check-in'
+                : 'Klik tombol di bawah untuk melakukan check-in dan mengakses event'
+              }
+            </p>
+
+            {user.participant_type === 'offline' ? (
+              // Offline: Show QR button
+              <Button
+                onClick={() => setIsQRDialogOpen(true)}
+                size="lg"
+                className="w-full"
+              >
+                <QrCode className="mr-2 size-5" />
+                Tampilkan QR Code
+              </Button>
+            ) : (
+              // Online: Show Check-in button
+              <Button
+                onClick={() => checkInMutation.mutate()}
+                disabled={checkInMutation.isPending}
+                size="lg"
+                className="w-full"
+              >
+                {checkInMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 size-5 animate-spin" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 size-5" />
+                    Check-in Sekarang
+                  </>
+                )}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* QR Dialog for offline participants */}
+        {user.participant_type === 'offline' && (
+          <ParticipantQRDialog
+            user={user}
+            open={isQRDialogOpen}
+            onOpenChange={setIsQRDialogOpen}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // POST CHECK-IN STATE: Show full participant dashboard
   // Calculate progress
   const boothsCompleted = boothCheckins.length
   const totalBooths = user.participant_type === 'offline'

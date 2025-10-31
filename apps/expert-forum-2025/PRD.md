@@ -142,18 +142,18 @@ After successful check-in, participant landing page (`/participant`) displays:
 #### Navigation Menu
 - **Booth** → `/participant/booth/index`
 - **Collaboration** → `/participant/collaboration/index`
-- **Zoom** → Opens Zoom dialog/drawer (offline participants only)
+- **Zoom** → Opens Zoom dialog/drawer (online participants only)
 
 ### 4.3 Zoom Dialog/Drawer
 
 **Trigger:** Click "Zoom" menu button on participant landing page (`/participant`)
 
-**Visibility:** Only shown for **offline participants** (`participant_type = 'offline'`)
-- Online participants do NOT see this menu option
+**Visibility:** Only shown for **online participants** (`participant_type = 'online'`)
+- Offline participants do NOT see this menu option (they attend physically)
 
 **UI Component:** Dialog/Drawer/Sheet (not a separate page/route)
 
-**Purpose:** Provide quick access to event Zoom meeting for offline participants
+**Purpose:** Provide quick access to event Zoom meeting for online participants attending virtually
 
 **Data Source:**
 - Zoom meeting URL fetched from `events.zoom_meeting_url` field

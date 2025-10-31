@@ -37,6 +37,7 @@ export class CheckinsAPI extends BaseAPI {
         .single()
 
       if (userError) {
+        console.error('[CheckinsAPI] Error fetching user:', userError)
         throw userError
       }
 
@@ -53,6 +54,10 @@ export class CheckinsAPI extends BaseAPI {
           .select('is_active')
           .limit(1)
           .single()
+
+        if (eventError) {
+          console.error('[CheckinsAPI] Error fetching event:', eventError)
+        }
 
         if (eventError || !eventData || !eventData.is_active) {
           throw new Error('Event belum aktif')
@@ -78,10 +83,16 @@ export class CheckinsAPI extends BaseAPI {
         .single()
 
       if (updateError) {
+        console.error('[CheckinsAPI] Error updating user check-in:', updateError)
         throw updateError
       }
 
-      return this.ensureData(updatedUser, 'Failed to update user') as User
+      if (!updatedUser) {
+        console.error('[CheckinsAPI] Update returned no data for participantId:', participantId)
+        throw new Error('Failed to update user check-in status')
+      }
+
+      return updatedUser as User
     } catch (error) {
       this.handleError(error, 'checkinEvent')
     }
