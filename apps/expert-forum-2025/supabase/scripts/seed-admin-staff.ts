@@ -7,6 +7,12 @@
  * Environment variables required:
  *   VITE_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
+ *
+ * NOTE:
+ *   - Admin users login via OTP (passwordless), but password is still required
+ *     during seeding because Supabase Auth mandates it for user creation
+ *   - Staff users login via email + password
+ *   - Password should be at least 8 characters for both roles
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -14,7 +20,7 @@ import { createClient } from '@supabase/supabase-js'
 interface AdminStaffData {
   name: string
   email: string
-  password: string
+  password: string // Required for both admin and staff (admin uses OTP but password still needed for Supabase Auth)
   role: 'admin' | 'staff'
   phone?: string
   department?: string
@@ -29,28 +35,10 @@ const BATCH_SIZE = 10
 // Sample data - replace this with your actual data
 const ADMIN_STAFF_DATA: AdminStaffData[] = [
   {
-    name: 'Admin Satu',
-    email: 'admin1@expert-forum.com',
-    password: 'admin123',
+    name: 'Admin Tiga',
+    email: 'dnmiloen@gmail.com',
+    password: 'admin123', // Required by Supabase Auth, but admin login uses OTP only
     role: 'admin',
-  },
-  {
-    name: 'Admin Dua',
-    email: 'admin2@expert-forum.com',
-    password: 'admin123',
-    role: 'admin',
-  },
-  {
-    name: 'Staff Satu',
-    email: 'staff1@expert-forum.com',
-    password: 'staff123',
-    role: 'staff',
-  },
-  {
-    name: 'Staff Dua',
-    email: 'staff2@expert-forum.com',
-    password: 'staff123',
-    role: 'staff',
   },
 ]
 

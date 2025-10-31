@@ -11,15 +11,22 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
 } from '@repo/react-components/ui'
-import { requiresPasswordInput } from 'src/lib/constants'
+import { requiresPasswordInput, requiresOTPLogin } from 'src/lib/constants'
 import useAuth from 'src/hooks/use-auth'
+import api from 'src/lib/api'
+
+type LoginStep = 'email' | 'password' | 'otp'
 
 export default function LoginDialog() {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showPasswordField, setShowPasswordField] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [currentStep, setCurrentStep] = useState<LoginStep>('email')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const isLoggingIn = useRef(false)
@@ -53,62 +60,68 @@ export default function LoginDialog() {
     }
   }, [user, isAuthenticated, navigate, isAuthLoading])
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     if (!email) return
 
-    // Check if email requires password (admin/staff)
-    if (requiresPasswordInput(email)) {
-      setShowPasswordField(true)
+    // Check if email requires OTP (admin)
+    if (requiresOTPLogin(email)) {
+      setIsLoading(true)
+      try {
+        // Request OTP for admin
+        await api.auth.requestOTP(email)
+        setCurrentStep('otp')
+        setIsLoading(false)
+      } catch (err) {
+        console.error('OTP request error:', err)
+        setError(err instanceof Error ? err.message : 'Gagal mengirim OTP. Silakan coba lagi.')
+        setIsLoading(false)
+      }
+    } else if (requiresPasswordInput(email)) {
+      // Staff or Participant - show password field
+      setCurrentStep('password')
     } else {
-      // Participant - proceed to login
-      handleParticipantLogin()
+      setError('Email tidak terdaftar.')
     }
   }
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     if (!password) return
 
-    // Handle admin/staff login
-    handleAdminStaffLogin()
-  }
-
-  const handleParticipantLogin = async () => {
     setIsLoading(true)
-    setError(null)
     isLoggingIn.current = true
 
     try {
-      // Use hardcoded password from env for participants
-      const participantPassword = import.meta.env.VITE_PARTICIPANT_DEFAULT_PASSWORD
-      await login(email, participantPassword)
-
+      await login(email, password)
       // Redirect will be handled by useEffect when user state updates
     } catch (err) {
-      console.error('Participant login error:', err)
-      setError(err instanceof Error ? err.message : 'Login gagal. Silakan coba lagi.')
+      console.error('Login error:', err)
+      setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password Anda.')
       isLoggingIn.current = false
       setIsLoading(false)
     }
   }
 
-  const handleAdminStaffLogin = async () => {
-    setIsLoading(true)
+  const handleOTPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     setError(null)
+
+    if (!otpCode) return
+
+    setIsLoading(true)
     isLoggingIn.current = true
 
     try {
-      await login(email, password)
-
+      await api.auth.verifyOTP(email, otpCode)
       // Redirect will be handled by useEffect when user state updates
     } catch (err) {
-      console.error('Admin/Staff login error:', err)
-      setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password Anda.')
+      console.error('OTP verification error:', err)
+      setError(err instanceof Error ? err.message : 'Kode OTP tidak valid. Silakan coba lagi.')
       isLoggingIn.current = false
       setIsLoading(false)
     }
@@ -120,7 +133,9 @@ export default function LoginDialog() {
       // Reset state when dialog closes
       setEmail('')
       setPassword('')
-      setShowPasswordField(false)
+      setOtpCode('')
+      setCurrentStep('email')
+      setError(null)
     }
   }
 
@@ -146,7 +161,7 @@ export default function LoginDialog() {
             </div>
           )}
 
-          {!showPasswordField ? (
+          {currentStep === 'email' && (
             // Email input step
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -167,8 +182,10 @@ export default function LoginDialog() {
                 {isLoading ? 'Memproses...' : 'Lanjutkan'}
               </Button>
             </form>
-          ) : (
-            // Password input step (for admin/staff)
+          )}
+
+          {currentStep === 'password' && (
+            // Password input step (for staff/participant)
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email-display">Email</Label>
@@ -200,8 +217,9 @@ export default function LoginDialog() {
                   variant="outline"
                   className="flex-1"
                   onClick={() => {
-                    setShowPasswordField(false)
+                    setCurrentStep('email')
                     setPassword('')
+                    setError(null)
                   }}
                 >
                   Kembali
@@ -209,6 +227,63 @@ export default function LoginDialog() {
                 <Button type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                   {isLoading ? 'Memproses...' : 'Login'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {currentStep === 'otp' && (
+            // OTP input step (for admin)
+            <form onSubmit={handleOTPSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email-display">Email</Label>
+                <Input
+                  id="email-display"
+                  type="email"
+                  value={email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="otp">Kode OTP</Label>
+                <InputOTP
+                  maxLength={6}
+                  value={otpCode}
+                  onChange={(value) => setOtpCode(value)}
+                  autoFocus
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+                <p className="text-xs text-muted-foreground">
+                  Kode OTP telah dikirim ke email Anda
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setCurrentStep('email')
+                    setOtpCode('')
+                    setError(null)
+                  }}
+                >
+                  Kembali
+                </Button>
+                <Button type="submit" className="flex-1" disabled={isLoading || otpCode.length !== 6}>
+                  {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {isLoading ? 'Memproses...' : 'Verifikasi'}
                 </Button>
               </div>
             </form>

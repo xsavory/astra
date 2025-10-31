@@ -2,6 +2,7 @@
 export const ADMIN_EMAILS = [
   'admin1@expert-forum.com',
   'admin2@expert-forum.com',
+  'dnmiloen@gmail.com',
 ] as const
 
 export const STAFF_EMAILS = [
