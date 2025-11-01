@@ -1,20 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2,
   Lock,
   Building2,
   Video,
   Lightbulb,
-  QrCode,
-  LogIn,
-  Loader2,
 } from 'lucide-react'
 
 import PageLoader from 'src/components/page-loader'
 import ZoomDialog from 'src/components/zoom-dialog'
-import ParticipantQRDialog from 'src/components/participant-qr-dialog'
+import ParticipantPreCheckinPage from 'src/components/participant-pre-checkin-page'
 import {
   Card,
   CardContent,
@@ -24,8 +21,6 @@ import {
   Badge,
   Progress,
   Skeleton,
-  Button,
-  toast
 } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
@@ -105,9 +100,8 @@ function ParticipantIndexSkeleton() {
 function ParticipantIndexPage() {
   const queryClient = useQueryClient()
 
-  // State for dialogs
+  // State for zoom dialog
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false)
-  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false)
 
   // Fetch current user
   const { data: user, isLoading: isLoadingUser } = useQuery<User | null>({
@@ -122,22 +116,30 @@ function ParticipantIndexPage() {
     enabled: !!user?.id && user.is_checked_in === true,
   })
 
-  // Manual check-in mutation for online participants
-  const checkInMutation = useMutation({
-    mutationFn: async () => {
-      if (!user?.id) throw new Error('User not found')
-      return api.checkins.checkinEvent(user.id, 'manual')
-    },
-    onSuccess: () => {
-      // Invalidate user query to refetch updated data
+  // Subscribe to realtime user changes (for QR check-in and eligibility updates)
+  useEffect(() => {
+    if (!user?.id) return
+
+    console.log('[ParticipantIndex] Subscribing to user changes for:', user.id)
+
+    const unsubscribe = api.checkins.subscribeToUserChanges(user.id, (updatedUser) => {
+      console.log('[ParticipantIndex] User changed:', updatedUser)
+
+      // Invalidate current user query to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['currentUser'] })
 
-      toast.success('Check-in berhasil! Selamat datang di Expert Forum 2025')
-    },
-    onError: (error) => {
-      toast.warning(error instanceof Error ? error.message : 'Terjadi kesalahan saat check-in')
-    },
-  })
+      // If user just got checked in, also invalidate booth checkins query
+      if (updatedUser.is_checked_in && !user.is_checked_in) {
+        console.log('[ParticipantIndex] User just checked in, invalidating booth checkins')
+        queryClient.invalidateQueries({ queryKey: ['boothCheckins', user.id] })
+      }
+    })
+
+    return () => {
+      console.log('[ParticipantIndex] Unsubscribing from user changes for:', user.id)
+      unsubscribe()
+    }
+  }, [user?.id, user?.is_checked_in, queryClient])
 
   const isLoading = isLoadingUser || (user?.is_checked_in && isLoadingCheckins)
 
@@ -146,75 +148,9 @@ function ParticipantIndexPage() {
     return <ParticipantIndexSkeleton />
   }
 
-  // PRE CHECK-IN STATE: Show only CTA button
+  // PRE CHECK-IN STATE: Show pre-checkin page component
   if (!user.is_checked_in) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Selamat Datang!</CardTitle>
-            <CardDescription>
-              {user.name}
-            </CardDescription>
-            <Badge
-              variant={user.participant_type === 'offline' ? 'default' : 'secondary'}
-              className="mx-auto mt-2"
-            >
-              {user.participant_type === 'offline' ? 'Offline' : 'Online'}
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-center text-sm text-muted-foreground">
-              {user.participant_type === 'offline'
-                ? 'Tunjukkan QR Code Anda kepada staff untuk melakukan check-in'
-                : 'Klik tombol di bawah untuk melakukan check-in dan mengakses event'
-              }
-            </p>
-
-            {user.participant_type === 'offline' ? (
-              // Offline: Show QR button
-              <Button
-                onClick={() => setIsQRDialogOpen(true)}
-                size="lg"
-                className="w-full"
-              >
-                <QrCode className="mr-2 size-5" />
-                Tampilkan QR Code
-              </Button>
-            ) : (
-              // Online: Show Check-in button
-              <Button
-                onClick={() => checkInMutation.mutate()}
-                disabled={checkInMutation.isPending}
-                size="lg"
-                className="w-full"
-              >
-                {checkInMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 size-5 animate-spin" />
-                    Memproses...
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="mr-2 size-5" />
-                    Check-in Sekarang
-                  </>
-                )}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* QR Dialog for offline participants */}
-        {user.participant_type === 'offline' && (
-          <ParticipantQRDialog
-            user={user}
-            open={isQRDialogOpen}
-            onOpenChange={setIsQRDialogOpen}
-          />
-        )}
-      </div>
-    )
+    return <ParticipantPreCheckinPage user={user} />
   }
 
   // POST CHECK-IN STATE: Show full participant dashboard

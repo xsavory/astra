@@ -327,23 +327,24 @@ export class CheckinsAPI extends BaseAPI {
   }
 
   /**
-   * Subscribe to user eligibility changes (triggered by booth checkins)
+   * Subscribe to user changes (Realtime Feature #3)
    *
-   * This enables real-time eligibility tracking:
-   * - Watches for changes to is_eligible_to_draw field
-   * - Triggers when eligibility status changes
+   * This enables real-time user state tracking:
+   * - Watches for changes to user fields (is_checked_in, is_eligible_to_draw, etc)
+   * - Triggers when any user field is updated
+   * - Can be used to auto-refresh UI when staff checks in participant via QR
    * - Can be used to show congratulations UI when eligible
    *
    * @param participantId - The participant to track
-   * @param callback - Called when eligibility changes
+   * @param callback - Called when user data changes with full updated user object
    * @returns Unsubscribe function
    */
-  subscribeToEligibilityChanges(
+  subscribeToUserChanges(
     participantId: string,
-    callback: (isEligible: boolean) => void
+    callback: (user: User) => void
   ): () => void {
     const channel = supabase
-      .channel(`eligibility:${participantId}`)
+      .channel(`user:${participantId}`)
       .on(
         'postgres_changes',
         {
@@ -354,7 +355,7 @@ export class CheckinsAPI extends BaseAPI {
         },
         (payload) => {
           const updatedUser = payload.new as DBUser
-          callback(updatedUser.is_eligible_to_draw)
+          callback(updatedUser as User)
         }
       )
       .subscribe()
