@@ -28,6 +28,8 @@ interface BoothCheckinDialogProps {
   isSubmitting: boolean
 }
 
+const MINIMUM_ANSWER_LENGTH = 20
+
 function BoothCheckinDialog({
   open,
   onOpenChange,
@@ -69,7 +71,7 @@ function BoothCheckinDialog({
           className="resize-none"
         />
         <p className="text-xs text-muted-foreground">
-          Minimal 50 karakter
+          Minimal {MINIMUM_ANSWER_LENGTH} karakter
         </p>
       </div>
     </div>
@@ -92,7 +94,7 @@ function BoothCheckinDialog({
           <DrawerFooter className="pt-4">
             <Button
               onClick={handleSubmit}
-              disabled={!answer.trim() || answer.trim().length < 50 || isSubmitting}
+              disabled={!answer.trim() || answer.trim().length < MINIMUM_ANSWER_LENGTH || isSubmitting}
               className="w-full"
             >
               {isSubmitting ? (
@@ -140,7 +142,7 @@ function BoothCheckinDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!answer.trim() || answer.trim().length < 50 || isSubmitting}
+            disabled={!answer.trim() || answer.trim().length < MINIMUM_ANSWER_LENGTH || isSubmitting}
           >
             {isSubmitting ? (
               <>

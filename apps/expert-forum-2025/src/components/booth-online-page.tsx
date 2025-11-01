@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { CheckCircle, Building2 } from 'lucide-react'
+import { CheckCircle, Building2, Clock, ArrowLeft } from 'lucide-react'
 
 import {
   Card,
@@ -10,9 +10,11 @@ import {
   CardTitle,
   Badge,
   Skeleton,
+  Button,
 } from '@repo/react-components/ui'
 import BoothDetailDialog from './booth-detail-dialog'
 import api from 'src/lib/api'
+import { getBoothVisualImage } from 'src/lib/utils'
 import type { User, Booth, BoothCheckin } from 'src/types/schema'
 
 interface BoothOnlinePageProps {
@@ -68,8 +70,8 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
     return <BoothOnlinePageSkeleton />
   }
 
-  // Create a set of visited booth IDs for quick lookup
-  const visitedBoothIds = new Set(boothCheckins.map((checkin) => checkin.booth_id))
+  // Create a map of booth ID to checkin data for quick lookup (to show checkin time)
+  const boothCheckinMap = new Map(boothCheckins.map((checkin) => [checkin.booth_id, checkin]))
 
   // Calculate progress
   const boothsCompleted = boothCheckins.length
@@ -77,6 +79,17 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
 
   return (
     <div className="space-y-4">
+      {/* Back Button */}
+      <Button
+        variant="secondary"
+        size="sm"
+        className="mb-2 -ml-2"
+        onClick={() => navigate({ to: '/participant' })}
+      >
+        <ArrowLeft className="size-4 mr-2" />
+        Kembali
+      </Button>
+
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Booth</h1>
@@ -108,7 +121,9 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
       {totalBooths > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           {booths.map((booth) => {
-            const isCompleted = visitedBoothIds.has(booth.id)
+            const checkin = boothCheckinMap.get(booth.id)
+            const isCompleted = !!checkin
+            const boothVisualImage = getBoothVisualImage(booth.id)
 
             return (
               <Card
@@ -126,11 +141,11 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                 }}
               >
                 <CardHeader className="pb-3">
-                  {/* Booth Poster Image */}
+                  {/* Booth Visual Image */}
                   <div className="relative aspect-video w-full mb-3 overflow-hidden rounded-lg bg-muted">
-                    {booth.poster_url ? (
+                    {boothVisualImage ? (
                       <img
-                        src={booth.poster_url}
+                        src={boothVisualImage}
                         alt={booth.name}
                         className="object-cover w-full h-full"
                       />
@@ -160,13 +175,28 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                     </CardDescription>
                   </div>
 
-                  {/* Status Badge */}
-                  <div className="mt-2">
+                  {/* Status Badge and Checkin Time */}
+                  <div className="mt-2 space-y-2">
                     {isCompleted ? (
-                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                        <CheckCircle className="size-3 mr-1" />
-                        Sudah dikunjungi
-                      </Badge>
+                      <>
+                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                          <CheckCircle className="size-3 mr-1" />
+                          Sudah dikunjungi
+                        </Badge>
+                        {checkin && (
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Clock className="size-3" />
+                            <span>
+                              {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <Badge variant="outline" className="text-muted-foreground">
                         Belum dikunjungi
@@ -189,10 +219,11 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
             navigate({
               to: '/participant/booth',
               search: {},
-              replace: true,
             })
           }
         }}
+        user={user}
+        existingCheckin={searchParams.booth_id ? boothCheckinMap.get(searchParams.booth_id) : null}
       />
     </div>
   )

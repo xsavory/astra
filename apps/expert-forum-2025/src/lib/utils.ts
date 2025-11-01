@@ -1,3 +1,5 @@
+import { BOOTH_VISUAL_IMAGES } from './constants'
+
 interface CapitaliseOptions {
   start: number;
   end: number;
@@ -24,4 +26,14 @@ export function capitalise(value: string, options?: Partial<CapitaliseOptions>):
   const stringEnd = value.substring(end, length);
 
   return `${stringStart}${capitalise.toUpperCase()}${stringEnd}`;
+}
+
+/**
+ * Gets the visual image path for a booth by its ID
+ * Returns null if booth ID not found or no image set yet
+ * @param boothId - The booth ID to lookup
+ * @returns The image path from /public folder or null
+ */
+export function getBoothVisualImage(boothId: string): string | null {
+  return BOOTH_VISUAL_IMAGES[boothId] ?? null
 }

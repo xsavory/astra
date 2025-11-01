@@ -33,6 +33,17 @@ export const COMPANY_OPTIONS = [
   'Astra Infra',
 ] as const
 
+// Booth Visual Images Mapping
+// Maps booth ID to visual image path from /public folder
+// Set to null for booths without images yet - will show placeholder
+export const BOOTH_VISUAL_IMAGES: Record<string, string | null> = {
+  'booth-001': null,
+  'booth-002': null,
+  'booth-003': null,
+  'booth-004': null,
+  'booth-005': null,
+} as const
+
 // Check-in Methods
 export const CHECKIN_METHODS = {
   QR: 'qr',

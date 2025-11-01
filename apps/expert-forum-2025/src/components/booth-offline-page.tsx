@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { QrCode, CheckCircle, Clock, ChevronRight } from 'lucide-react'
+import { QrCode, CheckCircle, Clock, ChevronRight, ArrowLeft } from 'lucide-react'
 
 import {
   Card,
@@ -15,7 +15,7 @@ import {
 import BoothQRScannerDialog from './booth-qr-scanner-dialog'
 import BoothDetailDialog from './booth-detail-dialog'
 import api from 'src/lib/api'
-import type { User, BoothCheckin } from 'src/types/schema'
+import type { User, BoothCheckin, Booth } from 'src/types/schema'
 
 interface BoothOfflinePageProps {
   user: User
@@ -57,10 +57,18 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
   const [isScannerOpen, setIsScannerOpen] = useState(false)
 
   // Fetch booth checkins for current user
-  const { data: boothCheckins = [], isLoading } = useQuery<BoothCheckin[]>({
+  const { data: boothCheckins = [], isLoading: isLoadingCheckins } = useQuery<BoothCheckin[]>({
     queryKey: ['boothCheckins', user.id],
     queryFn: () => api.checkins.getParticipantBoothCheckins(user.id),
   })
+
+  // Fetch all booths to get booth details
+  const { data: booths = [], isLoading: isLoadingBooths } = useQuery<Booth[]>({
+    queryKey: ['booths'],
+    queryFn: () => api.booths.getBooths(),
+  })
+
+  const isLoading = isLoadingCheckins || isLoadingBooths
 
   // Show skeleton while loading
   if (isLoading) {
@@ -79,10 +87,27 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
     )
   }
 
+  // Create a map of booth ID to booth data for quick lookup
+  const boothMap = new Map(booths.map((booth) => [booth.id, booth]))
+
+  // Create a map of booth ID to checkin data for quick lookup
+  const boothCheckinMap = new Map(boothCheckins.map((checkin) => [checkin.booth_id, checkin]))
+
   const boothsCompleted = boothCheckins.length
 
   return (
     <div className="space-y-4 pb-24">
+      {/* Back Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mb-2 -ml-2"
+        onClick={() => navigate({ to: '/participant' })}
+      >
+        <ArrowLeft className="size-4 mr-2" />
+        Kembali
+      </Button>
+
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Booth</h1>
@@ -113,48 +138,51 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
       {/* Booth Checkins List */}
       {boothsCompleted > 0 && (
         <div className="space-y-3">
-          {boothCheckins.map((checkin) => (
-            <Card
-              key={checkin.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => {
-                navigate({
-                  to: '/participant/booth',
-                  search: { booth_id: checkin.booth_id },
-                })
-              }}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base sm:text-lg mb-2">
-                      {/* TODO: Display booth name from booth data */}
-                      Booth {checkin.booth_id.slice(0, 8)}...
-                    </CardTitle>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="size-4" />
-                      <span>
-                        {new Date(checkin.checkin_time).toLocaleString('id-ID', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
+          {boothCheckins.map((checkin) => {
+            const booth = boothMap.get(checkin.booth_id)
+
+            return (
+              <Card
+                key={checkin.id}
+                className="cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => {
+                  navigate({
+                    to: '/participant/booth',
+                    search: { booth_id: checkin.booth_id },
+                  })
+                }}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base sm:text-lg mb-2">
+                        {booth?.name || `Booth ${checkin.booth_id.slice(0, 8)}...`}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="size-4" />
+                        <span>
+                          {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                        <CheckCircle className="size-3 mr-1" />
+                        Completed
+                      </Badge>
+                      <ChevronRight className="size-5 text-muted-foreground" />
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
-                      <CheckCircle className="size-3 mr-1" />
-                      Completed
-                    </Badge>
-                    <ChevronRight className="size-5 text-muted-foreground" />
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
+                </CardHeader>
+              </Card>
+            )
+          })}
         </div>
       )}
 
@@ -183,10 +211,11 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
             navigate({
               to: '/participant/booth',
               search: {},
-              replace: true,
             })
           }
         }}
+        user={user}
+        existingCheckin={searchParams.booth_id ? boothCheckinMap.get(searchParams.booth_id) : null}
       />
     </div>
   )
