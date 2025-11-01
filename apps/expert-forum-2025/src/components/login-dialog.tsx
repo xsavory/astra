@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
   Button,
   Input,
@@ -16,6 +16,7 @@ import {
   InputOTPSlot,
 } from '@repo/react-components/ui'
 import { requiresPasswordInput, requiresOTPLogin } from 'src/lib/constants'
+import { getRedirectUrl } from 'src/lib/route-guards'
 import useAuth from 'src/hooks/use-auth'
 import api from 'src/lib/api'
 
@@ -33,8 +34,9 @@ export default function LoginDialog() {
 
   const { login, user, isAuthenticated, isLoading: isAuthLoading } = useAuth()
   const navigate = useNavigate()
+  const searchParams = useSearch({ strict: false }) as { redirect?: string; search?: string }
 
-  // Listen to user changes after login
+  // Redirect based on role
   useEffect(() => {
     // Only handle redirect if we're in the middle of login process
     if (!isLoggingIn.current || !isAuthenticated || !user || isAuthLoading) {
@@ -48,17 +50,10 @@ export default function LoginDialog() {
     // Close dialog
     setOpen(false)
 
-    // Redirect based on role
-    if (user.role === 'admin') {
-      navigate({ to: '/admin' })
-    } else if (user.role === 'staff') {
-      navigate({ to: '/staff' })
-    } else if (user.role === 'participant') {
-      navigate({ to: '/participant' })
-    } else {
-      navigate({ to: '/' })
-    }
-  }, [user, isAuthenticated, navigate, isAuthLoading])
+    // Get redirect URL based on role and search params
+    const redirectUrl = getRedirectUrl(user, searchParams.redirect, searchParams.search)
+    navigate(redirectUrl)
+  }, [user, isAuthenticated, navigate, isAuthLoading, searchParams])
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

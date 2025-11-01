@@ -7,8 +7,12 @@ import { requireAdmin } from 'src/lib/route-guards'
 export const Route = createFileRoute('/admin')({
   component: AdminRoute,
   pendingComponent: PageLoader,
-  beforeLoad: async ({ context }) => {
-    const user = await requireAdmin(context.auth)
+  beforeLoad: async ({ context, location }) => {
+    const user = await requireAdmin(
+      context.auth,
+      location.pathname,
+      location.search
+    )
     return { user }
   },
 })

@@ -7,8 +7,12 @@ import { requireStaff } from 'src/lib/route-guards'
 export const Route = createFileRoute('/staff')({
   component: StaffRoute,
   pendingComponent: PageLoader,
-  beforeLoad: async ({ context }) => {
-    const user = await requireStaff(context.auth)
+  beforeLoad: async ({ context, location }) => {
+    const user = await requireStaff(
+      context.auth,
+      location.pathname,
+      location.search
+    )
     return { user }
   },
 })
