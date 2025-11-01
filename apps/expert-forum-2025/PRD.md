@@ -1296,7 +1296,7 @@ export const COMPANY_OPTIONS = [
 - **Auth State Sync:** Automatic session sync across browser tabs using `api.auth.subscribeToAuthChanges()`
 - **Progress Tracking:** Live progress bar updates as participants complete booths using `api.checkins.subscribeToProgress()`
 - **Booth Management:** Real-time booth data updates for admin panel using `api.booths.subscribeToBooths()`
-- **User Status:** Live user status state updates using `api.checkins.subscribeToUserChanges()`
+- **User Status:** Live user status state updates using `api.users.subscribeToUserChanges()`
 - **Admin Stats Dashboard:** Real-time statistics updates as data changes using subscriptions to `users`, `booth_checkins`, and `ideations` tables
 
 **Responsive Design:**

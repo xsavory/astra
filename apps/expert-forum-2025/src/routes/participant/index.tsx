@@ -117,29 +117,72 @@ function ParticipantIndexPage() {
   })
 
   // Subscribe to realtime user changes (for QR check-in and eligibility updates)
+  // with Page Visibility API to save WebSocket connections
   useEffect(() => {
-    if (!user?.id) return
+    if (
+      !user?.id || 
+      user?.participant_type === 'online' ||
+      (user?.participant_type === 'offline' && user?.is_checked_in)
+    ) {
+      return
+    }
 
-    console.log('[ParticipantIndex] Subscribing to user changes for:', user.id)
+    let unsubscribe: (() => void) | null = null
 
-    const unsubscribe = api.checkins.subscribeToUserChanges(user.id, (updatedUser) => {
-      console.log('[ParticipantIndex] User changed:', updatedUser)
+    const setupSubscription = () => {
+      console.log('[ParticipantIndex] Subscribing to user changes for:', user.id)
 
-      // Invalidate current user query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] })
+      unsubscribe = api.users.subscribeToUserChanges(user.id, (updatedUser) => {
+        console.log('[ParticipantIndex] User changed:', updatedUser)
 
-      // If user just got checked in, also invalidate booth checkins query
-      if (updatedUser.is_checked_in && !user.is_checked_in) {
-        console.log('[ParticipantIndex] User just checked in, invalidating booth checkins')
-        queryClient.invalidateQueries({ queryKey: ['boothCheckins', user.id] })
+        // Invalidate current user query to refetch updated data
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] })
+
+        // If user just got checked in, also invalidate booth checkins query
+        if (updatedUser.is_checked_in && !user.is_checked_in) {
+          console.log('[ParticipantIndex] User just checked in, invalidating booth checkins')
+          queryClient.invalidateQueries({ queryKey: ['boothCheckins', user.id] })
+        }
+      })
+    }
+
+    const teardownSubscription = () => {
+      if (unsubscribe) {
+        console.log('[ParticipantIndex] Unsubscribing from user changes for:', user.id)
+        unsubscribe()
+        unsubscribe = null
       }
-    })
+    }
+
+    // Handle page visibility changes
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('[ParticipantIndex] Page hidden, unsubscribing to save connection')
+        teardownSubscription()
+      } else {
+        console.log('[ParticipantIndex] Page visible, resubscribing')
+        setupSubscription()
+        // Refetch data when page becomes visible again to get latest state
+        queryClient.invalidateQueries({ queryKey: ['currentUser'] })
+        if (user.is_checked_in) {
+          queryClient.invalidateQueries({ queryKey: ['boothCheckins', user.id] })
+        }
+      }
+    }
+
+    // Initial subscription (only if page is visible)
+    if (!document.hidden) {
+      setupSubscription()
+    }
+
+    // Listen to visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
-      console.log('[ParticipantIndex] Unsubscribing from user changes for:', user.id)
-      unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      teardownSubscription()
     }
-  }, [user?.id, user?.is_checked_in, queryClient])
+  }, [user?.id, user?.is_checked_in, user?.participant_type, queryClient])
 
   const isLoading = isLoadingUser || (user?.is_checked_in && isLoadingCheckins)
 

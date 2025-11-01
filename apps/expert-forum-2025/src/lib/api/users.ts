@@ -1,5 +1,6 @@
 import { supabase } from './client'
 import { BaseAPI } from './base'
+import type { Database } from 'src/types/database'
 import type {
   User,
   CreateUserInput,
@@ -7,6 +8,8 @@ import type {
   UserFilters,
   PaginatedResponse,
 } from 'src/types/schema'
+
+type DBUser = Database['public']['Tables']['users']['Row']
 
 /**
  * Users API with Supabase
@@ -257,4 +260,49 @@ export class UsersAPI extends BaseAPI {
       this.handleError(error, 'deleteUser')
     }
   }
+
+  /**
+     * Subscribe to user changes (Realtime Feature #3)
+     *
+     * This enables real-time user state tracking:
+     * - Watches for changes to user fields (is_checked_in, is_eligible_to_draw, etc)
+     * - Triggers when any user field is updated
+     * - Can be used to auto-refresh UI when staff checks in participant via QR
+     * - Can be used to show congratulations UI when eligible
+     *
+     * @param participantId - The participant to track
+     * @param callback - Called when user data changes with full updated user object
+     * @returns Unsubscribe function
+     */
+    subscribeToUserChanges(
+      participantId: string,
+      callback: (user: User) => void
+    ): () => void {
+      console.log(`[Realtime] Opening WebSocket connection for user: ${participantId}`)
+  
+      const channel = supabase
+        .channel(`user:${participantId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'users',
+            filter: `id=eq.${participantId}`,
+          },
+          (payload) => {
+            console.log(`[Realtime] Received UPDATE event for user: ${participantId}`, payload.new)
+            const updatedUser = payload.new as DBUser
+            callback(updatedUser as User)
+          }
+        )
+        .subscribe((status) => {
+          console.log(`[Realtime] Subscription status for user ${participantId}:`, status)
+        })
+  
+      return () => {
+        console.log(`[Realtime] Closing WebSocket connection for user: ${participantId}`)
+        supabase.removeChannel(channel)
+      }
+    }
 }

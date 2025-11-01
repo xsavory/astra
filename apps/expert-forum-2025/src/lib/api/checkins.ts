@@ -325,43 +325,4 @@ export class CheckinsAPI extends BaseAPI {
       }
     }
   }
-
-  /**
-   * Subscribe to user changes (Realtime Feature #3)
-   *
-   * This enables real-time user state tracking:
-   * - Watches for changes to user fields (is_checked_in, is_eligible_to_draw, etc)
-   * - Triggers when any user field is updated
-   * - Can be used to auto-refresh UI when staff checks in participant via QR
-   * - Can be used to show congratulations UI when eligible
-   *
-   * @param participantId - The participant to track
-   * @param callback - Called when user data changes with full updated user object
-   * @returns Unsubscribe function
-   */
-  subscribeToUserChanges(
-    participantId: string,
-    callback: (user: User) => void
-  ): () => void {
-    const channel = supabase
-      .channel(`user:${participantId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'users',
-          filter: `id=eq.${participantId}`,
-        },
-        (payload) => {
-          const updatedUser = payload.new as DBUser
-          callback(updatedUser as User)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }
 }
