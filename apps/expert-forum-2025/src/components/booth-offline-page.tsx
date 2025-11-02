@@ -149,6 +149,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                   navigate({
                     to: '/participant/booth',
                     search: { booth_id: checkin.booth_id },
+                    resetScroll: false,
                   })
                 }}
               >
@@ -211,6 +212,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
             navigate({
               to: '/participant/booth',
               search: {},
+              resetScroll: false,
             })
           }
         }}

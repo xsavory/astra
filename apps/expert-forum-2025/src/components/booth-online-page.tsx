@@ -137,6 +137,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                   navigate({
                     to: '/participant/booth',
                     search: { booth_id: booth.id },
+                    resetScroll: false,
                   })
                 }}
               >
@@ -219,6 +220,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
             navigate({
               to: '/participant/booth',
               search: {},
+              resetScroll: false,
             })
           }
         }}

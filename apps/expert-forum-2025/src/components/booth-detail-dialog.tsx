@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearch } from '@tanstack/react-router'
-import { Building2, X, CheckCircle2, Image } from 'lucide-react'
+import { Building2, X, CheckCircle2, Image, Loader2 } from 'lucide-react'
 
 import {
   Dialog,
@@ -202,9 +202,65 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     )
   }, [booth, handleCheckInClick, hasCheckedIn, existingCheckin])
 
-  // Loading skeleton
-  if (isLoading || !booth) {
-    return null
+  // Show loading state
+  if (isLoading) {
+    if (!isMobile) {
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Building2 className="size-5" />
+                Loading...
+              </DialogTitle>
+              <DialogDescription>
+                Virtual Exhibition Booth
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="size-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Memuat detail booth...</p>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )
+    }
+
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent className="min-h-[500px]">
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <Building2 className="size-5" />
+              Loading...
+            </DrawerTitle>
+            <DrawerDescription />
+          </DrawerHeader>
+          <div className="px-4 pb-4 flex-1">
+            <div className="py-4">
+              <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="size-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">Memuat detail booth...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DrawerFooter className="pt-4 border-t">
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                <X className="size-4 mr-2" />
+                Tutup
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+    )
   }
 
 
@@ -217,7 +273,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Building2 className="size-5" />
-                {booth.name}
+                {booth?.name}
               </DialogTitle>
               <DialogDescription>
                 Virtual Exhibition Booth
@@ -235,14 +291,14 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Image className="size-5" />
-                Poster {booth.name}
+                Poster {booth?.name}
               </DialogTitle>
               <DialogDescription>
                 Klik pada gambar untuk melihat lebih detail
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              {booth.poster_url && (
+              {booth?.poster_url && (
                 <img
                   src={booth.poster_url}
                   alt={`Poster ${booth.name}`}
@@ -272,7 +328,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center gap-2">
               <Building2 className="size-5" />
-              {booth.name}
+              {booth?.name}
             </DrawerTitle>
             <DrawerDescription>
             </DrawerDescription>
@@ -305,14 +361,14 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center gap-2">
               <Image className="size-5" />
-              Poster {booth.name}
+              Poster {booth?.name}
             </DrawerTitle>
             <DrawerDescription>
               Geser untuk menutup
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
-            {booth.poster_url && (
+            {booth?.poster_url && (
               <img
                 src={booth.poster_url}
                 alt={`Poster ${booth.name}`}
