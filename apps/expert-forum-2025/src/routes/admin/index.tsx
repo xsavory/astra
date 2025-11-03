@@ -13,10 +13,10 @@
  * - ✅ AdminParticipantTable (read-only with pagination)
  * - [ ] Click row to open detail drawer (Phase 4)
  *
- * Phase 3: CRUD Operations 🚧 TODO
- * - [ ] AdminParticipantFormDrawer (add/edit)
- * - [ ] Delete with validation
- * - [ ] CSV export functionality
+ * Phase 3: CRUD Operations ✅ DONE
+ * - ✅ AdminParticipantFormDrawer (add/edit)
+ * - ✅ Delete with validation
+ * - ✅ CSV export functionality
  *
  * Phase 4: Detail View 🚧 TODO
  * - [ ] AdminParticipantDetailDrawer (basic info + timeline)
@@ -28,19 +28,23 @@
  */
 
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
-import { Users, UserCheck, Trophy, FileText, RefreshCw } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download } from 'lucide-react'
 import { useState, useMemo } from 'react'
+import { toast } from '@repo/react-components/ui'
 
 import AdminStatsCard from 'src/components/admin-stats-card'
 import AdminParticipantFilters, {
   type ParticipantFilters,
 } from 'src/components/admin-participant-filters'
 import AdminParticipantTable from 'src/components/admin-participant-table'
+import AdminParticipantFormDrawer from 'src/components/admin-participant-form-drawer'
+import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmation-dialog'
 import PageLoader from 'src/components/page-loader'
 import { Button } from '@repo/react-components/ui'
 import api from 'src/lib/api'
-import type { Stats, ParticipantType, User } from 'src/types/schema'
+import { exportParticipantsToCSV } from 'src/lib/csv-export'
+import type { Stats, ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
 
 export const Route = createFileRoute('/admin/')({
   component: AdminIndexPage,
@@ -48,6 +52,8 @@ export const Route = createFileRoute('/admin/')({
 })
 
 function AdminIndexPage() {
+  const queryClient = useQueryClient()
+
   // State for pagination
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
@@ -60,6 +66,14 @@ function AdminIndexPage() {
     company: undefined,
     search: undefined,
   })
+
+  // State for form drawer
+  const [isFormDrawerOpen, setIsFormDrawerOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<User | null>(null)
+
+  // State for delete dialog
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
 
   // Fetch stats with real-time updates
   const { data: stats, isLoading: isStatsLoading, refetch, isFetching } = useQuery<Stats>({
@@ -130,16 +144,104 @@ function AdminIndexPage() {
     setPage(1) // Reset to first page on limit change
   }
 
-  // Handle row click (placeholder for Phase 4)
-  const handleRowClick = (user: User) => {
-    console.log('Row clicked:', user)
-    // TODO: Open detail drawer in Phase 4
+  // Mutations for CRUD operations
+  const createMutation = useMutation({
+    mutationFn: (data: CreateUserInput) => api.users.createUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] })
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] })
+      toast.success('Participant created successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to create participant')
+    },
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ userId, data }: { userId: string; data: UpdateUserInput }) =>
+      api.users.updateUser(userId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] })
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] })
+      toast.success('Participant updated successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update participant')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => api.users.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] })
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] })
+      toast.success('Participant deleted successfully')
+      setIsDeleteDialogOpen(false)
+      setDeletingUser(null)
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete participant')
+    },
+  })
+
+  // Handle add participant
+  const handleAddParticipant = () => {
+    setEditingUser(null)
+    setIsFormDrawerOpen(true)
   }
 
-  // Handle delete (placeholder for Phase 3)
+  // Handle edit participant
+  const handleEditParticipant = (user: User) => {
+    setEditingUser(user)
+    setIsFormDrawerOpen(true)
+  }
+
+  // Handle form submit (create or update)
+  const handleFormSubmit = async (data: CreateUserInput | UpdateUserInput) => {
+    if (editingUser) {
+      // Update existing user
+      await updateMutation.mutateAsync({
+        userId: editingUser.id,
+        data: data as UpdateUserInput,
+      })
+    } else {
+      // Create new user
+      await createMutation.mutateAsync(data as CreateUserInput)
+    }
+  }
+
+  // Handle row click (edit for now, detail drawer in Phase 4)
+  const handleRowClick = (user: User) => {
+    handleEditParticipant(user)
+  }
+
+  // Handle delete click
   const handleDelete = (userId: string) => {
-    console.log('Delete clicked:', userId)
-    // TODO: Implement delete with confirmation in Phase 3
+    const user = participantsData?.items.find((u) => u.id === userId)
+    if (user) {
+      setDeletingUser(user)
+      setIsDeleteDialogOpen(true)
+    }
+  }
+
+  // Handle delete confirm
+  const handleDeleteConfirm = async () => {
+    if (deletingUser) {
+      await deleteMutation.mutateAsync(deletingUser.id)
+    }
+  }
+
+  // Handle CSV export
+  const handleExportCSV = async () => {
+    try {
+      toast.info('Fetching participant data...')
+      const allUsers = await api.users.getAllUsersForExport()
+      exportParticipantsToCSV(allUsers)
+      toast.success('CSV exported successfully')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to export CSV')
+    }
   }
 
   return (
@@ -215,7 +317,26 @@ function AdminIndexPage() {
 
       {/* Participant Management Section */}
       <div className="space-y-4">
-        <h3 className="text-xl font-semibold">Participant Management</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold">Participant Management</h3>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleAddParticipant}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Participant
+            </Button>
+          </div>
+        </div>
 
         {/* Filters */}
         <AdminParticipantFilters
@@ -238,6 +359,24 @@ function AdminIndexPage() {
           onLimitChange={handleLimitChange}
         />
       </div>
+
+      {/* Form Drawer for Add/Edit */}
+      <AdminParticipantFormDrawer
+        open={isFormDrawerOpen}
+        onClose={() => setIsFormDrawerOpen(false)}
+        onSubmit={handleFormSubmit}
+        user={editingUser}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AdminDeleteConfirmationDialog
+        open={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        user={deletingUser}
+        isDeleting={deleteMutation.isPending}
+      />
     </div>
   )
 }

@@ -134,60 +134,43 @@ export class UsersAPI extends BaseAPI {
 
   /**
    * Create new user (auth + database)
+   * Uses Edge Function for admin operations
    */
   async createUser(data: CreateUserInput): Promise<User> {
     try {
       // Validate required fields
       this.validateRequired(data, ['name', 'email', 'participant_type'])
 
-      // Get participant password from env
-      const password =
-        (import.meta.env.VITE_PARTICIPANT_DEFAULT_PASSWORD as string) ||
-        'expertforum2025'
+      // Get current session token for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-      // Create auth account
-      const { data: authData, error: authError } =
-        await supabase.auth.admin.createUser({
-          email: data.email,
-          password: password,
-          email_confirm: true,
-          user_metadata: {
+      if (sessionError || !session) {
+        throw new Error('Not authenticated')
+      }
+
+      // Call Edge Function to create user
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        'admin-create-user',
+        {
+          body: {
             name: data.name,
+            email: data.email,
+            participant_type: data.participant_type,
+            company: data.company,
+            division: data.division,
           },
-        })
+        }
+      )
 
-      if (authError) {
-        throw authError
+      if (functionError) {
+        throw functionError
       }
 
-      if (!authData.user) {
-        throw new Error('Failed to create auth user')
+      if (!functionData?.data) {
+        throw new Error('Failed to create user')
       }
 
-      // Create database record
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert({
-          auth_id: authData.user.id,
-          name: data.name,
-          email: data.email,
-          role: 'participant',
-          participant_type: data.participant_type,
-          company: data.company || null,
-          division: data.division || null,
-          is_checked_in: false,
-          is_eligible_to_draw: false,
-        })
-        .select()
-        .single()
-
-      if (userError) {
-        // Rollback: delete auth user if database insert fails
-        await supabase.auth.admin.deleteUser(authData.user.id)
-        throw userError
-      }
-
-      return userData as User
+      return functionData.data as User
     } catch (error) {
       this.handleError(error, 'createUser')
     }
@@ -225,34 +208,33 @@ export class UsersAPI extends BaseAPI {
 
   /**
    * Delete user (with validation)
+   * Uses Edge Function for admin operations
    */
   async deleteUser(userId: string): Promise<{ success: boolean }> {
     try {
-      // Fetch user to check if checked in
-      const user = await this.getUser(userId)
+      // Get current session token for authentication
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
-      if (user.is_checked_in) {
-        throw new Error('Participant sudah check-in, tidak dapat dihapus')
+      if (sessionError || !session) {
+        throw new Error('Not authenticated')
       }
 
-      // Hard delete from database (RLS will handle permissions)
-      const { error } = await supabase.from('users').delete().eq('id', userId)
-
-      if (error) {
-        throw error
-      }
-
-      // Also delete from auth (if auth_id exists)
-      if (user.id) {
-        const { data: authUser } = await supabase
-          .from('users')
-          .select('auth_id')
-          .eq('id', userId)
-          .single()
-
-        if (authUser && (authUser as User).auth_id) {
-          await supabase.auth.admin.deleteUser((authUser as User).auth_id!)
+      // Call Edge Function to delete user
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        'admin-delete-user',
+        {
+          body: {
+            userId: userId,
+          },
         }
+      )
+
+      if (functionError) {
+        throw functionError
+      }
+
+      if (!functionData?.success) {
+        throw new Error('Failed to delete user')
       }
 
       return { success: true }
