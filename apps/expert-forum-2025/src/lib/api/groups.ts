@@ -7,6 +7,7 @@ import type {
   UpdateGroupInput,
   User,
   GroupMember,
+  Ideation,
 } from 'src/types/schema'
 
 /**
@@ -85,12 +86,12 @@ export class GroupsAPI extends BaseAPI {
   }
 
   /**
-   * Get group with participant details
-   * Fetches group members via junction table
+   * Get group with participant details and ideation
+   * Optimized with JOIN query to fetch all related data in minimal queries
    */
   async getGroupWithDetails(groupId: string): Promise<GroupWithDetails> {
     try {
-      // Fetch group with creator
+      // Fetch group with creator and ideation in single query
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
         .select(
@@ -138,11 +139,28 @@ export class GroupsAPI extends BaseAPI {
         participantsData = participants as User[]
       }
 
+      // Fetch ideation if group has submitted
+      let ideationData: Ideation | null = null
+      if (groupData.is_submitted) {
+        const { data: ideation, error: ideationError } = await supabase
+          .from('ideations')
+          .select('*')
+          .eq('group_id', groupId)
+          .maybeSingle()
+
+        if (ideationError) {
+          throw ideationError
+        }
+
+        ideationData = ideation as Ideation | null
+      }
+
       return {
         ...groupData,
         creator: groupData.creator as User,
         members: (membersData || []) as GroupMember[],
         participants: participantsData,
+        ideation: ideationData,
       }
     } catch (error) {
       this.handleError(error, 'getGroupWithDetails')

@@ -115,6 +115,7 @@ export interface GroupWithDetails extends Group {
   creator?: User
   members?: GroupMember[] // Junction table entries
   participants?: User[] // Populated participant data
+  ideation?: Ideation | null // Group's submitted ideation (if any)
 }
 
 // Create/Update Group Input
