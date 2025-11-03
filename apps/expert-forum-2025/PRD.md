@@ -530,9 +530,11 @@ The ideation feature enables participants to propose improvement or innovation i
    * Invited participant joins the group via `group_members` database junction table.
    * **Cannot invite to a group that has already submitted** (`is_submitted = true`).
 
-5. Participants can **leave** a group anytime:
+5. Participants can **leave** a group with restrictions:
 
-   * **Cannot leave a group that has already submitted** (`is_submitted = true`).
+   * **Creator CANNOT leave their own group** (enforced at both RLS and API layer for security)
+   * **Non-creator members can leave only if group has NOT submitted** (`is_submitted = false`)
+   * System validates and shows appropriate error message if leave attempt is invalid
 
 6. Once group size = **2 members exactly**, the **Submit Ideation** button becomes enabled.
 
@@ -545,7 +547,12 @@ The ideation feature enables participants to propose improvement or innovation i
    * **Group has exactly 2 members** (real-time check).
    * **Group has not submitted before** (`is_submitted = false`).
    * **Both members are from different companies** (compare `users.company` field).
-   * **Neither member has submitted an ideation for the same company case before** (check all ideations by both participants for matching `company_case`).
+   * **Neither member has submitted an ideation for the same company case before:**
+     - System queries `group_members` table to find ALL groups where current participants were/are members
+     - System checks ALL ideations from those groups for matching `company_case`
+     - System checks ALL individual ideations by current participants for matching `company_case`
+     - Validation ensures NO participant has EVER submitted the selected company case (either as individual or as group member)
+     - If any conflict found, shows error with participant name(s) who already submitted this case
    * Creates ideation record in `ideations` table linked to `group_id`.
    * Sets `is_group = true` on the ideation.
    * **Updates group:** Sets `is_submitted = true` and `submitted_at = now()`.
@@ -1131,7 +1138,15 @@ CREATE TABLE draw_winners (
 - **Hard validation:** Group must have exactly 2 members (validated in API layer)
 - **Group submission validation:** Group must not have submitted before (`is_submitted = false`)
 - **Company validation:** Both members must be from different companies (compare `users.company` field)
-- **Company case validation:** Neither group member can have submitted an ideation with the same `company_case` before (check all previous ideations by both participants)
+- **Company case validation (Critical):** Neither group member can have submitted an ideation with the same `company_case` before
+  - System checks ALL groups where participants were/are members (via `group_members` junction table)
+  - System checks ALL individual ideations by participants
+  - Validation applies to ALL participants in the group, not just the creator
+  - Example scenarios:
+    - ✅ User A + User B → Submit Case X (first time for both)
+    - ❌ User A + User C → Submit Case X (blocked: User A already submitted Case X)
+    - ❌ User B + User D → Submit Case X (blocked: User B was in group that submitted Case X)
+    - ✅ User C + User D → Submit Case X (allowed: neither has submitted Case X before)
 - Leader fills ideation form: title, description, company_case
 - System creates ideation record in `ideations` table linked to group via `group_id`
 - Sets `is_group = true` on the ideation record

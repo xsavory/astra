@@ -182,20 +182,97 @@ export class IdeationsAPI extends BaseAPI {
       }
 
       // Validate: neither member has submitted this company case before
-      const { data: existingIdeations, error: ideationsError } = await supabase
-        .from('ideations')
-        .select('creator_id, company_case')
-        .in('creator_id', participantIds)
-        .eq('company_case', data.company_case)
+      // Check both as creator (individual) AND as group member
 
-      if (ideationsError) {
-        throw ideationsError
+      // Step 1: Get all groups where participants are/were members
+      const { data: participantGroups, error: groupsError } = await supabase
+        .from('group_members')
+        .select('group_id')
+        .in('participant_id', participantIds)
+
+      if (groupsError) {
+        throw groupsError
       }
 
-      if (existingIdeations && existingIdeations.length > 0) {
+      const participantGroupIds = (participantGroups || []).map((g) => g.group_id)
+
+      // Step 2: Check for existing ideations with same company case
+      // 2a. Check group ideations from any groups these participants were in
+      let existingGroupIdeations: Array<{
+        id: string
+        group_id: string | null
+        creator_id: string
+      }> = []
+      if (participantGroupIds.length > 0) {
+        const { data: groupIdeations, error: groupIdeationsError } =
+          await supabase
+            .from('ideations')
+            .select('id, group_id, creator_id')
+            .in('group_id', participantGroupIds)
+            .eq('company_case', data.company_case)
+            .eq('is_group', true)
+
+        if (groupIdeationsError) {
+          throw groupIdeationsError
+        }
+
+        existingGroupIdeations = groupIdeations || []
+      }
+
+      // 2b. Check individual ideations by these participants
+      const { data: individualIdeations, error: individualError } =
+        await supabase
+          .from('ideations')
+          .select('id, creator_id')
+          .in('creator_id', participantIds)
+          .eq('company_case', data.company_case)
+          .eq('is_group', false)
+
+      if (individualError) {
+        throw individualError
+      }
+
+      const existingIndividualIdeations = individualIdeations || []
+
+      // Step 3: Check if any conflicts found
+      if (
+        existingGroupIdeations.length > 0 ||
+        existingIndividualIdeations.length > 0
+      ) {
         // Find which member(s) already submitted this company case
+        const conflictingMemberIds = new Set<string>()
+
+        // Add members who submitted as individual
+        existingIndividualIdeations.forEach((ideation) => {
+          if (participantIds.includes(ideation.creator_id)) {
+            conflictingMemberIds.add(ideation.creator_id)
+          }
+        })
+
+        // Add members who were in groups that submitted this case
+        for (const groupIdeation of existingGroupIdeations) {
+          // Skip if no group_id (shouldn't happen for group ideations, but safety check)
+          if (!groupIdeation.group_id) continue
+
+          // Find members of this group
+          const { data: groupMembers } = await supabase
+            .from('group_members')
+            .select('participant_id')
+            .eq('group_id', groupIdeation.group_id)
+
+          const memberIds = (groupMembers || []).map((m) => m.participant_id)
+
+          // Check if any current participant was in that group
+          memberIds.forEach((memberId) => {
+            if (participantIds.includes(memberId)) {
+              conflictingMemberIds.add(memberId)
+            }
+          })
+        }
+
+        // Get names of conflicting members
         const conflictingMembers = participants.filter((p) =>
-          existingIdeations.some((i) => i.creator_id === p.id)
+          conflictingMemberIds.has(p.id)
         )
 
         const memberNames = conflictingMembers.map((m) => m.name).join(', ')
