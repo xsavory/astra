@@ -17,15 +17,87 @@ import type {
  */
 export class GroupsAPI extends BaseAPI {
   /**
-   * Create new group
+   * Create new group with members
    * Groups are for member organization only - ideation content goes to ideations table
    * Creator is automatically added as first member via group_members table
+   * Additional members can be added during creation (validated)
+   *
+   * Business Rules (from inviteToGroup validation):
+   * - Only offline participants can be members
+   * - Participants must be checked in
+   * - No duplicate members allowed
+   * - Creator is automatically included (don't pass in member_ids)
    */
   async createGroup(
     creatorId: string,
     data: CreateGroupInput
   ): Promise<Group> {
     try {
+      // Validate creator
+      const { data: creatorData, error: creatorError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', creatorId)
+        .single()
+
+      if (creatorError) {
+        throw creatorError
+      }
+
+      if (!creatorData) {
+        throw new Error('Creator not found')
+      }
+
+      if (creatorData.participant_type !== 'offline') {
+        throw new Error('Hanya offline participant yang bisa membuat grup')
+      }
+
+      if (!creatorData.is_checked_in) {
+        throw new Error('Creator belum check-in')
+      }
+
+      // Validate additional members if provided
+      const memberIds = data.member_ids || []
+      const validatedMemberIds: string[] = []
+
+      if (memberIds.length > 0) {
+        // Remove duplicates and exclude creator
+        const uniqueMemberIds = Array.from(
+          new Set(memberIds.filter((id) => id !== creatorId))
+        )
+
+        if (uniqueMemberIds.length > 0) {
+          // Fetch all members at once
+          const { data: membersData, error: membersError } = await supabase
+            .from('users')
+            .select('*')
+            .in('id', uniqueMemberIds)
+
+          if (membersError) {
+            throw membersError
+          }
+
+          if (!membersData || membersData.length !== uniqueMemberIds.length) {
+            throw new Error('Beberapa participant tidak ditemukan')
+          }
+
+          // Validate each member
+          for (const member of membersData) {
+            if (member.participant_type !== 'offline') {
+              throw new Error(
+                `${member.name}: Hanya offline participant yang bisa join grup`
+              )
+            }
+
+            if (!member.is_checked_in) {
+              throw new Error(`${member.name}: Participant belum check-in`)
+            }
+
+            validatedMemberIds.push(member.id)
+          }
+        }
+      }
+
       // Create group
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
@@ -44,18 +116,22 @@ export class GroupsAPI extends BaseAPI {
         throw new Error('Failed to create group')
       }
 
-      // Add creator as first member via junction table
-      const { error: memberError } = await supabase
-        .from('group_members')
-        .insert({
-          group_id: groupData.id,
-          participant_id: creatorId,
-        })
+      // Prepare all members to insert (creator + validated members)
+      const allMemberIds = [creatorId, ...validatedMemberIds]
+      const memberInserts = allMemberIds.map((participantId) => ({
+        group_id: groupData.id,
+        participant_id: participantId,
+      }))
 
-      if (memberError) {
+      // Add all members via junction table in one insert
+      const { error: membersError } = await supabase
+        .from('group_members')
+        .insert(memberInserts)
+
+      if (membersError) {
         // Rollback: delete the group
         await supabase.from('groups').delete().eq('id', groupData.id)
-        throw memberError
+        throw membersError
       }
 
       return groupData as Group
@@ -343,16 +419,26 @@ export class GroupsAPI extends BaseAPI {
   /**
    * Get available participants (offline, checked in only)
    * No filtering by group membership for performance (validation done at submission)
+   * @param searchQuery - Optional search query to filter by name, email, or company
    */
-  async getAvailableParticipants(): Promise<User[]> {
+  async getAvailableParticipants(searchQuery?: string): Promise<User[]> {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('users')
         .select('*')
         .eq('role', 'participant')
         .eq('participant_type', 'offline')
         .eq('is_checked_in', true)
-        .order('name', { ascending: true })
+
+      // Add search filters if query provided
+      if (searchQuery && searchQuery.trim().length > 0) {
+        const search = `%${searchQuery.trim()}%`
+        query = query.or(
+          `name.ilike.${search},email.ilike.${search},company.ilike.${search}`
+        )
+      }
+
+      const { data, error } = await query.order('name', { ascending: true })
 
       if (error) {
         throw error

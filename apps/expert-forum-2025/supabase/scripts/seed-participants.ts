@@ -30,40 +30,47 @@ const BATCH_SIZE = 50
 
 // Sample data - replace this with your actual data or load from JSON
 const PARTICIPANTS_DATA: ParticipantData[] = [
+  // {
+  //   name: 'John Doe',
+  //   email: 'john.doe@astraotoparts.com',
+  //   participant_type: 'offline',
+  //   company: 'Astra Otoparts',
+  //   division: 'Engineering',
+  // },
+  // {
+  //   name: 'Jane Smith',
+  //   email: 'jane.smith@astraotoparts.com',
+  //   participant_type: 'offline',
+  //   company: 'Astra Otoparts',
+  //   division: 'Marketing',
+  // },
+  // {
+  //   name: 'Bob Wilson',
+  //   email: 'bob.wilson@example.com',
+  //   participant_type: 'online',
+  //   company: 'External Partner',
+  //   division: 'Sales',
+  // },
+  // {
+  //   name: 'Alice Brown',
+  //   email: 'alice.brown@astraotoparts.com',
+  //   participant_type: 'offline',
+  //   company: 'Astra Otoparts',
+  //   division: 'HR',
+  // },
+  // {
+  //   name: 'Charlie Johnson',
+  //   email: 'charlie.johnson@example.com',
+  //   participant_type: 'online',
+  //   company: 'Consultant',
+  //   division: 'Strategy',
+  // },
   {
-    name: 'John Doe',
-    email: 'john.doe@astraotoparts.com',
+    name: 'Bob Sadino',
+    email: 'bob.sadino@ahm.com',
     participant_type: 'offline',
-    company: 'Astra Otoparts',
-    division: 'Engineering',
-  },
-  {
-    name: 'Jane Smith',
-    email: 'jane.smith@astraotoparts.com',
-    participant_type: 'offline',
-    company: 'Astra Otoparts',
-    division: 'Marketing',
-  },
-  {
-    name: 'Bob Wilson',
-    email: 'bob.wilson@example.com',
-    participant_type: 'online',
-    company: 'External Partner',
-    division: 'Sales',
-  },
-  {
-    name: 'Alice Brown',
-    email: 'alice.brown@astraotoparts.com',
-    participant_type: 'offline',
-    company: 'Astra Otoparts',
-    division: 'HR',
-  },
-  {
-    name: 'Charlie Johnson',
-    email: 'charlie.johnson@example.com',
-    participant_type: 'online',
-    company: 'Consultant',
-    division: 'Strategy',
+    company: 'Astra Honda Motor',
+    division: 'Finance',
   },
 ]
 

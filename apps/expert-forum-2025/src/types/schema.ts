@@ -121,6 +121,7 @@ export interface GroupWithDetails extends Group {
 // Create/Update Group Input
 export interface CreateGroupInput {
   name: string
+  member_ids?: string[] // Optional: IDs of participants to add as members (excluding creator)
 }
 
 export interface UpdateGroupInput {
