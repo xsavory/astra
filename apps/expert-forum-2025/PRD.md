@@ -1122,9 +1122,10 @@ CREATE TABLE draw_winners (
 - Creates entry in `group_members` table: `(group_id, participant_id, joined_at)`
 
 **Leave Group:**
-- Participants can leave groups anytime
+- Non-creator participants can leave groups only if group has NOT submitted
+- Creator CANNOT leave their own group (enforced at both RLS and API layer)
 - Deletes entry from `group_members` table
-- If creator leaves, group remains active (other members can still use it)
+- Cannot leave if group has already submitted (`is_submitted = true`)
 
 **Create Group Ideation:**
 - **Hard validation:** Group must have exactly 2 members (validated in API layer)

@@ -287,11 +287,13 @@ export class GroupsAPI extends BaseAPI {
   /**
    * Remove participant from group
    * Deletes entry from group_members junction table
-   * Cannot leave if group has already submitted
+   * Business Rules:
+   * - Creator CANNOT leave their own group
+   * - Non-creator members can only leave if group has NOT submitted
    */
   async leaveGroup(groupId: string, participantId: string): Promise<Group> {
     try {
-      // Get group and check if already submitted
+      // Get group data
       const { data: groupData, error: groupError } = await supabase
         .from('groups')
         .select('*')
@@ -306,8 +308,18 @@ export class GroupsAPI extends BaseAPI {
         throw new Error('Group not found')
       }
 
+      // Check if participant is creator
+      if (groupData.creator_id === participantId) {
+        throw new Error(
+          'Creator tidak bisa meninggalkan grup yang dibuat sendiri'
+        )
+      }
+
+      // Check if group has already submitted
       if (groupData.is_submitted) {
-        throw new Error('Grup sudah submit ideation dan tidak bisa meninggalkan grup')
+        throw new Error(
+          'Grup sudah submit ideation dan tidak bisa meninggalkan grup'
+        )
       }
 
       // Remove from group via junction table
