@@ -14,6 +14,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import { useEffect } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -90,6 +91,27 @@ function AdminParticipantFormDrawer({
   })
 
   const participantType = watch('participant_type')
+
+  // Update form values when user prop changes (for edit mode)
+  useEffect(() => {
+    if (user) {
+      reset({
+        name: user.name,
+        email: user.email,
+        participant_type: user.participant_type || 'offline',
+        company: user.company || '',
+        division: user.division || '',
+      })
+    } else {
+      reset({
+        name: '',
+        email: '',
+        participant_type: 'offline',
+        company: '',
+        division: '',
+      })
+    }
+  }, [user, reset])
 
   // Handle form submission
   const onFormSubmit = async (data: ParticipantFormData) => {

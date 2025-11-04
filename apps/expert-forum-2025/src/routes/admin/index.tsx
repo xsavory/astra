@@ -18,8 +18,10 @@
  * - ✅ Delete with validation
  * - ✅ CSV export functionality
  *
- * Phase 4: Detail View 🚧 TODO
- * - [ ] AdminParticipantDetailDrawer (basic info + timeline)
+ * Phase 4: Detail View ✅ DONE
+ * - ✅ AdminParticipantDetailDrawer (basic info + timeline)
+ * - ✅ Click row to open detail drawer
+ * - ✅ Edit/Delete actions from detail drawer
  *
  * Phase 5: Submission Management 🚧 TODO
  * - [ ] AdminSubmissionDrawer (list + detail + export)
@@ -39,6 +41,7 @@ import AdminParticipantFilters, {
 } from 'src/components/admin-participant-filters'
 import AdminParticipantTable from 'src/components/admin-participant-table'
 import AdminParticipantFormDrawer from 'src/components/admin-participant-form-drawer'
+import AdminParticipantDetailDrawer from 'src/components/admin-participant-detail-drawer'
 import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmation-dialog'
 import PageLoader from 'src/components/page-loader'
 import { Button } from '@repo/react-components/ui'
@@ -70,6 +73,10 @@ function AdminIndexPage() {
   // State for form drawer
   const [isFormDrawerOpen, setIsFormDrawerOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+
+  // State for detail drawer
+  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false)
+  const [detailUser, setDetailUser] = useState<User | null>(null)
 
   // State for delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -210,9 +217,25 @@ function AdminIndexPage() {
     }
   }
 
-  // Handle row click (edit for now, detail drawer in Phase 4)
+  // Handle row click (opens detail drawer)
   const handleRowClick = (user: User) => {
+    setDetailUser(user)
+    setIsDetailDrawerOpen(true)
+  }
+
+  // Handle detail drawer actions
+  const handleDetailEdit = (user: User) => {
+    setIsDetailDrawerOpen(false)
     handleEditParticipant(user)
+  }
+
+  const handleDetailDelete = () => {
+    const user = detailUser
+    if (user) {
+      setIsDetailDrawerOpen(false)
+      setDeletingUser(user)
+      setIsDeleteDialogOpen(true)
+    }
   }
 
   // Handle delete click
@@ -359,6 +382,15 @@ function AdminIndexPage() {
           onLimitChange={handleLimitChange}
         />
       </div>
+
+      {/* Detail Drawer */}
+      <AdminParticipantDetailDrawer
+        open={isDetailDrawerOpen}
+        onClose={() => setIsDetailDrawerOpen(false)}
+        user={detailUser}
+        onEdit={handleDetailEdit}
+        onDelete={handleDetailDelete}
+      />
 
       {/* Form Drawer for Add/Edit */}
       <AdminParticipantFormDrawer
