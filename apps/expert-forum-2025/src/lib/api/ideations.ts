@@ -344,6 +344,94 @@ export class IdeationsAPI extends BaseAPI {
   }
 
   /**
+   * Get paginated ideations with filters (for admin dashboard)
+   */
+  async getIdeationsWithFilters(options?: {
+    page?: number
+    limit?: number
+    filters?: {
+      is_group?: boolean
+      company_case?: string
+      search?: string
+    }
+  }): Promise<{
+    items: Array<Ideation & { creator: User }>
+    total: number
+    page: number
+    limit: number
+    total_pages: number
+  }> {
+    try {
+      const page = options?.page || 1
+      const limit = options?.limit || 10
+      const filters = options?.filters || {}
+      const offset = (page - 1) * limit
+
+      // Build query with creator join
+      let query = supabase
+        .from('ideations')
+        .select('*, creator:users!creator_id(*)', { count: 'exact' })
+        .order('submitted_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      // Apply filters
+      if (filters.is_group !== undefined) {
+        query = query.eq('is_group', filters.is_group)
+      }
+
+      if (filters.company_case) {
+        query = query.eq('company_case', filters.company_case)
+      }
+
+      if (filters.search) {
+        // Search by title or creator name using text search
+        query = query.or(
+          `title.ilike.%${filters.search}%,creator.name.ilike.%${filters.search}%`
+        )
+      }
+
+      const { data, error, count } = await query
+
+      if (error) {
+        throw error
+      }
+
+      const total = count || 0
+      const items = (data || []) as Array<Ideation & { creator: User }>
+
+      return {
+        items,
+        total,
+        page,
+        limit,
+        total_pages: Math.ceil(total / limit),
+      }
+    } catch (error) {
+      this.handleError(error, 'getIdeationsWithFilters')
+    }
+  }
+
+  /**
+   * Get all ideations for export (no pagination)
+   */
+  async getAllIdeationsForExport(): Promise<Array<Ideation & { creator: User }>> {
+    try {
+      const { data, error } = await supabase
+        .from('ideations')
+        .select('*, creator:users!creator_id(*)')
+        .order('submitted_at', { ascending: false })
+
+      if (error) {
+        throw error
+      }
+
+      return (data || []) as Array<Ideation & { creator: User }>
+    } catch (error) {
+      this.handleError(error, 'getAllIdeationsForExport')
+    }
+  }
+
+  /**
    * Get ideation by ID
    */
   async getIdeation(ideationId: string): Promise<Ideation> {

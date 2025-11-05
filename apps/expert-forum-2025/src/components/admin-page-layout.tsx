@@ -123,7 +123,7 @@ function AdminPageLayout({ children }: Props) {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 container mx-auto px-4 py-6">{children}</main>
+      <main className="flex-1 container mx-auto px-4 py-6 bg-card">{children}</main>
     </div>
   )
 }
