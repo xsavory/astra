@@ -78,7 +78,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
         {/* FAB - Always visible */}
         <Button
           size="lg"
-          className="fixed bottom-6 right-6 size-14 rounded-full shadow-lg"
+          className="fixed bottom-6 right-6 size-14 rounded-full shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/50 transition-all duration-300 z-50 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-white/20 hover:border-white/40 hover:scale-110"
           onClick={() => setIsScannerOpen(true)}
         >
           <QrCode className="size-6" />
@@ -101,19 +101,24 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
       <Button
         variant="ghost"
         size="sm"
-        className="mb-2 -ml-2"
+        className="mb-2 -ml-2 hover:bg-primary/10"
         onClick={() => navigate({ to: '/participant' })}
       >
         <ArrowLeft className="size-4 mr-2" />
         Kembali
       </Button>
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Booth</h1>
-        <p className="text-muted-foreground mt-1">
-          Progress: {boothsCompleted} booth dikunjungi
-        </p>
+      {/* Header with gradient background */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-blue-500/5 to-cyan-500/10 p-6 border border-primary/20 shadow-lg shadow-primary/10">
+        <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+        <div className="relative">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-cyan-600 bg-clip-text text-transparent">
+            Booth Offline
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Progress: {boothsCompleted} booth dikunjungi
+          </p>
+        </div>
       </div>
 
       {/* Empty State */}
@@ -144,7 +149,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
             return (
               <Card
                 key={checkin.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
+                className="cursor-pointer transition-all group border-2 border-green-500/30 bg-gradient-to-br from-green-50/50 via-card to-green-500/5 dark:from-green-950/20 dark:via-card dark:to-green-500/10 shadow-lg shadow-green-500/10 hover:shadow-xl hover:shadow-green-500/20 hover:border-green-500/50"
                 onClick={() => {
                   navigate({
                     to: '/participant/booth',
@@ -156,7 +161,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base sm:text-lg mb-2">
+                      <CardTitle className="text-base sm:text-lg mb-2 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors">
                         {booth?.name || `Booth ${checkin.booth_id.slice(0, 8)}...`}
                       </CardTitle>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -173,11 +178,11 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                      <Badge variant="outline" className="bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-950 dark:to-green-900/50 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 shadow-sm">
                         <CheckCircle className="size-3 mr-1" />
                         Completed
                       </Badge>
-                      <ChevronRight className="size-5 text-muted-foreground" />
+                      <ChevronRight className="size-5 text-muted-foreground group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
                     </div>
                   </div>
                 </CardHeader>
@@ -190,7 +195,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
       {/* Floating Action Button (FAB) */}
       <Button
         size="lg"
-        className="fixed bottom-6 right-6 size-14 rounded-full shadow-lg hover:shadow-xl transition-shadow z-50"
+        className="fixed bottom-6 right-6 size-14 rounded-full transition-all duration-300 z-50 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
         onClick={() => setIsScannerOpen(true)}
       >
         <QrCode className="size-6" />

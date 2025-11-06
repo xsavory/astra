@@ -1,4 +1,6 @@
 import boothMock1 from 'src/assets/booth-mock-1.png'
+import boothMock2 from 'src/assets/booth-mock-2.png'
+import boothMock3 from 'src/assets/booth-mock-3.png'
 
 // Email Lists for Authentication
 export const ADMIN_EMAILS = [
@@ -40,8 +42,8 @@ export const COMPANY_OPTIONS = [
 // Set to null for booths without images yet - will show placeholder
 export const BOOTH_VISUAL_IMAGES: Record<string, string | null> = {
   'fe32d446-3a40-405f-acda-fee60680108a': boothMock1,
-  'booth-002': null,
-  'booth-003': null,
+  'a1462a04-38de-4e11-876e-e5d231ac4c0e': boothMock2,
+  '9798a826-3a23-4847-8b54-567167546c89': boothMock3,
   'booth-004': null,
   'booth-005': null,
 } as const

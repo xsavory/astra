@@ -81,21 +81,26 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
     <div className="space-y-4 relative min-h-screen">
       {/* Back Button */}
       <Button
-        variant="secondary"
+        variant="ghost"
         size="sm"
-        className="mb-2 -ml-2"
+        className="mb-2 -ml-2 hover:bg-primary/10"
         onClick={() => navigate({ to: '/participant' })}
       >
         <ArrowLeft className="size-4 mr-2" />
         Kembali
       </Button>
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Booth</h1>
-        <p className="text-muted-foreground mt-1">
-          Progress: {boothsCompleted} dari {totalBooths} booth selesai
-        </p>
+      {/* Header with gradient background */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-blue-500/5 to-cyan-500/10 p-6 border border-primary/20 shadow-lg shadow-primary/10">
+        <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+        <div className="relative">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-cyan-600 bg-clip-text text-transparent">
+            Booth Online
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Progress: {boothsCompleted} dari {totalBooths} booth selesai
+          </p>
+        </div>
       </div>
 
       {/* Empty State - No booths available */}
@@ -128,10 +133,10 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
             return (
               <Card
                 key={booth.id}
-                className={`cursor-pointer hover:shadow-md transition-all ${
+                className={`cursor-pointer transition-all group ${
                   isCompleted
-                    ? 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20'
-                    : 'hover:border-primary/50'
+                    ? 'border-2 border-green-500/30 bg-gradient-to-br from-green-50/50 via-card to-green-500/5 dark:from-green-950/20 dark:via-card dark:to-green-500/10 shadow-lg shadow-green-500/10 hover:shadow-xl hover:shadow-green-500/20'
+                    : 'border-2 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 hover:border-primary/40'
                 }`}
                 onClick={() => {
                   navigate({
@@ -143,22 +148,22 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
               >
                 <CardHeader className="pb-3">
                   {/* Booth Visual Image */}
-                  <div className="relative aspect-video w-full mb-3 overflow-hidden rounded-lg bg-muted">
+                  <div className="relative aspect-video w-full mb-3 overflow-hidden rounded-lg bg-muted ring-2 ring-primary/10 group-hover:ring-primary/30 transition-all">
                     {boothVisualImage ? (
                       <img
                         src={boothVisualImage}
                         alt={booth.name}
-                        className="object-cover w-full h-full"
+                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="flex items-center justify-center w-full h-full">
-                        <Building2 className="size-12 text-muted-foreground" />
+                      <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-primary/5 to-cyan-500/10">
+                        <Building2 className="size-12 text-primary/40 group-hover:text-primary/60 transition-colors" />
                       </div>
                     )}
                     {/* Completed Badge Overlay */}
                     {isCompleted && (
                       <div className="absolute top-2 right-2">
-                        <Badge className="bg-green-600 hover:bg-green-600 text-white border-0 shadow-md">
+                        <Badge className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white border-0 shadow-lg">
                           <CheckCircle className="size-3 mr-1" />
                           Completed
                         </Badge>
@@ -168,7 +173,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
 
                   {/* Booth Info */}
                   <div className="space-y-2">
-                    <CardTitle className="text-base sm:text-lg line-clamp-1">
+                    <CardTitle className="text-base sm:text-lg line-clamp-1 group-hover:text-primary transition-colors">
                       {booth.name}
                     </CardTitle>
                     <CardDescription className="line-clamp-2 text-xs sm:text-sm">
@@ -180,7 +185,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                   <div className="mt-2 space-y-2">
                     {isCompleted ? (
                       <>
-                        <Badge variant="outline" className="bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
+                        <Badge variant="outline" className="bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-950 dark:to-green-900/50 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 shadow-sm">
                           <CheckCircle className="size-3 mr-1" />
                           Sudah dikunjungi
                         </Badge>
@@ -199,7 +204,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                         )}
                       </>
                     ) : (
-                      <Badge variant="outline" className="text-muted-foreground">
+                      <Badge variant="outline" className="text-muted-foreground border-dashed">
                         Belum dikunjungi
                       </Badge>
                     )}
