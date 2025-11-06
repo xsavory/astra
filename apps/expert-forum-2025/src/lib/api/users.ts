@@ -207,6 +207,47 @@ export class UsersAPI extends BaseAPI {
   }
 
   /**
+   * Update participant check-in status (Admin only)
+   * Toggles check-in status and updates related fields
+   */
+  async updateCheckinStatus(
+    userId: string,
+    isCheckedIn: boolean,
+    checkinMethod?: 'qr' | 'manual'
+  ): Promise<User> {
+    try {
+      const updates: Partial<User> = {
+        is_checked_in: isCheckedIn,
+      }
+
+      if (isCheckedIn) {
+        // When checking in, set timestamp and method
+        updates.event_checkin_time = new Date().toISOString()
+        updates.event_checkin_method = checkinMethod || 'manual'
+      } else {
+        // When unchecking, clear timestamp and method
+        updates.event_checkin_time = null
+        updates.event_checkin_method = null
+      }
+
+      const { data: userData, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', userId)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return userData as User
+    } catch (error) {
+      this.handleError(error, 'updateCheckinStatus')
+    }
+  }
+
+  /**
    * Delete user (with validation)
    * Uses Edge Function for admin operations
    */

@@ -27,6 +27,8 @@ import {
 import {
   Pencil,
   Trash2,
+  UserCheck,
+  UserX,
 } from 'lucide-react'
 import type { User } from 'src/types/schema'
 
@@ -36,6 +38,7 @@ interface AdminParticipantDetailDrawerProps {
   user: User | null
   onEdit?: (user: User) => void
   onDelete?: (userId: string) => void
+  onToggleCheckin?: (user: User) => void
 }
 
 function AdminParticipantDetailDrawer({
@@ -44,6 +47,7 @@ function AdminParticipantDetailDrawer({
   user,
   onEdit,
   onDelete,
+  onToggleCheckin,
 }: AdminParticipantDetailDrawerProps) {
   if (!user) return null
 
@@ -56,6 +60,12 @@ function AdminParticipantDetailDrawer({
   const handleDelete = () => {
     if (onDelete) {
       onDelete(user.id)
+    }
+  }
+
+  const handleToggleCheckin = () => {
+    if (onToggleCheckin) {
+      onToggleCheckin(user)
     }
   }
 
@@ -168,24 +178,46 @@ function AdminParticipantDetailDrawer({
         </div>
 
         <SheetFooter>
-          <div className="flex gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full">
+            {/* Check-in Toggle Button */}
             <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleEdit}
+              variant={user.is_checked_in ? 'outline' : 'default'}
+              className="w-full"
+              onClick={handleToggleCheckin}
             >
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
+              {user.is_checked_in ? (
+                <>
+                  <UserX className="h-4 w-4 mr-2" />
+                  Undo Check-in
+                </>
+              ) : (
+                <>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Check-in Participant
+                </>
+              )}
             </Button>
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={handleDelete}
-              disabled={user.is_checked_in}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
+
+            {/* Edit and Delete Buttons */}
+            <div className="flex gap-2 w-full">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleEdit}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={handleDelete}
+                disabled={user.is_checked_in}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </div>
           </div>
         </SheetFooter>
       </SheetContent>

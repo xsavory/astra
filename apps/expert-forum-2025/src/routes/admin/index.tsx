@@ -44,6 +44,7 @@ import AdminParticipantFormDrawer from 'src/components/admin-participant-form-dr
 import AdminParticipantDetailDrawer from 'src/components/admin-participant-detail-drawer'
 import AdminSubmissionDrawer from 'src/components/admin-submission-drawer'
 import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmation-dialog'
+import AdminCheckinDialog from 'src/components/admin-checkin-dialog'
 import PageLoader from 'src/components/page-loader'
 import { Button } from '@repo/react-components/ui'
 import api from 'src/lib/api'
@@ -85,6 +86,10 @@ function AdminIndexPage() {
   // State for delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deletingUser, setDeletingUser] = useState<User | null>(null)
+
+  // State for check-in dialog
+  const [isCheckinDialogOpen, setIsCheckinDialogOpen] = useState(false)
+  const [checkinUser, setCheckinUser] = useState<User | null>(null)
 
   // Fetch stats with real-time updates
   const { data: stats, isLoading: isStatsLoading, refetch, isFetching } = useQuery<Stats>({
@@ -195,6 +200,26 @@ function AdminIndexPage() {
     },
   })
 
+  const checkinMutation = useMutation({
+    mutationFn: ({ userId, isCheckedIn }: { userId: string; isCheckedIn: boolean }) =>
+      api.users.updateCheckinStatus(userId, isCheckedIn, 'manual'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] })
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] })
+      toast.success('Check-in status updated successfully')
+      setIsCheckinDialogOpen(false)
+      setCheckinUser(null)
+      // Also update detail drawer if open
+      if (detailUser && checkinUser && detailUser.id === checkinUser.id) {
+        // Refetch to update detail drawer
+        refetchParticipants()
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update check-in status')
+    },
+  })
+
   // Handle add participant
   const handleAddParticipant = () => {
     setEditingUser(null)
@@ -242,6 +267,12 @@ function AdminIndexPage() {
     }
   }
 
+  const handleDetailToggleCheckin = (user: User) => {
+    setIsDetailDrawerOpen(false)
+    setCheckinUser(user)
+    setIsCheckinDialogOpen(true)
+  }
+
   // Handle delete click
   const handleDelete = (userId: string) => {
     const user = participantsData?.items.find((u) => u.id === userId)
@@ -255,6 +286,16 @@ function AdminIndexPage() {
   const handleDeleteConfirm = async () => {
     if (deletingUser) {
       await deleteMutation.mutateAsync(deletingUser.id)
+    }
+  }
+
+  // Handle check-in confirm
+  const handleCheckinConfirm = async () => {
+    if (checkinUser) {
+      await checkinMutation.mutateAsync({
+        userId: checkinUser.id,
+        isCheckedIn: !checkinUser.is_checked_in,
+      })
     }
   }
 
@@ -427,6 +468,7 @@ function AdminIndexPage() {
         user={detailUser}
         onEdit={handleDetailEdit}
         onDelete={handleDetailDelete}
+        onToggleCheckin={handleDetailToggleCheckin}
       />
 
       {/* Form Drawer for Add/Edit */}
@@ -445,6 +487,15 @@ function AdminIndexPage() {
         onConfirm={handleDeleteConfirm}
         user={deletingUser}
         isDeleting={deleteMutation.isPending}
+      />
+
+      {/* Check-in Dialog */}
+      <AdminCheckinDialog
+        open={isCheckinDialogOpen}
+        onClose={() => setIsCheckinDialogOpen(false)}
+        onConfirm={handleCheckinConfirm}
+        user={checkinUser}
+        isLoading={checkinMutation.isPending}
       />
 
       {/* Submission Drawer */}
