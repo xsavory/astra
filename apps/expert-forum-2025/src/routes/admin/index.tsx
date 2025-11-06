@@ -23,8 +23,8 @@
  * - ✅ Click row to open detail drawer
  * - ✅ Edit/Delete actions from detail drawer
  *
- * Phase 5: Submission Management 🚧 TODO
- * - [ ] AdminSubmissionDrawer (list + detail + export)
+ * Phase 5: Submission Management ✅ DONE
+ * - ✅ AdminSubmissionDrawer (list + detail + export)
  *
  * @see PRD.md Section 9 for full requirements
  */
@@ -42,11 +42,12 @@ import AdminParticipantFilters, {
 import AdminParticipantTable from 'src/components/admin-participant-table'
 import AdminParticipantFormDrawer from 'src/components/admin-participant-form-drawer'
 import AdminParticipantDetailDrawer from 'src/components/admin-participant-detail-drawer'
+import AdminSubmissionDrawer from 'src/components/admin-submission-drawer'
 import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmation-dialog'
 import PageLoader from 'src/components/page-loader'
 import { Button } from '@repo/react-components/ui'
 import api from 'src/lib/api'
-import { exportParticipantsToCSV } from 'src/lib/csv-export'
+import { exportParticipantsToCSV, exportSubmissionsToCSV } from 'src/lib/csv-export'
 import type { Stats, ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
 
 export const Route = createFileRoute('/admin/')({
@@ -77,6 +78,9 @@ function AdminIndexPage() {
   // State for detail drawer
   const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false)
   const [detailUser, setDetailUser] = useState<User | null>(null)
+
+  // State for submission drawer
+  const [isSubmissionDrawerOpen, setIsSubmissionDrawerOpen] = useState(false)
 
   // State for delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -254,7 +258,7 @@ function AdminIndexPage() {
     }
   }
 
-  // Handle CSV export
+  // Handle CSV export (participants)
   const handleExportCSV = async () => {
     try {
       toast.info('Fetching participant data...')
@@ -264,6 +268,31 @@ function AdminIndexPage() {
     } catch (error) {
       console.error(error)
       toast.error('Failed to export CSV')
+    }
+  }
+
+  // Handle CSV export (submissions)
+  const handleExportSubmissionsCSV = async () => {
+    try {
+      toast.info('Fetching submission data...')
+      const allSubmissions = await api.ideations.getAllIdeationsForExport()
+
+      // Fetch group members for group submissions
+      const groupMembers = new Map<string, User[]>()
+      for (const submission of allSubmissions) {
+        if (submission.is_group && submission.group_id) {
+          const details = await api.ideations.getIdeationWithDetails(submission.id)
+          if (details.participants) {
+            groupMembers.set(submission.group_id, details.participants)
+          }
+        }
+      }
+
+      exportSubmissionsToCSV(allSubmissions, groupMembers)
+      toast.success('Submissions CSV exported successfully')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to export submissions CSV')
     }
   }
 
@@ -346,6 +375,14 @@ function AdminIndexPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setIsSubmissionDrawerOpen(true)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              View Submissions
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleExportCSV}
             >
               <Download className="h-4 w-4 mr-2" />
@@ -408,6 +445,13 @@ function AdminIndexPage() {
         onConfirm={handleDeleteConfirm}
         user={deletingUser}
         isDeleting={deleteMutation.isPending}
+      />
+
+      {/* Submission Drawer */}
+      <AdminSubmissionDrawer
+        open={isSubmissionDrawerOpen}
+        onClose={() => setIsSubmissionDrawerOpen(false)}
+        onExportCSV={handleExportSubmissionsCSV}
       />
     </div>
   )
