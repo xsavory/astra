@@ -19,6 +19,7 @@ import { requiresPasswordInput, requiresOTPLogin } from 'src/lib/constants'
 import { getRedirectUrl } from 'src/lib/route-guards'
 import useAuth from 'src/hooks/use-auth'
 import api from 'src/lib/api'
+import AppButton from './app-button'
 
 type LoginStep = 'email' | 'password' | 'otp'
 
@@ -136,14 +137,14 @@ export default function LoginDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="lg" className="w-full">
+      <DialogTrigger asChild className='justify-center flex w-full'>
+        <AppButton size="lg" className="w-full text-lg">
           Login
-        </Button>
+        </AppButton>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Login</DialogTitle>
+          <DialogTitle className='text-primary'>Login</DialogTitle>
           <DialogDescription>
             Masukkan email Anda untuk melanjutkan
           </DialogDescription>
@@ -172,10 +173,10 @@ export default function LoginDialog() {
                 />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <AppButton type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                 {isLoading ? 'Memproses...' : 'Lanjutkan'}
-              </Button>
+              </AppButton>
             </form>
           )}
 
@@ -207,7 +208,7 @@ export default function LoginDialog() {
               </div>
 
               <div className="flex gap-2">
-                <Button
+                <AppButton
                   type="button"
                   variant="outline"
                   className="flex-1"
@@ -218,11 +219,11 @@ export default function LoginDialog() {
                   }}
                 >
                   Kembali
-                </Button>
-                <Button type="submit" className="flex-1" disabled={isLoading}>
+                </AppButton>
+                <AppButton type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
                   {isLoading ? 'Memproses...' : 'Login'}
-                </Button>
+                </AppButton>
               </div>
             </form>
           )}

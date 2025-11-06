@@ -3,6 +3,8 @@ import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@repo/react-components/ui'
 import useAuth from 'src/hooks/use-auth'
 
+import logo from 'src/assets/logo.png'
+
 interface Props {
   children: React.ReactNode
 }
@@ -26,12 +28,13 @@ function ParticipantPageLayout({ children }: Props) {
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex items-center justify-between px-4 py-3 sm:py-4">
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-semibold sm:text-xl truncate">
+            <img src={logo} alt='logo' className='w-24' />
+            {/* <h1 className="text-lg font-semibold sm:text-xl truncate">
               Expert Forum 2025
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground truncate">
               {user?.name}
-            </p>
+            </p> */}
           </div>
           <Button
             variant="ghost"
