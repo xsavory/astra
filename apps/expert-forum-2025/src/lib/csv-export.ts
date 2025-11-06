@@ -122,7 +122,7 @@ function convertSubmissionsToCSV(submissions: Array<Ideation & { creator: User }
       submission.creator.name,
       submission.creator.email,
       groupMembersStr,
-      new Date(submission.submitted_at).toLocaleString('id-ID'),
+      submission.submitted_at ? new Date(submission.submitted_at).toLocaleString('id-ID') : '',
     ]
   })
 

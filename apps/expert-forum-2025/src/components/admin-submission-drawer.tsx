@@ -17,7 +17,7 @@
  * @see PRD.md Section 9.2.5 (Submission Management)
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Sheet,
@@ -83,6 +83,19 @@ function AdminSubmissionDrawer({
     search: undefined,
   })
 
+  // State for search input (separate from filters for debounce)
+  const [searchInput, setSearchInput] = useState<string>('')
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchInput || undefined }))
+      setPage(1) // Reset to first page on search
+    }, 500) // 500ms delay
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
   // State for selected submission (detail view)
   const [selectedSubmission, setSelectedSubmission] = useState<IdeationWithCreator | null>(null)
   const [submissionDetails, setSubmissionDetails] = useState<{
@@ -110,7 +123,6 @@ function AdminSubmissionDrawer({
   const {
     data: submissionsData,
     isLoading: isSubmissionsLoading,
-    refetch: refetchSubmissions,
   } = useQuery({
     queryKey: ['adminSubmissions', page, limit, apiFilters],
     queryFn: () =>
@@ -205,9 +217,9 @@ function AdminSubmissionDrawer({
                     <label className="text-sm font-medium">Type</label>
                     <Select
                       value={filters.type}
-                      onValueChange={(value) => handleFilterChange('type', value as any)}
+                      onValueChange={(value) => handleFilterChange('type', value)}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className='w-full'>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -227,7 +239,7 @@ function AdminSubmissionDrawer({
                         handleFilterChange('companyCase', value === 'all' ? undefined : value)
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className='w-full'>
                         <SelectValue placeholder="All Cases" />
                       </SelectTrigger>
                       <SelectContent>
@@ -247,9 +259,9 @@ function AdminSubmissionDrawer({
                     <div className="relative">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
-                        placeholder="Title or creator..."
-                        value={filters.search || ''}
-                        onChange={(e) => handleFilterChange('search', e.target.value || undefined)}
+                        placeholder="Search title or description..."
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
                         className="pl-9"
                       />
                     </div>
@@ -321,7 +333,7 @@ function AdminSubmissionDrawer({
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {formatDateTime(submission.submitted_at)}
+                            {submission.submitted_at ? formatDateTime(submission.submitted_at) : '-'}
                           </TableCell>
                         </TableRow>
                       ))
@@ -427,7 +439,7 @@ function AdminSubmissionDrawer({
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Submitted</span>
                         <span className="text-sm font-medium">
-                          {formatDateTime(submissionDetails.ideation.submitted_at)}
+                          {submissionDetails.ideation.submitted_at ? formatDateTime(submissionDetails.ideation.submitted_at) : '-'}
                         </span>
                       </div>
                     </div>

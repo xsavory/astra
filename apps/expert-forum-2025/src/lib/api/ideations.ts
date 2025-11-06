@@ -384,9 +384,9 @@ export class IdeationsAPI extends BaseAPI {
       }
 
       if (filters.search) {
-        // Search by title or creator name using text search
+        // Search by title or description (can't search joined table with OR)
         query = query.or(
-          `title.ilike.%${filters.search}%,creator.name.ilike.%${filters.search}%`
+          `title.ilike.%${filters.search}%,description.ilike.%${filters.search}%`
         )
       }
 
