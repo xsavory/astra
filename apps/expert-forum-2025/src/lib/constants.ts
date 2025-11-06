@@ -1,3 +1,5 @@
+import boothMock1 from 'src/assets/booth-mock-1.png'
+
 // Email Lists for Authentication
 export const ADMIN_EMAILS = [
   'admin1@expert-forum.com',
@@ -37,7 +39,7 @@ export const COMPANY_OPTIONS = [
 // Maps booth ID to visual image path from /public folder
 // Set to null for booths without images yet - will show placeholder
 export const BOOTH_VISUAL_IMAGES: Record<string, string | null> = {
-  'booth-001': null,
+  'fe32d446-3a40-405f-acda-fee60680108a': boothMock1,
   'booth-002': null,
   'booth-003': null,
   'booth-004': null,

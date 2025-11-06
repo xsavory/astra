@@ -118,12 +118,12 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     return (
       <div className="space-y-4">
         {/* Booth Visual Image - Full width exhibition style */}
-        <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg overflow-hidden">
+        <div className="relative w-full aspect-[16/9] bg-gradient-to-br from-blue-100 to-purple-50 rounded-lg overflow-hidden flex items-end">
           {boothVisualImage ? (
             <img
               src={boothVisualImage}
               alt={booth.name}
-              className="object-cover w-full h-full"
+              className="w-full h-auto"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

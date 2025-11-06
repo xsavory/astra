@@ -26,6 +26,8 @@ import api from 'src/lib/api'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
 import type { User, BoothCheckin } from 'src/types/schema'
 
+import logoAstraOtoparts from 'src/assets/logo-astra-otoparts.png'
+
 export const Route = createFileRoute('/participant/')({
   component: ParticipantIndexPage,
   pendingComponent: PageLoader,
@@ -207,50 +209,61 @@ function ParticipantIndexPage() {
   const isEligible = user.is_eligible_to_draw ?? false
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 relative">
       {/* Welcome & Progress Section - Combined */}
-      <Card>
-        <CardHeader className="space-y-1 pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl sm:text-2xl">
-              Selamat Datang, {user.name}!
-            </CardTitle>
-            <Badge variant={user.participant_type === 'offline' ? 'default' : 'secondary'}>
+      <Card className="relative overflow-hidden border-2 border-primary/30 shadow-xl shadow-primary/20">
+        {/* Decorative Background Pattern */}
+        <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+
+        <CardHeader className="relative space-y-1 pb-4">
+          <div className='space-y-2'>
+            <div className='flex items-center justify-between'>
+            <img src={logoAstraOtoparts} className='w-32' />
+
+            <Badge
+              variant={user.participant_type === 'offline' ? 'default' : 'secondary'}
+              className="shadow-lg">
               {user.participant_type === 'offline' ? 'Offline' : 'Online'}
             </Badge>
+            </div>
+            <CardTitle className="text-xl sm:text-2xl bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent font-bold">
+              Selamat Datang, {user.name}!
+            </CardTitle>
           </div>
-          <CardDescription>
-            Terima kasih telah mengikuti Expert Forum 2025
+          <CardDescription className="text-base">
+            Terima kasih telah mengikuti Expert Forum 2025.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="relative space-y-4">
           {/* Progress Bar */}
-          <div className="space-y-2">
+          <div className="space-y-2 rounded bg-gradient-to-br from-primary/10 to-cyan-500/5 p-4 border border-primary/20">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-medium">
+              <span className="font-semibold text-foreground">
                 Progress Booth: {boothsCompleted} dari {totalBooths}
               </span>
-              <span className="text-muted-foreground">
+              <span className="font-bold text-primary">
                 {Math.round(progressPercentage)}%
               </span>
             </div>
-            <Progress value={progressPercentage} className="h-2" />
+            <Progress value={progressPercentage} className="h-3" />
           </div>
 
           {/* Status Message */}
           {!isEligible && (
-            <div className="rounded-lg bg-muted p-3 sm:p-4">
-              <p className="text-sm text-muted-foreground">
-                Selesaikan <span className="font-semibold text-foreground">{remainingBooths} booth lagi</span> untuk mendapatkan voucher dan mengikuti undian
+            <div className="rounded bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-2 border-2 border-amber-500/30 shadow-lg shadow-amber-500/10">
+              <p className="text-xs font-medium">
+                Selesaikan <span className="font-bold text-amber-600 dark:text-amber-400">{remainingBooths} booth lagi</span> untuk mendapatkan voucher dan mengikuti undian
               </p>
             </div>
           )}
 
           {isEligible && (
-            <div className="rounded-lg bg-green-50 dark:bg-green-950 p-3 sm:p-4 border border-green-200 dark:border-green-800">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="size-5 text-green-600 dark:text-green-400 shrink-0" />
-                <p className="text-sm font-medium text-green-900 dark:text-green-100">
+            <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-500/10 p-4 border-2 border-green-500/40 shadow-lg shadow-green-500/20">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-green-500/20 p-2">
+                  <CheckCircle2 className="size-5 text-green-600 dark:text-green-400 shrink-0" />
+                </div>
+                <p className="text-sm font-semibold text-green-700 dark:text-green-300">
                   Selamat! Anda telah menyelesaikan semua booth
                 </p>
               </div>
@@ -264,17 +277,17 @@ function ParticipantIndexPage() {
         {/* First Row: Booth and Collaboration */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {/* Booth Card */}
-          <Link to="/participant/booth" className="block">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
+          <Link to="/participant/booth" className="block group">
+            <Card className="cursor-pointer h-full bg-gradient-to-r from-primary via-blue-600 to-cyan-500 border-2 border-white/30 shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/50">
               <CardContent className="pt-6 pb-6">
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="rounded-full bg-primary/10 p-3 sm:p-4">
-                    <Building2 className="size-5 sm:size-6 text-primary" />
+                  <div className="rounded-full bg-white/20 backdrop-blur-sm p-3 sm:p-4 group-hover:scale-110 transition-transform duration-300">
+                    <Building2 className="size-5 sm:size-6 text-white" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="font-semibold text-sm sm:text-base">Booth</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Kunjungi booth perusahaan
+                    <h3 className="font-bold text-white">Booth Checkin</h3>
+                    <p className="text-xs text-white/80">
+                      Kunjungi booth
                     </p>
                   </div>
                 </div>
@@ -283,16 +296,16 @@ function ParticipantIndexPage() {
           </Link>
 
           {/* Collaboration Card */}
-          <Link to="/participant/collaboration" className="block">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow h-full">
+          <Link to="/participant/collaboration" className="block group">
+            <Card className="cursor-pointer h-full bg-gradient-to-r from-primary via-blue-600 to-cyan-500 border-2 border-white/30 shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/50">
               <CardContent className="pt-6 pb-6">
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="rounded-full bg-primary/10 p-3 sm:p-4">
-                    <Lightbulb className="size-5 sm:size-6 text-primary" />
+                  <div className="rounded-full bg-white/20 backdrop-blur-sm p-3 sm:p-4 group-hover:scale-110 transition-transform duration-300">
+                    <Lightbulb className="size-5 sm:size-6 text-white" />
                   </div>
                   <div className="space-y-1">
-                    <h3 className="font-semibold text-sm sm:text-base">Collaboration</h3>
-                    <p className="text-xs text-muted-foreground">
+                    <h3 className="font-bold text-white">Collaboration</h3>
+                    <p className="text-xs text-white/80">
                       {user.participant_type === 'offline' ? 'Buat grup ideasi' : 'Submit ideasi'}
                     </p>
                   </div>
@@ -305,17 +318,17 @@ function ParticipantIndexPage() {
         {/* Second Row: Zoom Card - Only for online participants */}
         {user.participant_type === 'online' && (
           <Card
-            className="cursor-pointer hover:shadow-md transition-shadow"
+            className="cursor-pointer bg-gradient-to-r from-primary via-blue-600 to-cyan-500 border-2 border-white/30 shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/50 group"
             onClick={() => setIsZoomDialogOpen(true)}
           >
             <CardContent className="pt-6 pb-6">
               <div className="flex flex-col items-center text-center space-y-3">
-                <div className="rounded-full bg-primary/10 p-3 sm:p-4">
-                  <Video className="size-5 sm:size-6 text-primary" />
+                <div className="rounded-full bg-white/20 backdrop-blur-sm p-3 sm:p-4 group-hover:scale-110 transition-transform duration-300">
+                  <Video className="size-5 sm:size-6 text-white" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-semibold text-sm sm:text-base">Join Zoom Meeting</h3>
-                  <p className="text-xs text-muted-foreground">
+                  <h3 className="font-bold text-sm sm:text-base text-white">Join Zoom Meeting</h3>
+                  <p className="text-xs text-white/80">
                     Bergabung dengan sesi virtual
                   </p>
                 </div>
@@ -326,21 +339,29 @@ function ParticipantIndexPage() {
       </div>
 
       {/* Voucher Section - Moved to bottom */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base sm:text-lg">Voucher & Undian</CardTitle>
+      <Card className="relative overflow-hidden border-2 border-primary/30 shadow-xl shadow-primary/20 bg-gradient-to-br from-card via-card to-amber-100">
+        {/* Decorative Background */}
+        <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
+
+        <CardHeader className="relative pb-3">
+          <CardTitle className="text-base sm:text-lg bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent font-bold">
+            Voucher & Undian
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           {!isEligible ? (
             // Locked State
             <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center space-y-4">
-              <div className="rounded-full bg-muted p-4 sm:p-6">
-                <Lock className="size-8 sm:size-12 text-muted-foreground" />
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-gray-400/20 to-gray-500/10 blur-xl" />
+                <div className="relative rounded-full bg-gradient-to-br from-gray-200/50 to-gray-300/30 p-5 sm:p-7 border-2 border-gray-300/40">
+                  <Lock className="size-8 sm:size-12 text-gray-500" />
+                </div>
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-base sm:text-lg">Voucher Terkunci</h3>
+                <h3 className="font-bold text-base sm:text-lg">Voucher Terkunci</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Selesaikan {remainingBooths} booth lagi untuk membuka voucher dan mendapatkan kesempatan mengikuti undian berhadiah
+                  Selesaikan <span className="font-bold text-primary">{remainingBooths} booth lagi</span> untuk membuka voucher dan mengikuti undian berhadiah
                 </p>
               </div>
             </div>
@@ -348,23 +369,37 @@ function ParticipantIndexPage() {
             // Unlocked State
             <div className="space-y-4">
               {/* Voucher Image Placeholder */}
-              <div className="relative aspect-[16/9] rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 border-2 border-primary/20">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center space-y-2">
-                    <CheckCircle2 className="size-12 sm:size-16 text-primary mx-auto" />
-                    <p className="font-semibold text-lg sm:text-xl">Voucher Unlocked!</p>
-                    <p className="text-sm text-muted-foreground">Kode: ASTRA2025</p>
+              <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-primary via-blue-500 to-amber-400 border-2 border-white/40 shadow-2xl shadow-primary/30">
+                <div className="absolute inset-0 bg-grid-white/10" />
+                <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
+                  <div className="text-center space-y-3">
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-full bg-white/30 blur-2xl" />
+                      <CheckCircle2 className="relative size-14 sm:size-20 text-white mx-auto drop-shadow-lg" />
+                    </div>
+                    <p className="font-bold text-xl sm:text-2xl text-white drop-shadow-lg">
+                      Voucher Unlocked!
+                    </p>
+                    <div className="inline-block px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm">
+                      <p className="text-sm sm:text-base font-bold text-gray-800">
+                        Kode: ASTRA2025
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Eligibility Badge */}
-              <div className="rounded-lg bg-primary/10 p-4 border border-primary/20">
+              <div className="rounded-xl bg-gradient-to-br from-green-500/15 to-emerald-500/10 p-4 border-2 border-green-500/40 shadow-lg shadow-green-500/20">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="size-5 text-primary shrink-0 mt-0.5" />
+                  <div className="rounded-full bg-green-500/20 p-2">
+                    <CheckCircle2 className="size-5 text-green-600 dark:text-green-400 shrink-0" />
+                  </div>
                   <div className="space-y-1">
-                    <p className="font-semibold text-sm">Anda Memenuhi Syarat!</p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="font-bold text-sm text-green-700 dark:text-green-300">
+                      Anda Memenuhi Syarat!
+                    </p>
+                    <p className="text-sm text-green-600/80 dark:text-green-400/80">
                       Selamat! Anda telah memenuhi syarat untuk mengikuti undian berhadiah Expert Forum 2025
                     </p>
                   </div>

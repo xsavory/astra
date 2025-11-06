@@ -78,7 +78,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
   const totalBooths = booths.length
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative min-h-screen">
       {/* Back Button */}
       <Button
         variant="secondary"

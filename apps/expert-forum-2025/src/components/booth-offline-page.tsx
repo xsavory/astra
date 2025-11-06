@@ -96,7 +96,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
   const boothsCompleted = boothCheckins.length
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-4 pb-24 relative min-h-screen">
       {/* Back Button */}
       <Button
         variant="ghost"
