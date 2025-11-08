@@ -369,7 +369,7 @@ function ParticipantIndexPage() {
             // Unlocked State
             <div className="space-y-4">
               {/* Voucher Image Placeholder */}
-              <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-primary via-blue-500 to-amber-400 border-2 border-white/40 shadow-2xl shadow-primary/30">
+              <div className="relative aspect-[16/9] rounded-xl overflow-hidden bg-gradient-to-br from-primary via-blue-500 to-amber-400 border-6 border-white/40 shadow-2xl shadow-primary/30">
                 <div className="absolute inset-0 bg-grid-white/10" />
                 <div className="absolute inset-0 flex items-center justify-center backdrop-blur-[2px]">
                   <div className="text-center space-y-3">
