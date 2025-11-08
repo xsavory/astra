@@ -114,6 +114,7 @@ function StaffEventQRScannerDialog({
           onScannerReady={handleScannerReady}
           onScanningChange={handleScanningChange}
           onIdleTimeout={handleIdleTimeout}
+          preferredCamera='user'
         />
 
         {/* Loading State */}
