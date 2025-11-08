@@ -71,7 +71,7 @@ function StaffCheckinPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto container px-4 py-6">
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Event Check-in</h1>

@@ -1,12 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { Trophy, Sparkles, Users, History, Play, Check, X, RotateCcw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trophy, Sparkles, Users, History, Play, Check, X, RotateCcw } from 'lucide-react'
 import {
   Button,
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
   Badge,
@@ -20,11 +19,16 @@ import {
   AlertDescription,
   Skeleton,
 } from '@repo/react-components/ui'
+import { useIsMobile } from '@repo/react-components/hooks'
 import { cn } from '@repo/react-components/lib'
 import useAuth from 'src/hooks/use-auth'
 import api from 'src/lib/api'
 import type { User, DrawLogWithDetails } from 'src/types/schema'
 import PageLoader from 'src/components/page-loader'
+
+import bgImage from 'src/assets/background.png'
+import bgMobileImage from 'src/assets/background-mobile.png'
+import logoHeadline from 'src/assets/logo-headline.png'
 
 export const Route = createFileRoute('/staff/draw')({
   component: StaffDrawPage,
@@ -39,6 +43,7 @@ type DrawState = 'idle' | 'drawing' | 'winner-revealed' | 'confirming'
 function StaffDrawPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const isMobile = useIsMobile()
 
   // State
   const [drawState, setDrawState] = useState<DrawState>('idle')
@@ -46,7 +51,7 @@ function StaffDrawPage() {
   const [animatingCard, setAnimatingCard] = useState<User | null>(null)
   const [cachedWinners, setCachedWinners] = useState<User[]>([])
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [showHistoryCollapsed, setShowHistoryCollapsed] = useState(true)
+  const [showHistoryDialog, setShowHistoryDialog] = useState(false)
 
   // Queries
   const { data: eligibleParticipants = [], isLoading: isLoadingParticipants } = useQuery<User[]>({
@@ -169,197 +174,240 @@ function StaffDrawPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/20 p-4 md:p-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            <Trophy className="size-10 text-yellow-500" />
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 bg-clip-text text-transparent">
-              Lucky Draw
-            </h1>
-            <Trophy className="size-10 text-yellow-500" />
-          </div>
-          <p className="text-muted-foreground text-lg">
-            Draw pemenang dari peserta yang eligible
-          </p>
-        </div>
-
-        {/* Stats Card */}
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-xl">
-          <CardContent className="pt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <Users className="size-5 text-primary" />
-                  <p className="text-sm font-medium text-muted-foreground">Eligible Participants</p>
-                </div>
-                <p className="text-4xl font-bold text-primary">{availableParticipants.length}</p>
-              </div>
-
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <Sparkles className="size-5 text-yellow-600" />
-                  <p className="text-sm font-medium text-muted-foreground">Selected Winners</p>
-                </div>
-                <p className="text-4xl font-bold text-yellow-600">{cachedWinners.length}</p>
-              </div>
-
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <History className="size-5 text-green-600" />
-                  <p className="text-sm font-medium text-muted-foreground">Total Draws</p>
-                </div>
-                <p className="text-4xl font-bold text-green-600">{drawHistory.length}</p>
-              </div>
+    <div className='min-w-screen min-h-screen relative overflow-hidden'>
+      {/* Background Image with Overlay */}
+      <div className="absolute inset-0 z-0">
+        <img
+          src={isMobile ? bgMobileImage : bgImage}
+          alt="Background"
+          className="h-full w-full object-cover"
+        />
+      </div>
+      <div className="container px-4 py-6 mx-auto h-screen">
+        <div className="flex gap-4 h-full max-w-7xl mx-auto">
+          {/* Left Column - Logo, Stats, Winners List */}
+          <div className="w-80 flex flex-col gap-3 overflow-hidden">
+            {/* Logo */}
+            <div className="flex justify-center shrink-0 z-15">
+              <img
+                src={logoHeadline}
+                alt="The 9th Expert Forum"
+                className="h-auto w-full max-w-xs"
+              />
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Main Draw Area */}
-        <Card className="border-2 border-primary/30 bg-gradient-to-br from-white via-purple-50/30 to-pink-50/20 shadow-2xl">
-          <CardContent className="p-8 md:p-12">
-            {drawState === 'idle' && (
-              <div className="text-center space-y-8">
-                {availableParticipants.length === 0 ? (
-                  <Alert>
-                    <AlertDescription className="text-center">
-                      Tidak ada peserta yang eligible untuk mengikuti undian.
-                      {cachedWinners.length > 0 && " Silakan submit winners yang sudah dipilih atau hapus dari daftar."}
-                    </AlertDescription>
-                  </Alert>
+            {/* Stats Card - Unified */}
+            <Card className="border border-cyan-200 bg-white/80 backdrop-blur shrink-0 p-2">
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center">
+                    <p className="text-[9px] font-medium text-muted-foreground">Eligible</p>
+                    <p className="text-base font-bold text-primary">{availableParticipants.length}</p>
+                  </div>
+                  <div className="text-center border-x border-cyan-200">
+                    <p className="text-[9px] font-medium text-muted-foreground">Selected</p>
+                    <p className="text-base font-bold text-primary">{cachedWinners.length}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[9px] font-medium text-muted-foreground">Draws</p>
+                    <p className="text-base font-bold text-primary">{drawHistory.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Winners List */}
+            <Card className="gap-0 pt-4 border-2 border-primary bg-white/90 backdrop-blur shadow-xl flex flex-col flex-1 min-h-0 overflow-hidden">
+              <CardHeader className="border-b pb-0!">
+                <CardTitle className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-2">
+                    <Trophy className="size-4 text-cyan-600" />
+                    Winners Terpilih
+                  </span>
+                  <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-xs">
+                    {cachedWinners.length}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col p-2 min-h-0 overflow-hidden">
+                {cachedWinners.length === 0 ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <p className="text-muted-foreground text-xs text-center px-2">
+                      Belum ada winners yang dipilih.<br />Mulai undian untuk memilih pemenang.
+                    </p>
+                  </div>
                 ) : (
                   <>
-                    <div className="space-y-4">
-                      <Sparkles className="size-20 mx-auto text-yellow-500 animate-pulse" />
-                      <div>
-                        <h2 className="text-3xl font-bold mb-2">Siap untuk mengundi?</h2>
-                        <p className="text-muted-foreground">
-                          {availableParticipants.length} peserta menunggu kesempatan mereka
-                        </p>
-                      </div>
+                    <div className="flex-1 overflow-y-auto pr-1 min-h-0">
+                      {cachedWinners.map((winner, index) => (
+                        <Card key={winner.id} className="py-2 border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 shrink-0 my-2">
+                          <CardContent className="flex items-start gap-2">
+                            <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 shrink-0 text-[10px] px-1.5">
+                              #{index + 1}
+                            </Badge>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-xs truncate">{winner.name}</p>
+                              <p className="text-[10px] text-muted-foreground truncate">{winner.email}</p>
+                              {winner.company && (
+                                <p className="text-[10px] text-muted-foreground truncate">{winner.company}</p>
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveCachedWinner(winner.id)}
+                              className="h-5 w-5 p-0 hover:bg-red-100 hover:text-red-600 shrink-0"
+                            >
+                              <X className="size-3" />
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
 
-                    <Button
-                      size="lg"
-                      onClick={handleStartDraw}
-                      className="relative h-16 px-12 text-xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-700 hover:via-pink-700 hover:to-red-700 border-2 border-white/30 shadow-2xl shadow-purple-500/50 transition-all duration-300 hover:scale-105 hover:shadow-purple-500/70"
-                    >
-                      <Play className="size-6 mr-2" />
-                      Mulai Undian
-                    </Button>
+                    <div className="flex gap-1.5 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowConfirmDialog(true)}
+                        className="border-cyan-300 hover:bg-cyan-50 text-[10px] h-7"
+                      >
+                        <Check className="size-3 mr-1" />
+                        Submit ({cachedWinners.length})
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowHistoryDialog(true)}
+                        className="border-cyan-300 hover:bg-cyan-50 text-[10px] h-7"
+                      >
+                        <History className="size-3 mr-1" />
+                        Riwayat ({drawHistory.length})
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setCachedWinners([])
+                          localStorage.removeItem('draw_cached_winners')
+                        }}
+                        className="border-red-300 hover:bg-red-50 hover:text-red-600 text-[10px] h-7"
+                      >
+                        <X className="size-3 mr-1" />
+                        Clear
+                      </Button>
+                    </div>
                   </>
                 )}
-              </div>
-            )}
+              </CardContent>
+            </Card>
+          </div>
 
-            {drawState === 'drawing' && (
-              <DrawingAnimation participant={animatingCard} />
-            )}
-
-            {drawState === 'winner-revealed' && selectedWinner && (
-              <WinnerReveal
-                winner={selectedWinner}
-                onConfirm={handleConfirmWinner}
-                onRedraw={handleRedraw}
-              />
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Cached Winners */}
-        {cachedWinners.length > 0 && (
-          <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-50/50 via-card to-yellow-500/5 shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="size-5 text-yellow-600" />
-                Winners Terpilih ({cachedWinners.length})
-              </CardTitle>
-              <CardDescription>
-                Winners yang sudah terpilih dan siap untuk disubmit
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {cachedWinners.map((winner, index) => (
-                  <Card key={winner.id} className="border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-50 to-white">
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <Badge className="bg-gradient-to-r from-yellow-600 to-yellow-500">
-                          Winner #{index + 1}
-                        </Badge>
+          {/* Right Column - Draw Area (Standout/Prominent) */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Card className="bg-gradient-to-r from-primary to-cyan-600 border-2 border-cyan-200 backdrop-blur shadow-2xl flex-1 flex flex-col overflow-hidden">
+              <CardContent className="flex-1 flex flex-col justify-center overflow-hidden p-8">
+                {drawState === 'idle' && (
+                  <div className="text-center space-y-8">
+                    {availableParticipants.length === 0 ? (
+                      <Alert className="border-cyan-200">
+                        <AlertDescription className="text-center">
+                          Tidak ada peserta yang eligible untuk mengikuti undian.
+                          {cachedWinners.length > 0 && " Silakan submit winners yang sudah dipilih."}
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <>
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveCachedWinner(winner.id)}
-                          className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                          size="lg"
+                          onClick={handleStartDraw}
+                          className="bg-white cursor-pointer h-16 px-12 text-xl text-primary font-bold shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:scale-105 hover:bg-white"
                         >
-                          <X className="size-4" />
+                          <Play className="size-6 mr-2" />
+                          Mulai Undian
                         </Button>
-                      </div>
-                      <div>
-                        <p className="font-bold text-lg">{winner.name}</p>
-                        <p className="text-sm text-muted-foreground">{winner.email}</p>
-                        {winner.company && (
-                          <p className="text-sm text-muted-foreground">{winner.company}</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="flex gap-3 justify-center pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowConfirmDialog(true)}
-                  size="lg"
-                  className="border-2 border-yellow-500/30 hover:bg-yellow-50"
-                >
-                  <Check className="size-5 mr-2" />
-                  Submit {cachedWinners.length} Winner{cachedWinners.length > 1 ? 's' : ''}
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCachedWinners([])
-                    localStorage.removeItem('draw_cached_winners')
-                  }}
-                  size="lg"
-                  className="border-2 border-red-500/30 hover:bg-red-50 hover:text-red-600"
-                >
-                  <X className="size-5 mr-2" />
-                  Clear All
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Draw History */}
-        <Card className="border-2 border-slate-200 shadow-lg">
-          <CardHeader
-            className="cursor-pointer hover:bg-slate-50 transition-colors"
-            onClick={() => setShowHistoryCollapsed(!showHistoryCollapsed)}
-          >
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <History className="size-5" />
-                Riwayat Undian
-              </CardTitle>
-              <Button variant="ghost" size="sm">
-                {showHistoryCollapsed ? (
-                  <ChevronDown className="size-5" />
-                ) : (
-                  <ChevronUp className="size-5" />
+                      </>
+                    )}
+                  </div>
                 )}
-              </Button>
-            </div>
-          </CardHeader>
 
-          {!showHistoryCollapsed && (
-            <CardContent>
+                {drawState === 'drawing' && (
+                  <DrawingAnimation participant={animatingCard} />
+                )}
+
+                {drawState === 'winner-revealed' && selectedWinner && (
+                  <WinnerReveal
+                    winner={selectedWinner}
+                    onConfirm={handleConfirmWinner}
+                    onRedraw={handleRedraw}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Confirmation Dialog */}
+        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Submit Winners</DialogTitle>
+              <DialogDescription>
+                Apakah Anda yakin ingin submit {cachedWinners.length} winner{cachedWinners.length > 1 ? 's' : ''}?
+                Aksi ini tidak dapat dibatalkan dan winners akan dicatat ke database.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="max-h-60 overflow-y-auto space-y-2">
+              {cachedWinners.map((winner, index) => (
+                <div
+                  key={winner.id}
+                  className="p-3 bg-cyan-50 rounded-md border border-cyan-200"
+                >
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">#{index + 1}</Badge>
+                    <div>
+                      <p className="font-medium">{winner.name}</p>
+                      <p className="text-sm text-muted-foreground">{winner.company}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowConfirmDialog(false)}
+                disabled={submitDrawMutation.isPending}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleSubmitDraw}
+                disabled={submitDrawMutation.isPending}
+                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
+              >
+                <Check className="size-4 mr-2" />
+                {submitDrawMutation.isPending ? 'Submitting...' : 'Submit Winners'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* History Dialog */}
+        <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <History className="size-5 text-cyan-600" />
+                Riwayat Undian
+              </DialogTitle>
+              <DialogDescription>
+                Total {drawHistory.length} undian yang telah dilakukan
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="overflow-y-auto max-h-[60vh] pr-2">
               {isLoadingHistory ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map(i => (
@@ -373,11 +421,11 @@ function StaffDrawPage() {
               ) : (
                 <div className="space-y-3">
                   {drawHistory.map((draw, index) => (
-                    <Card key={draw.id} className="border border-slate-200">
+                    <Card key={draw.id} className="border border-cyan-200">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
                           <div>
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="bg-cyan-100 text-cyan-900">
                               Draw #{drawHistory.length - index}
                             </Badge>
                             <p className="text-sm text-muted-foreground mt-1">
@@ -392,7 +440,7 @@ function StaffDrawPage() {
                               </p>
                             )}
                           </div>
-                          <Badge className="bg-gradient-to-r from-yellow-600 to-yellow-500">
+                          <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600">
                             {draw.winners?.length || 0} Winner{(draw.winners?.length || 0) > 1 ? 's' : ''}
                           </Badge>
                         </div>
@@ -402,7 +450,7 @@ function StaffDrawPage() {
                             {draw.winners.map((winner) => (
                               <div
                                 key={winner.id}
-                                className="p-2 bg-slate-50 rounded-md border border-slate-200"
+                                className="p-2 bg-cyan-50 rounded-md border border-cyan-200"
                               >
                                 <p className="font-medium text-sm">{winner.name}</p>
                                 <p className="text-xs text-muted-foreground">{winner.company}</p>
@@ -415,58 +463,10 @@ function StaffDrawPage() {
                   ))}
                 </div>
               )}
-            </CardContent>
-          )}
-        </Card>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Confirmation Dialog */}
-      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Konfirmasi Submit Winners</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin submit {cachedWinners.length} winner{cachedWinners.length > 1 ? 's' : ''}?
-              Aksi ini tidak dapat dibatalkan dan winners akan dicatat ke database.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {cachedWinners.map((winner, index) => (
-              <div
-                key={winner.id}
-                className="p-3 bg-slate-50 rounded-md border border-slate-200"
-              >
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">#{index + 1}</Badge>
-                  <div>
-                    <p className="font-medium">{winner.name}</p>
-                    <p className="text-sm text-muted-foreground">{winner.company}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowConfirmDialog(false)}
-              disabled={submitDrawMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={handleSubmitDraw}
-              disabled={submitDrawMutation.isPending}
-              className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600"
-            >
-              <Check className="size-4 mr-2" />
-              {submitDrawMutation.isPending ? 'Submitting...' : 'Submit Winners'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
@@ -481,30 +481,30 @@ function DrawingAnimation({ participant }: { participant: User | null }) {
 
   if (!participant) {
     return (
-      <div className="text-center py-20">
-        <div className="size-32 mx-auto bg-gradient-to-br from-purple-200 to-pink-200 rounded-2xl animate-pulse" />
+      <div className="text-center p-6">
+        <div className="size-32 mx-auto bg-gradient-to-br from-cyan-200 to-blue-200 rounded-2xl animate-pulse" />
       </div>
     )
   }
 
   return (
-    <div className="text-center space-y-8 py-8">
-      <div className="space-y-4">
-        <Sparkles className="size-16 mx-auto text-yellow-500 animate-spin" />
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-          Mengundi...
+    <div className="text-center space-y-2">
+      <div className="space-y-3">
+        <Sparkles className="size-14 mx-auto text-white animate-spin" />
+        <h2 className="text-xl font-bold text-white">
+          Drawing...
         </h2>
       </div>
 
       <div
         className={cn(
           "mx-auto max-w-md transform transition-all duration-200",
-          isAnimating ? "scale-100 opacity-100 blur-xs" : "scale-95 opacity-0"
+          isAnimating ? "scale-100 opacity-100 blur-sm" : "scale-95 opacity-0"
         )}
       >
-        <Card className="border-2 border-primary shadow-2xl shadow-primary/30 bg-gradient-to-br from-white via-purple-50 to-pink-50">
+        <Card className="border-2 border-primary shadow-2xl shadow-primary/30 bg-gradient-to-br from-cyan-50 via-white to-blue-50">
           <CardContent className="p-8 space-y-3">
-            <div className="size-20 mx-auto bg-gradient-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+            <div className="size-20 mx-auto bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
               {participant.name.charAt(0).toUpperCase()}
             </div>
             <div>
@@ -538,30 +538,7 @@ function WinnerReveal({
   }, [])
 
   return (
-    <div className="text-center space-y-8 py-8">
-      {/* Celebration */}
-      <div
-        className={cn(
-          "transition-all duration-700",
-          isRevealing ? "scale-100 opacity-100" : "scale-0 opacity-0"
-        )}
-      >
-        <Trophy className="size-24 mx-auto text-yellow-500 drop-shadow-2xl animate-bounce" />
-      </div>
-
-      {/* Title */}
-      <div
-        className={cn(
-          "transition-all duration-700 delay-300",
-          isRevealing ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        )}
-      >
-        <h2 className="text-4xl font-bold bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 bg-clip-text text-transparent">
-          Selamat!
-        </h2>
-        <p className="text-muted-foreground mt-2">Kami memiliki pemenang!</p>
-      </div>
-
+    <div className="text-center space-y-6">
       {/* Winner Card */}
       <div
         className={cn(
@@ -569,22 +546,22 @@ function WinnerReveal({
           isRevealing ? "scale-100 opacity-100 rotate-0" : "scale-50 opacity-0 rotate-12"
         )}
       >
-        <Card className="border-4 border-yellow-500 shadow-2xl shadow-yellow-500/50 bg-gradient-to-br from-yellow-50 via-white to-yellow-50">
-          <CardContent className="p-10 space-y-4">
-            <Badge className="bg-gradient-to-r from-yellow-600 to-yellow-500 text-lg px-4 py-1">
-              <Trophy className="size-4 mr-2" />
+        <Card className="border-4 border-cyan-500 shadow-2xl shadow-cyan-500/50 bg-gradient-to-br from-cyan-50 via-white to-blue-50">
+          <CardContent className="p-8 space-y-3">
+            <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-base px-3 py-1">
+              <Trophy className="size-4 mr-1" />
               WINNER
             </Badge>
 
-            <div className="size-28 mx-auto bg-gradient-to-br from-yellow-600 to-yellow-500 rounded-full flex items-center justify-center text-white text-4xl font-bold shadow-xl">
+            <div className="size-24 mx-auto bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-xl">
               {winner.name.charAt(0).toUpperCase()}
             </div>
 
-            <div className="space-y-2">
-              <p className="font-bold text-3xl">{winner.name}</p>
-              <p className="text-muted-foreground">{winner.email}</p>
+            <div className="space-y-1">
+              <p className="font-bold text-2xl">{winner.name}</p>
+              <p className="text-muted-foreground text-sm">{winner.email}</p>
               {winner.company && (
-                <p className="text-lg font-semibold text-primary">{winner.company}</p>
+                <p className="text-base font-semibold text-cyan-700">{winner.company}</p>
               )}
               {winner.division && (
                 <p className="text-sm text-muted-foreground">{winner.division}</p>
@@ -597,7 +574,7 @@ function WinnerReveal({
       {/* Actions */}
       <div
         className={cn(
-          "flex gap-4 justify-center transition-all duration-700 delay-700",
+          "flex gap-3 justify-center transition-all duration-700 delay-700",
           isRevealing ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
         )}
       >
@@ -607,16 +584,16 @@ function WinnerReveal({
           size="lg"
           className="border-2 border-slate-300 hover:bg-slate-50"
         >
-          <RotateCcw className="size-5 mr-2" />
+          <RotateCcw className="size-4 mr-2" />
           Undi Ulang
         </Button>
 
         <Button
           onClick={onConfirm}
           size="lg"
-          className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 shadow-xl shadow-green-500/30"
+          className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-lg shadow-cyan-500/30"
         >
-          <Check className="size-5 mr-2" />
+          <Check className="size-4 mr-2" />
           Konfirmasi Winner
         </Button>
       </div>

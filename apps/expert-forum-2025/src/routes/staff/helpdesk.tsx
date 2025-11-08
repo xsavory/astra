@@ -275,7 +275,7 @@ function StaffHelpdeskPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container px-4 py-6 mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

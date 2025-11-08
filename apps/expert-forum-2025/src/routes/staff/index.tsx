@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { CheckSquare, HelpCircle, Gift, ArrowRight } from 'lucide-react'
 
 import PageLoader from 'src/components/page-loader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Button } from '@repo/react-components/ui'
+import { Card, CardContent, Button } from '@repo/react-components/ui'
 import useAuth from 'src/hooks/use-auth'
 
 export const Route = createFileRoute('/staff/')({
@@ -42,19 +42,14 @@ function StaffIndexPage() {
   ]
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 mx-auto container px-4 py-6">
       {/* Hero Section */}
-      <div className="text-center space-y-4 py-8">
-        <h1 className="text-3xl sm:text-4xl font-bold">
-          Selamat Datang, {user?.name}!
-        </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Staff Portal untuk Expert Forum 2025. Pilih menu di bawah untuk mulai mengelola event.
-        </p>
-      </div>
+      <h1 className="text-xl font-bold text-center">
+        Selamat Datang, {user?.name}!
+      </h1>
 
       {/* Menu Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6">
         {menuCards.map((menu) => {
           const Icon = menu.icon
           return (
@@ -63,39 +58,24 @@ function StaffIndexPage() {
               className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50"
               onClick={() => navigate({ to: menu.path })}
             >
-              <CardHeader>
-                <div className={`w-12 h-12 rounded-lg ${menu.bgColor} flex items-center justify-center mb-4`}>
-                  <Icon className={`size-6 ${menu.color}`} />
-                </div>
-                <CardTitle className="text-xl">{menu.title}</CardTitle>
-                <CardDescription className="text-sm">
-                  {menu.description}
-                </CardDescription>
-              </CardHeader>
               <CardContent>
-                <Button variant="ghost" className="w-full gap-2 group">
-                  Buka Menu
-                  <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
+                <div className='flex justify-between items-center'>
+                  <div className='flex gap-2 items-center'>
+                    <div className={`w-12 h-12 rounded-lg ${menu.bgColor} flex items-center justify-center`}>
+                      <Icon className={`size-6 ${menu.color}`} />
+                    </div>
+                    {menu.title}
+                  </div>
+                  <Button variant="secondary" className="gap-2 group cursor-pointer">
+                    Buka Menu
+                    <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )
         })}
       </div>
-
-      {/* Quick Info */}
-      <Card className="border-dashed">
-        <CardContent className="pt-6">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-muted-foreground">
-              Gunakan menu navigasi di atas untuk berpindah antar halaman dengan cepat
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Jika mengalami kendala, silakan hubungi admin event
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
