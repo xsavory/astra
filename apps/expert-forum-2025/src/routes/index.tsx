@@ -53,7 +53,7 @@ function Landing() {
         <img
           src={robotImage}
           alt="Innovation Robot"
-          className="w-auto object-contain drop-shadow-2xl sm:h-[55vh] lg:h-[60vh]"
+          className="w-auto object-cover drop-shadow-2xl sm:h-[50vh] md:h-[40vh] lg:h-[60vh]"
         />
       </div>
 
@@ -65,18 +65,18 @@ function Landing() {
             <img
               src={logoAstra}
               alt="Astra"
-              className="h-6 w-auto sm:h-8 md:h-10"
+              className="h-10"
             />
             <img
               src={logoSatuIndonesia}
               alt="Satu Indonesia"
-              className="h-6 w-auto sm:h-8 md:h-10"
+              className="h-10"
             />
           </div>
         </header>
 
         {/* Hero Section */}
-        <div className="flex flex-1 items-center mb-32 px-6 sm:px-8">
+        <div className="flex flex-1 items-center sm:items-start sm:items-star mb-32 sm:mb-0 mt-0 sm:mt-32 px-6 sm:px-8">
           <div className="mx-auto w-full max-w-7xl">
             <div className="max-w-2xl space-y-6 lg:space-y-8">
               {/* Event Logo/Headline */}
@@ -89,7 +89,7 @@ function Landing() {
               </div>
 
               {/* Login Section */}
-              <div className='w-full lg:w-3/4'>
+              <div className='w-full sm:w-3/4'>
                 <LoginDialog />
               </div>
             </div>

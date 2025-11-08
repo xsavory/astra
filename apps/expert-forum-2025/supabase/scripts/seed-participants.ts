@@ -107,12 +107,26 @@ const PARTICIPANTS_DATA: ParticipantData[] = [
   //   company: 'Astra International',
   //   division: 'Operation',
   // },
+  // {
+  //   name: 'Ayu Sylvia',
+  //   email: 'ayu.sylvia@astra.com',
+  //   participant_type: 'offline',
+  //   company: 'Astra International',
+  //   division: 'Operation',
+  // },
   {
-    name: 'Ayu Sylvia',
-    email: 'ayu.sylvia@astra.com',
+    name: 'Bambang Pamunqkas',
+    email: 'bambang.pamunqkas@astra.com',
     participant_type: 'offline',
     company: 'Astra International',
     division: 'Operation',
+  },
+  {
+    name: 'Budi Sudarsono',
+    email: 'budi.sudarsono@astra.com',
+    participant_type: 'online',
+    company: 'Astra Financial',
+    division: 'Finance',
   },
 ]
 

@@ -112,14 +112,14 @@ function AdminParticipantTable({
       <div className="rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Company</TableHead>
-              <TableHead>Check-in</TableHead>
-              <TableHead>Eligibility</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+            <TableRow className='bg-muted'>
+              <TableHead className='font-bold'>Name</TableHead>
+              <TableHead className='font-bold'>Email</TableHead>
+              <TableHead className='font-bold'>Type</TableHead>
+              <TableHead className='font-bold'>Company</TableHead>
+              <TableHead className='font-bold'>Check-in</TableHead>
+              <TableHead className='font-bold'>Eligibility</TableHead>
+              <TableHead className="text-right font-bold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

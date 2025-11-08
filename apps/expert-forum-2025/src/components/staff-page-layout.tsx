@@ -4,6 +4,8 @@ import { Button, Separator } from '@repo/react-components/ui'
 import useAuth from 'src/hooks/use-auth'
 import { useState } from 'react'
 
+import logo from 'src/assets/logo.png'
+
 interface Props {
   children: React.ReactNode
 }
@@ -50,7 +52,7 @@ function StaffPageLayout({ children }: Props) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-card">
       {/* Header with navbar */}
       <header className={`sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 transition-transform duration-300 ${isNavbarVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="container mx-auto px-3 sm:px-4">
@@ -59,7 +61,9 @@ function StaffPageLayout({ children }: Props) {
             <div className="flex items-center justify-between">
               {/* Left: Brand */}
               <div className="flex items-center gap-2">
-                <h1 className="text-base sm:text-lg font-semibold whitespace-nowrap">Staff Portal</h1>
+                <div className="flex-1 min-w-0">
+                  <img src={logo} alt='logo' className='w-26' />
+                </div>
               </div>
 
               {/* Right: Actions (mobile & tablet) */}

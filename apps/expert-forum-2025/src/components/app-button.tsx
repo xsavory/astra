@@ -10,7 +10,7 @@ const AppButton = React.forwardRef<HTMLButtonElement, AppButtonProps>(
   ({ className, variant = 'default', ...props }, ref) => {
     const baseStyles =
       variant === 'default'
-        ? 'bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-white/30 shadow-xl shadow-primary/30 text-white font-bold transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/50'
+        ? 'cursor-pointer bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-white/30 shadow-xl shadow-primary/30 text-white font-bold transition-all duration-300 hover:scale-101 hover:shadow-2xl hover:shadow-primary/50'
         : ''
 
     return (

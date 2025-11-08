@@ -286,12 +286,12 @@ function AdminSubmissionDrawer({
               <div className="border rounded-lg">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Company Case</TableHead>
-                      <TableHead>Creator</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Submitted At</TableHead>
+                    <TableRow className='bg-muted'>
+                      <TableHead className='font-bold'>Title</TableHead>
+                      <TableHead className='font-bold'>Company Case</TableHead>
+                      <TableHead className='font-bold'>Creator</TableHead>
+                      <TableHead className='font-bold'>Type</TableHead>
+                      <TableHead className='font-bold'>Submitted At</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
