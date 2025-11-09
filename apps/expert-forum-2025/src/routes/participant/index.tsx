@@ -380,11 +380,6 @@ function ParticipantIndexPage() {
                     <p className="font-bold text-xl sm:text-2xl text-white drop-shadow-lg">
                       Voucher Unlocked!
                     </p>
-                    <div className="inline-block px-4 py-2 rounded-full bg-white/90 backdrop-blur-sm">
-                      <p className="text-sm sm:text-base font-bold text-gray-800">
-                        Kode: ASTRA2025
-                      </p>
-                    </div>
                   </div>
                 </div>
               </div>
