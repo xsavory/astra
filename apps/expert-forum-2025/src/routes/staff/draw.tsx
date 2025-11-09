@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { Trophy, Sparkles, Users, History, Play, Check, X, RotateCcw } from 'lucide-react'
+import { Trophy, Sparkles, History, Play, Check, X, RotateCcw } from 'lucide-react'
 import {
   Button,
   Card,
@@ -99,17 +99,22 @@ function StaffDrawPage() {
 
   // Start draw animation
   const handleStartDraw = () => {
-    if (eligibleParticipants.length === 0) return
+    // Use availableParticipants (already filtered to exclude cached winners and previous winners)
+    if (availableParticipants.length === 0) return
 
     setDrawState('drawing')
+
+    // Create snapshot of available participants at draw start
+    // This prevents issues if availableParticipants changes during animation
+    const participantsSnapshot = [...availableParticipants]
 
     // Animate cycling through participants
     let cycleCount = 0
     const maxCycles = DRAW_ANIMATION_DURATION / CARD_CYCLE_INTERVAL
 
     const cycleInterval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * eligibleParticipants.length)
-      const randomParticipant = eligibleParticipants[randomIndex]
+      const randomIndex = Math.floor(Math.random() * participantsSnapshot.length)
+      const randomParticipant = participantsSnapshot[randomIndex]
       if (randomParticipant) {
         setAnimatingCard(randomParticipant)
       }
@@ -117,9 +122,9 @@ function StaffDrawPage() {
 
       if (cycleCount >= maxCycles) {
         clearInterval(cycleInterval)
-        // Final random selection
-        const winnerIndex = Math.floor(Math.random() * eligibleParticipants.length)
-        const winner = eligibleParticipants[winnerIndex]
+        // Final random selection from snapshot
+        const winnerIndex = Math.floor(Math.random() * participantsSnapshot.length)
+        const winner = participantsSnapshot[winnerIndex]
         if (winner) {
           setSelectedWinner(winner)
           setAnimatingCard(winner)
@@ -136,6 +141,16 @@ function StaffDrawPage() {
   // Confirm single winner
   const handleConfirmWinner = () => {
     if (!selectedWinner) return
+
+    // Check if winner is already in cached winners
+    const isAlreadyCached = cachedWinners.some(w => w.id === selectedWinner.id)
+    if (isAlreadyCached) {
+      // Winner already cached, just reset
+      setSelectedWinner(null)
+      setAnimatingCard(null)
+      setDrawState('idle')
+      return
+    }
 
     // Add to cached winners
     setCachedWinners(prev => [...prev, selectedWinner])
@@ -217,16 +232,24 @@ function StaffDrawPage() {
             </Card>
 
             {/* Winners List */}
-            <Card className="gap-0 pt-4 border-2 border-primary bg-white/90 backdrop-blur shadow-xl flex flex-col flex-1 min-h-0 overflow-hidden">
+            <Card className="gap-0 pt-4 border-2 border-cyan-200 bg-white/90 backdrop-blur shadow-xl flex flex-col flex-1 min-h-0 overflow-hidden">
               <CardHeader className="border-b pb-0!">
                 <CardTitle className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
                     <Trophy className="size-4 text-cyan-600" />
-                    Winners Terpilih
+                    <div>Winners</div>
+                    <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-xs">
+                      {cachedWinners.length}
+                    </Badge>
                   </span>
-                  <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-xs">
-                    {cachedWinners.length}
-                  </Badge>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowHistoryDialog(true)}
+                    className="border-cyan-300 hover:bg-cyan-50 text-[10px] h-7"
+                  >
+                    <History className="size-3 mr-1" />
+                    History ({drawHistory.length})
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col p-2 min-h-0 overflow-hidden">
@@ -273,15 +296,6 @@ function StaffDrawPage() {
                       >
                         <Check className="size-3 mr-1" />
                         Submit ({cachedWinners.length})
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowHistoryDialog(true)}
-                        className="border-cyan-300 hover:bg-cyan-50 text-[10px] h-7"
-                      >
-                        <History className="size-3 mr-1" />
-                        Riwayat ({drawHistory.length})
                       </Button>
 
                       <Button
@@ -542,7 +556,7 @@ function WinnerReveal({
       {/* Winner Card */}
       <div
         className={cn(
-          "mx-auto max-w-md transition-all duration-700 delay-500",
+          "mx-auto max-w-md transition-all duration-400 delay-500",
           isRevealing ? "scale-100 opacity-100 rotate-0" : "scale-50 opacity-0 rotate-12"
         )}
       >
