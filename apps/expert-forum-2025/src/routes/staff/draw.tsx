@@ -556,7 +556,7 @@ function WinnerReveal({
       {/* Winner Card */}
       <div
         className={cn(
-          "mx-auto max-w-md transition-all duration-400 delay-500",
+          "mx-auto max-w-md transition-all duration-500 delay-500",
           isRevealing ? "scale-100 opacity-100 rotate-0" : "scale-50 opacity-0 rotate-12"
         )}
       >
