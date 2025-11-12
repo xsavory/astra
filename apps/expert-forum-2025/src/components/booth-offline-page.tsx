@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { QrCode, CheckCircle, Clock, ChevronRight, ArrowLeft } from 'lucide-react'
+import { QrCode, CheckCircle, Circle, Clock, ChevronRight, ArrowLeft, ChevronDown, CheckCircle2 } from 'lucide-react'
 
 import {
   Card,
@@ -11,6 +11,9 @@ import {
   Button,
   Badge,
   Skeleton,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
 } from '@repo/react-components/ui'
 import BoothQRScannerDialog from './booth-qr-scanner-dialog'
 import BoothDetailDialog from './booth-detail-dialog'
@@ -55,6 +58,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
   const navigate = useNavigate()
   const searchParams = useSearch({ strict: false }) as { booth_id?: string }
   const [isScannerOpen, setIsScannerOpen] = useState(false)
+  const [isProgressOpen, setIsProgressOpen] = useState(false)
 
   // Fetch booth checkins for current user
   const { data: boothCheckins = [], isLoading: isLoadingCheckins } = useQuery<BoothCheckin[]>({
@@ -94,39 +98,130 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
   const boothCheckinMap = new Map(boothCheckins.map((checkin) => [checkin.booth_id, checkin]))
 
   const boothsCompleted = boothCheckins.length
+  const totalBooths = booths.length
 
   return (
     <div className="space-y-4 pb-24 relative min-h-screen">
       {/* Back Button */}
       <Button
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="mb-2 -ml-2 hover:bg-primary/10"
+        className="mb-3 hover:bg-primary/10"
         onClick={() => navigate({ to: '/participant' })}
       >
         <ArrowLeft className="size-4 mr-2" />
-        Kembali
+        Back
       </Button>
 
       {/* Header with gradient background */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-blue-500/5 to-cyan-500/10 p-6 border border-primary/20 shadow-lg shadow-primary/10">
-        <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
-        <div className="relative">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-cyan-600 bg-clip-text text-transparent">
-            Booth Offline
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Progress: {boothsCompleted} booth dikunjungi
-          </p>
-        </div>
-      </div>
+      <Collapsible open={isProgressOpen} onOpenChange={setIsProgressOpen}>
+        <Card className="gap-2 py-3 relative overflow-hidden border-primary/20 shadow-lg shadow-primary/10 bg-gradient-to-br from-primary/10 via-blue-500/5 to-cyan-500/10">
+          <CardHeader className="relative">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <CardTitle className="text-xl font-bold bg-gradient-to-r from-primary to-cyan-600 bg-clip-text text-transparent mb-2">
+                  Booth Offline
+                </CardTitle>
+                <p className="text-muted-foreground text-sm">
+                  Progress: <span className='font-bold text-foreground'>{boothsCompleted}</span> dari <span className='font-bold text-foreground'>{totalBooths}</span> booth selesai
+                </p>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="hover:bg-primary/10"
+                >
+                  <ChevronDown
+                    className={`size-5 transition-transform duration-200 ${
+                      isProgressOpen ? 'rotate-180' : ''
+                    }`}
+                  />
+                  <span className="sr-only">Toggle progress details</span>
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </CardHeader>
+
+          <CollapsibleContent>
+            <CardContent className="relative pt-0 space-y-2">
+              <div className="border-t border-primary/10 pt-4">
+                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
+                  Daftar Booth yang Dikunjungi
+                </h3>
+                {boothsCompleted === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Belum ada booth yang dikunjungi. Scan QR code untuk mulai mengunjungi booth.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {booths.map((booth) => {
+                      const isCompleted = boothCheckinMap.has(booth.id)
+                      const checkin = boothCheckinMap.get(booth.id)
+
+                      return (
+                        <div
+                          key={booth.id}
+                          className={`flex items-start gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+                            isCompleted
+                              ? 'bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100/50 dark:hover:bg-green-900/30'
+                              : 'bg-muted/30 hover:bg-muted/50'
+                          }`}
+                          onClick={() => {
+                            navigate({
+                              to: '/participant/booth',
+                              search: { booth_id: booth.id },
+                              resetScroll: false,
+                            })
+                            setIsProgressOpen(false)
+                          }}
+                        >
+                          <div className="mt-0.5">
+                            {isCompleted ? (
+                              <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <Circle className="size-5 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium line-clamp-1 ${
+                              isCompleted
+                                ? 'text-green-700 dark:text-green-300'
+                                : 'text-muted-foreground'
+                            }`}>
+                              {booth.name}
+                            </p>
+                            {isCompleted && checkin && (
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <Clock className="size-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Empty State */}
       {boothsCompleted === 0 && (
         <Card className="border-dashed">
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-              <div className="rounded-full bg-muted p-4">
+              <div className="rounded-full bg-muted">
                 <QrCode className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-2">
@@ -195,11 +290,11 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
       {/* Floating Action Button (FAB) */}
       <Button
         size="lg"
-        className="fixed bottom-6 right-6 size-14 rounded-full transition-all duration-300 z-50 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
+        className="fixed bottom-6 right-6 rounded-xl transition-all duration-300 z-50 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
         onClick={() => setIsScannerOpen(true)}
       >
         <QrCode className="size-6" />
-        <span className="sr-only">Scan Booth QR Code</span>
+        <span>Scan QR Code</span>
       </Button>
 
       {/* QR Scanner Dialog */}
