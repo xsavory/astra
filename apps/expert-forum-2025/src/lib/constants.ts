@@ -1,3 +1,5 @@
+import type { PrizeTemplate } from 'src/types/schema'
+
 import boothMock1 from 'src/assets/booth-mock-1.png'
 import boothMock2 from 'src/assets/booth-mock-2.png'
 import boothMock3 from 'src/assets/booth-mock-3.png'
@@ -85,6 +87,39 @@ export const DATE_FORMATS = {
   TIME_ONLY: 'HH:mm',
   ISO: "yyyy-MM-dd'T'HH:mm:ss.SSSxxx",
 } as const
+
+export const PRIZE_TEMPLATES: PrizeTemplate[] = [
+  {
+    id: 'motor-5',
+    name: 'Motor',
+    slotCount: 5,
+    description: '5 Pemenang Motor',
+    icon: 'Bike',
+  },
+  {
+    id: 'handphone-10',
+    name: 'Handphone',
+    slotCount: 10,
+    description: '10 Pemenang Handphone',
+    icon: 'Smartphone',
+  },
+  {
+    id: 'mobil-1',
+    name: 'Mobil',
+    slotCount: 1,
+    description: '1 Pemenang Mobil',
+    icon: 'Car',
+  },
+  {
+    id: 'voucher-3',
+    name: 'Voucher',
+    slotCount: 3,
+    description: '3 Pemenang Voucher',
+    icon: 'Gift',
+  },
+]
+
+export const DEFAULT_TEMPLATE = PRIZE_TEMPLATES[0]!
 
 // Helper function to check if email is admin
 export const isAdminEmail = (email: string): boolean => {

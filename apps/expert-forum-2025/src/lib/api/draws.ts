@@ -57,7 +57,10 @@ export class DrawsAPI extends BaseAPI {
    */
   async submitDraw(
     winnerIds: string[],
-    staffId?: string
+    staffId?: string,
+    prizeTemplate?: string,
+    prizeName?: string,
+    slotCount?: number
   ): Promise<DrawLog> {
     try {
       // Validate winners array
@@ -76,11 +79,14 @@ export class DrawsAPI extends BaseAPI {
         )
       }
 
-      // Create draw_log entry
+      // Create draw_log entry with template info
       const { data: drawLogData, error: drawLogError } = await supabase
         .from('draw_logs')
         .insert({
           staff_id: staffId || null,
+          prize_template: prizeTemplate || null,
+          prize_name: prizeName || null,
+          slot_count: slotCount || winnerIds.length,
         })
         .select()
         .single()

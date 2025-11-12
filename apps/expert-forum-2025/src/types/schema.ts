@@ -174,9 +174,43 @@ export interface CreateIdeationInput {
 
 // ==================== Draw Log Types ====================
 
+// Prize Template
+export interface PrizeTemplate {
+  id: string
+  name: string
+  slotCount: number
+  description: string
+  icon: string
+}
+
+// Draw Slot for tracking individual slot state
+export interface DrawSlot {
+  slotNumber: number
+  selectedWinnerId: string | null
+  animatingParticipantId: string | null
+  isRevealed: boolean
+}
+
+// Cached Draw Session for localStorage
+export interface CachedDrawSession {
+  id: string
+  templateId: string
+  templateName: string
+  slotCount: number
+  winners: Array<{
+    slotNumber: number
+    participant: User
+  }>
+  createdAt: string
+  status: 'pending' | 'submitted'
+}
+
 export interface DrawLog {
   id: string
   staff_id?: string | null // Staff who created the draw
+  prize_template?: string | null // Template ID (e.g., "motor-5")
+  prize_name?: string | null // Prize display name (e.g., "Motor")
+  slot_count?: number | null // Number of winners in this session
   created_at: string
 }
 

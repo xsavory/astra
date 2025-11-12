@@ -1,18 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState, useEffect } from 'react'
-import { Trophy, Sparkles, History, Play, Check, X, RotateCcw } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Trophy, History, Check, X, ListTodo } from 'lucide-react'
 import {
   Button,
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   Badge,
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   Alert,
@@ -20,11 +17,14 @@ import {
   Skeleton,
 } from '@repo/react-components/ui'
 import { useIsMobile } from '@repo/react-components/hooks'
-import { cn } from '@repo/react-components/lib'
 import useAuth from 'src/hooks/use-auth'
 import api from 'src/lib/api'
-import type { User, DrawLogWithDetails } from 'src/types/schema'
+import type { User, DrawLogWithDetails, PrizeTemplate, DrawSlot, CachedDrawSession } from 'src/types/schema'
 import PageLoader from 'src/components/page-loader'
+import { TemplateSelector } from 'src/components/draw-template-selector'
+import { MultiSlotDrawing } from 'src/components/draw-multi-slot-drawing'
+import { MultiSlotReveal } from 'src/components/draw-multi-slot-reveal'
+import { PRIZE_TEMPLATES, DEFAULT_TEMPLATE } from 'src/lib/constants'
 
 import bgImage from 'src/assets/background.png'
 import bgMobileImage from 'src/assets/background-mobile.png'
@@ -35,10 +35,10 @@ export const Route = createFileRoute('/staff/draw')({
   pendingComponent: PageLoader,
 })
 
-const DRAW_ANIMATION_DURATION = 4000 // 4 seconds
-const CARD_CYCLE_INTERVAL = 100 // Card change speed during animation
+const DRAW_ANIMATION_DURATION = 5000 // 5 seconds
+const CARD_CYCLE_INTERVAL = 80 // Card change speed during animation
 
-type DrawState = 'idle' | 'drawing' | 'winner-revealed' | 'confirming'
+type DrawState = 'idle' | 'drawing' | 'revealed'
 
 function StaffDrawPage() {
   const { user } = useAuth()
@@ -47,11 +47,11 @@ function StaffDrawPage() {
 
   // State
   const [drawState, setDrawState] = useState<DrawState>('idle')
-  const [selectedWinner, setSelectedWinner] = useState<User | null>(null)
-  const [animatingCard, setAnimatingCard] = useState<User | null>(null)
-  const [cachedWinners, setCachedWinners] = useState<User[]>([])
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<PrizeTemplate>(DEFAULT_TEMPLATE)
+  const [drawSlots, setDrawSlots] = useState<DrawSlot[]>([])
+  const [cachedSessions, setCachedSessions] = useState<CachedDrawSession[]>([])
   const [showHistoryDialog, setShowHistoryDialog] = useState(false)
+  const [showWinnersDialog, setShowWinnersDialog] = useState(false)
 
   // Queries
   const { data: eligibleParticipants = [], isLoading: isLoadingParticipants } = useQuery<User[]>({
@@ -66,123 +66,246 @@ function StaffDrawPage() {
 
   // Mutations
   const submitDrawMutation = useMutation({
-    mutationFn: (winnerIds: string[]) => api.draws.submitDraw(winnerIds, user?.id),
-    onSuccess: () => {
+    mutationFn: (params: { sessionId: string }) => {
+      const session = cachedSessions.find(s => s.id === params.sessionId)
+      if (!session) throw new Error('Session not found')
+
+      return api.draws.submitDraw(
+        session.winners.map(w => w.participant.id),
+        user?.id,
+        session.templateId,
+        session.templateName,
+        session.slotCount
+      )
+    },
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['eligible-participants'] })
       queryClient.invalidateQueries({ queryKey: ['draw-history'] })
-      setCachedWinners([])
-      localStorage.removeItem('draw_cached_winners')
+
+      // Remove submitted session
+      setCachedSessions(prev => prev.filter(s => s.id !== variables.sessionId))
+
       setDrawState('idle')
-      setShowConfirmDialog(false)
     },
   })
 
-  // Load cached winners from localStorage on mount
+  // Load cached sessions from localStorage on mount
   useEffect(() => {
-    const cached = localStorage.getItem('draw_cached_winners')
+    const cached = localStorage.getItem('draw_cached_sessions')
     if (cached) {
       try {
         const parsed = JSON.parse(cached)
-        setCachedWinners(parsed)
+        setCachedSessions(parsed)
       } catch {
-        localStorage.removeItem('draw_cached_winners')
+        localStorage.removeItem('draw_cached_sessions')
       }
     }
   }, [])
 
-  // Save cached winners to localStorage
+  // Save cached sessions to localStorage
   useEffect(() => {
-    if (cachedWinners.length > 0) {
-      localStorage.setItem('draw_cached_winners', JSON.stringify(cachedWinners))
+    if (cachedSessions.length > 0) {
+      localStorage.setItem('draw_cached_sessions', JSON.stringify(cachedSessions))
+    } else {
+      localStorage.removeItem('draw_cached_sessions')
     }
-  }, [cachedWinners])
+  }, [cachedSessions])
 
-  // Start draw animation
-  const handleStartDraw = () => {
-    // Use availableParticipants (already filtered to exclude cached winners and previous winners)
-    if (availableParticipants.length === 0) return
+  // Filter out already cached winners from eligible participants
+  const allCachedWinnerIds = cachedSessions.flatMap(session =>
+    session.winners.map(w => w.participant.id)
+  )
+  const availableParticipants = eligibleParticipants.filter(
+    p => !allCachedWinnerIds.includes(p.id)
+  )
 
-    setDrawState('drawing')
-
-    // Create snapshot of available participants at draw start
-    // This prevents issues if availableParticipants changes during animation
-    const participantsSnapshot = [...availableParticipants]
-
-    // Animate cycling through participants
-    let cycleCount = 0
-    const maxCycles = DRAW_ANIMATION_DURATION / CARD_CYCLE_INTERVAL
-
-    const cycleInterval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * participantsSnapshot.length)
-      const randomParticipant = participantsSnapshot[randomIndex]
-      if (randomParticipant) {
-        setAnimatingCard(randomParticipant)
-      }
-      cycleCount++
-
-      if (cycleCount >= maxCycles) {
-        clearInterval(cycleInterval)
-        // Final random selection from snapshot
-        const winnerIndex = Math.floor(Math.random() * participantsSnapshot.length)
-        const winner = participantsSnapshot[winnerIndex]
-        if (winner) {
-          setSelectedWinner(winner)
-          setAnimatingCard(winner)
-        }
-
-        // Transition to winner reveal
-        setTimeout(() => {
-          setDrawState('winner-revealed')
-        }, 300)
-      }
-    }, CARD_CYCLE_INTERVAL)
-  }
-
-  // Confirm single winner
-  const handleConfirmWinner = () => {
-    if (!selectedWinner) return
-
-    // Check if winner is already in cached winners
-    const isAlreadyCached = cachedWinners.some(w => w.id === selectedWinner.id)
-    if (isAlreadyCached) {
-      // Winner already cached, just reset
-      setSelectedWinner(null)
-      setAnimatingCard(null)
-      setDrawState('idle')
+  // Start draw animation (multi-slot)
+  const handleStartDraw = useCallback(() => {
+    // Validation
+    if (availableParticipants.length < selectedTemplate.slotCount) {
+      alert(`Tidak cukup peserta! Butuh ${selectedTemplate.slotCount}, tersedia ${availableParticipants.length}`)
       return
     }
 
-    // Add to cached winners
-    setCachedWinners(prev => [...prev, selectedWinner])
+    setDrawState('drawing')
+
+    // Initialize slots
+    const slots: DrawSlot[] = Array.from({ length: selectedTemplate.slotCount }, (_, i) => ({
+      slotNumber: i + 1,
+      selectedWinnerId: null,
+      animatingParticipantId: null,
+      isRevealed: false,
+    }))
+
+    setDrawSlots(slots)
+
+    // Create snapshot to prevent changes during animation
+    const participantsSnapshot = [...availableParticipants]
+    const selectedWinnerIds = new Set<string>()
+    const intervals: ReturnType<typeof setInterval>[] = []
+
+    // Create animation interval for each slot
+    slots.forEach((slot) => {
+      let cycleCount = 0
+      const maxCycles = DRAW_ANIMATION_DURATION / CARD_CYCLE_INTERVAL
+
+      const interval = setInterval(() => {
+        // Pick random participant NOT already selected
+        let randomParticipant: User | undefined
+        let attempts = 0
+        do {
+          randomParticipant = participantsSnapshot[Math.floor(Math.random() * participantsSnapshot.length)]
+          attempts++
+          // Safety: prevent infinite loop
+          if (attempts > 100) break
+        } while (randomParticipant && selectedWinnerIds.has(randomParticipant.id) && attempts < 100)
+
+        if (!randomParticipant) return
+
+        // Update animating participant for this slot
+        setDrawSlots(prev =>
+          prev.map(s =>
+            s.slotNumber === slot.slotNumber
+              ? { ...s, animatingParticipantId: randomParticipant!.id }
+              : s
+          )
+        )
+
+        cycleCount++
+
+        if (cycleCount >= maxCycles) {
+          clearInterval(interval)
+
+          // Final selection for this slot
+          let finalWinner: User | undefined
+          let attempts = 0
+          do {
+            finalWinner = participantsSnapshot[Math.floor(Math.random() * participantsSnapshot.length)]
+            attempts++
+            if (attempts > 100) break
+          } while (finalWinner && selectedWinnerIds.has(finalWinner.id) && attempts < 100)
+
+          if (!finalWinner) return
+
+          selectedWinnerIds.add(finalWinner.id)
+
+          // Set final winner
+          setDrawSlots(prev =>
+            prev.map(s =>
+              s.slotNumber === slot.slotNumber
+                ? {
+                    ...s,
+                    selectedWinnerId: finalWinner!.id,
+                    animatingParticipantId: finalWinner!.id,
+                    isRevealed: true,
+                  }
+                : s
+            )
+          )
+        }
+      }, CARD_CYCLE_INTERVAL)
+
+      intervals.push(interval)
+    })
+
+    // After all animations complete, transition to revealed state
+    setTimeout(() => {
+      intervals.forEach(clearInterval)
+      setDrawState('revealed')
+    }, DRAW_ANIMATION_DURATION + 100)
+  }, [availableParticipants, selectedTemplate])
+
+  // Keyboard handler for spacebar
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Only trigger if spacebar is pressed and we're in idle state
+      if (
+        e.code === 'Space' &&
+        drawState === 'idle' &&
+        availableParticipants.length >= selectedTemplate.slotCount
+      ) {
+        e.preventDefault() // Prevent page scroll
+        handleStartDraw()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [drawState, availableParticipants.length, selectedTemplate.slotCount, handleStartDraw])
+
+  // Confirm winners and cache session
+  const handleConfirmWinners = () => {
+    if (drawSlots.length === 0) return
+
+    // Get all winners from slots
+    const winners = drawSlots
+      .filter(slot => slot.selectedWinnerId)
+      .map(slot => {
+        const participant = eligibleParticipants.find(p => p.id === slot.selectedWinnerId)
+        return {
+          slotNumber: slot.slotNumber,
+          participant: participant!,
+        }
+      })
+
+    if (winners.length === 0) return
+
+    // Create new session
+    const newSession: CachedDrawSession = {
+      id: crypto.randomUUID(),
+      templateId: selectedTemplate.id,
+      templateName: selectedTemplate.name,
+      slotCount: selectedTemplate.slotCount,
+      winners,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+    }
+
+    // Add to cached sessions
+    setCachedSessions(prev => [...prev, newSession])
 
     // Reset for next draw
-    setSelectedWinner(null)
-    setAnimatingCard(null)
+    setDrawSlots([])
     setDrawState('idle')
   }
 
   // Redraw
   const handleRedraw = () => {
-    setSelectedWinner(null)
-    setAnimatingCard(null)
+    setDrawSlots([])
     setDrawState('idle')
   }
 
-  // Remove from cached winners
-  const handleRemoveCachedWinner = (winnerId: string) => {
-    setCachedWinners(prev => prev.filter(w => w.id !== winnerId))
+  // Remove session from cache
+  const handleRemoveSession = (sessionId: string) => {
+    setCachedSessions(prev => prev.filter(s => s.id !== sessionId))
   }
 
-  // Submit all cached winners
-  const handleSubmitDraw = () => {
-    if (cachedWinners.length === 0) return
-    submitDrawMutation.mutate(cachedWinners.map(w => w.id))
+  // Submit session
+  const handleSubmitSession = (sessionId: string) => {
+    submitDrawMutation.mutate({ sessionId })
   }
 
-  // Filter out already cached winners from eligible participants
-  const availableParticipants = eligibleParticipants.filter(
-    p => !cachedWinners.some(w => w.id === p.id)
-  )
+  // Get participants map for MultiSlotDrawing
+  const getParticipantsMap = (): Map<number, User | null> => {
+    const map = new Map<number, User | null>()
+    drawSlots.forEach(slot => {
+      const participant = slot.animatingParticipantId
+        ? eligibleParticipants.find(p => p.id === slot.animatingParticipantId)
+        : null
+      map.set(slot.slotNumber, participant || null)
+    })
+    return map
+  }
+
+  // Get winners array for MultiSlotReveal
+  const getWinnersArray = () => {
+    return drawSlots
+      .filter(slot => slot.selectedWinnerId)
+      .map(slot => ({
+        slotNumber: slot.slotNumber,
+        participant: eligibleParticipants.find(p => p.id === slot.selectedWinnerId)!,
+      }))
+  }
 
   if (isLoadingParticipants) {
     return <PageLoader />
@@ -199,159 +322,81 @@ function StaffDrawPage() {
         />
       </div>
       <div className="container px-4 py-6 mx-auto h-screen">
-        <div className="flex gap-4 h-full max-w-7xl mx-auto">
-          {/* Left Column - Logo, Stats, Winners List */}
-          <div className="w-80 flex flex-col gap-3 overflow-hidden">
+        {/* Trigger Button - Top Left */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setShowWinnersDialog(true)}
+          className="fixed top-6 left-6 z-20 size-10"
+        >
+          <ListTodo className="size-5 text-cyan-600" />
+        </Button>
+
+        <div className="flex gap-4 h-full max-w-8xl mx-auto">
+          {/* Main Draw Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
             {/* Logo */}
-            <div className="flex justify-center shrink-0 z-15">
+            <div className="flex justify-center shrink-0 z-15 pb-4">
               <img
                 src={logoHeadline}
                 alt="The 9th Expert Forum"
-                className="h-auto w-full max-w-xs"
+                className="h-auto w-full max-w-[250px]"
               />
             </div>
+            <Card className="bg-transparentfrom-primary to-cyan-600 border-2 border-cyan-200 backdrop-blur shadow-2xl flex-1 flex flex-col overflow-hidden">
+              <div className="flex justify-between items-center shrink-0 z-15 px-6">
+                <h2 className='relative text-5xl bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent font-bold'>DOORPRIZE</h2>
 
-            {/* Stats Card - Unified */}
-            <Card className="border border-cyan-200 bg-white/80 backdrop-blur shrink-0 p-2">
-              <CardContent>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="text-center">
-                    <p className="text-[9px] font-medium text-muted-foreground">Eligible</p>
-                    <p className="text-base font-bold text-primary">{availableParticipants.length}</p>
-                  </div>
-                  <div className="text-center border-x border-cyan-200">
-                    <p className="text-[9px] font-medium text-muted-foreground">Selected</p>
-                    <p className="text-base font-bold text-primary">{cachedWinners.length}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[9px] font-medium text-muted-foreground">Draws</p>
-                    <p className="text-base font-bold text-primary">{drawHistory.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                {/* Template Selector */}
+                <TemplateSelector
+                  templates={PRIZE_TEMPLATES}
+                  selectedTemplate={selectedTemplate}
+                  onSelectTemplate={setSelectedTemplate}
+                  disabled={drawState !== 'idle'}
+                />
+              </div>
 
-            {/* Winners List */}
-            <Card className="gap-0 pt-4 border-2 border-cyan-200 bg-white/90 backdrop-blur shadow-xl flex flex-col flex-1 min-h-0 overflow-hidden">
-              <CardHeader className="border-b pb-0!">
-                <CardTitle className="flex items-center justify-between text-sm">
-                  <span className="flex items-center gap-2">
-                    <Trophy className="size-4 text-cyan-600" />
-                    <div>Winners</div>
-                    <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-xs">
-                      {cachedWinners.length}
-                    </Badge>
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowHistoryDialog(true)}
-                    className="border-cyan-300 hover:bg-cyan-50 text-[10px] h-7"
-                  >
-                    <History className="size-3 mr-1" />
-                    History ({drawHistory.length})
-                  </Button>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col p-2 min-h-0 overflow-hidden">
-                {cachedWinners.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center">
-                    <p className="text-muted-foreground text-xs text-center px-2">
-                      Belum ada winners yang dipilih.<br />Mulai undian untuk memilih pemenang.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex-1 overflow-y-auto pr-1 min-h-0">
-                      {cachedWinners.map((winner, index) => (
-                        <Card key={winner.id} className="py-2 border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 shrink-0 my-2">
-                          <CardContent className="flex items-start gap-2">
-                            <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 shrink-0 text-[10px] px-1.5">
-                              #{index + 1}
-                            </Badge>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-xs truncate">{winner.name}</p>
-                              <p className="text-[10px] text-muted-foreground truncate">{winner.email}</p>
-                              {winner.company && (
-                                <p className="text-[10px] text-muted-foreground truncate">{winner.company}</p>
-                              )}
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveCachedWinner(winner.id)}
-                              className="h-5 w-5 p-0 hover:bg-red-100 hover:text-red-600 shrink-0"
-                            >
-                              <X className="size-3" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-1.5 pt-2 border-t">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowConfirmDialog(true)}
-                        className="border-cyan-300 hover:bg-cyan-50 text-[10px] h-7"
-                      >
-                        <Check className="size-3 mr-1" />
-                        Submit ({cachedWinners.length})
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setCachedWinners([])
-                          localStorage.removeItem('draw_cached_winners')
-                        }}
-                        className="border-red-300 hover:bg-red-50 hover:text-red-600 text-[10px] h-7"
-                      >
-                        <X className="size-3 mr-1" />
-                        Clear
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Right Column - Draw Area (Standout/Prominent) */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Card className="bg-gradient-to-r from-primary to-cyan-600 border-2 border-cyan-200 backdrop-blur shadow-2xl flex-1 flex flex-col overflow-hidden">
-              <CardContent className="flex-1 flex flex-col justify-center overflow-hidden p-8">
+              <CardContent className="flex-1 flex flex-col justify-center overflow-hidden p-4 pt-0">
                 {drawState === 'idle' && (
-                  <div className="text-center space-y-8">
-                    {availableParticipants.length === 0 ? (
-                      <Alert className="border-cyan-200">
+                  <div className="space-y-8">
+                    {availableParticipants.length < selectedTemplate.slotCount ? (
+                      <Alert className="border-cyan-200 bg-white/90">
                         <AlertDescription className="text-center">
-                          Tidak ada peserta yang eligible untuk mengikuti undian.
-                          {cachedWinners.length > 0 && " Silakan submit winners yang sudah dipilih."}
+                          Tidak cukup peserta yang eligible. Butuh {selectedTemplate.slotCount}, tersedia {availableParticipants.length}.
+                          {cachedSessions.length > 0 && " Silakan submit sessions yang sudah ada."}
                         </AlertDescription>
                       </Alert>
                     ) : (
                       <>
-                        <Button
-                          size="lg"
-                          onClick={handleStartDraw}
-                          className="bg-white cursor-pointer h-16 px-12 text-xl text-primary font-bold shadow-lg shadow-cyan-500/30 transition-all duration-300 hover:scale-105 hover:bg-white"
-                        >
-                          <Play className="size-6 mr-2" />
-                          Mulai Undian
-                        </Button>
+                        {/* Empty slot frames */}
+                        <MultiSlotDrawing
+                          slots={Array.from({ length: selectedTemplate.slotCount }, (_, i) => ({
+                            slotNumber: i + 1,
+                            selectedWinnerId: null,
+                            animatingParticipantId: null,
+                            isRevealed: false,
+                          }))}
+                          participants={new Map()}
+                          isDrawing={false}
+                        />
                       </>
                     )}
                   </div>
                 )}
 
                 {drawState === 'drawing' && (
-                  <DrawingAnimation participant={animatingCard} />
+                  <MultiSlotDrawing
+                    slots={drawSlots}
+                    participants={getParticipantsMap()}
+                    isDrawing={true}
+                  />
                 )}
 
-                {drawState === 'winner-revealed' && selectedWinner && (
-                  <WinnerReveal
-                    winner={selectedWinner}
-                    onConfirm={handleConfirmWinner}
+                {drawState === 'revealed' && (
+                  <MultiSlotReveal
+                    winners={getWinnersArray()}
+                    templateName={selectedTemplate.name}
+                    onConfirm={handleConfirmWinners}
                     onRedraw={handleRedraw}
                   />
                 )}
@@ -360,51 +405,133 @@ function StaffDrawPage() {
           </div>
         </div>
 
-        {/* Confirmation Dialog */}
-        <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
-          <DialogContent>
+        {/* Winners Dialog */}
+        <Dialog open={showWinnersDialog} onOpenChange={setShowWinnersDialog}>
+          <DialogContent className="max-w-2xl max-h-[85vh]">
             <DialogHeader>
-              <DialogTitle>Konfirmasi Submit Winners</DialogTitle>
-              <DialogDescription>
-                Apakah Anda yakin ingin submit {cachedWinners.length} winner{cachedWinners.length > 1 ? 's' : ''}?
-                Aksi ini tidak dapat dibatalkan dan winners akan dicatat ke database.
-              </DialogDescription>
+              <DialogTitle className="flex items-center gap-2">
+                <Trophy className="size-5 text-cyan-600" />
+                Pending Sessions & Stats
+              </DialogTitle>
             </DialogHeader>
 
-            <div className="max-h-60 overflow-y-auto space-y-2">
-              {cachedWinners.map((winner, index) => (
-                <div
-                  key={winner.id}
-                  className="p-3 bg-cyan-50 rounded-md border border-cyan-200"
-                >
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">#{index + 1}</Badge>
-                    <div>
-                      <p className="font-medium">{winner.name}</p>
-                      <p className="text-sm text-muted-foreground">{winner.company}</p>
+            <div className="space-y-4">
+              {/* Stats Card */}
+              <Card className="p-2 border border-cyan-200 bg-white/80 backdrop-blur">
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="text-center">
+                      <p className="text-[10px] font-medium text-muted-foreground">Eligible</p>
+                      <p className="text-lg font-bold text-primary">{availableParticipants.length}</p>
+                    </div>
+                    <div className="text-center border-x border-cyan-200">
+                      <p className="text-[10px] font-medium text-muted-foreground">Pending Sessions</p>
+                      <p className="text-lg font-bold text-primary">{cachedSessions.length}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] font-medium text-muted-foreground">Total Draws</p>
+                      <p className="text-lg font-bold text-primary">{drawHistory.length}</p>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                </CardContent>
+              </Card>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowConfirmDialog(false)}
-                disabled={submitDrawMutation.isPending}
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={handleSubmitDraw}
-                disabled={submitDrawMutation.isPending}
-                className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
-              >
-                <Check className="size-4 mr-2" />
-                {submitDrawMutation.isPending ? 'Submitting...' : 'Submit Winners'}
-              </Button>
-            </DialogFooter>
+              {/* Sessions List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Pending Sessions</h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowWinnersDialog(false)
+                      setShowHistoryDialog(true)
+                    }}
+                    className="border-cyan-300 hover:bg-cyan-50 h-7 text-xs"
+                  >
+                    <History className="size-3 mr-1" />
+                    History ({drawHistory.length})
+                  </Button>
+                </div>
+
+                {cachedSessions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    Belum ada sessions pending.<br />
+                    <span className="text-xs">Mulai undian untuk memilih pemenang.</span>
+                  </div>
+                ) : (
+                  <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-1">
+                    {cachedSessions.map((session) => (
+                      <Card key={session.id} className="border-2 border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50">
+                        <CardContent className="p-4 space-y-3">
+                          {/* Session Header */}
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600">
+                                  {session.templateName}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  {session.slotCount} Winner{session.slotCount > 1 ? 's' : ''}
+                                </span>
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(session.createdAt).toLocaleString('id-ID', {
+                                  dateStyle: 'medium',
+                                  timeStyle: 'short'
+                                })}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveSession(session.id)}
+                              className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                            >
+                              <X className="size-3" />
+                            </Button>
+                          </div>
+
+                          {/* Winners in Session */}
+                          <div className="grid grid-cols-1 gap-2">
+                            {session.winners.map((winner) => (
+                              <div
+                                key={winner.slotNumber}
+                                className="flex items-center gap-2 p-2 bg-white rounded border border-cyan-200"
+                              >
+                                <Badge variant="secondary" className="shrink-0 text-xs">
+                                  #{winner.slotNumber}
+                                </Badge>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-xs truncate">{winner.participant.name}</p>
+                                  <p className="text-[10px] text-muted-foreground truncate">
+                                    {winner.participant.company}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Submit Session Button */}
+                          <Button
+                            onClick={() => {
+                              setShowWinnersDialog(false)
+                              handleSubmitSession(session.id)
+                            }}
+                            size="sm"
+                            disabled={submitDrawMutation.isPending}
+                            className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700"
+                          >
+                            <Check className="size-3 mr-2" />
+                            Submit Session
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
 
@@ -438,11 +565,18 @@ function StaffDrawPage() {
                     <Card key={draw.id} className="border border-cyan-200">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <Badge variant="secondary" className="bg-cyan-100 text-cyan-900">
-                              Draw #{drawHistory.length - index}
-                            </Badge>
-                            <p className="text-sm text-muted-foreground mt-1">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="bg-cyan-100 text-cyan-900">
+                                Draw #{drawHistory.length - index}
+                              </Badge>
+                              {draw.prize_name && (
+                                <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600">
+                                  {draw.prize_name}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
                               {new Date(draw.created_at).toLocaleString('id-ID', {
                                 dateStyle: 'full',
                                 timeStyle: 'short'
@@ -454,7 +588,7 @@ function StaffDrawPage() {
                               </p>
                             )}
                           </div>
-                          <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600">
+                          <Badge variant="outline" className="border-cyan-300">
                             {draw.winners?.length || 0} Winner{(draw.winners?.length || 0) > 1 ? 's' : ''}
                           </Badge>
                         </div>
@@ -480,136 +614,6 @@ function StaffDrawPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
-  )
-}
-
-// Drawing Animation Component
-function DrawingAnimation({ participant }: { participant: User | null }) {
-  const [isAnimating, setIsAnimating] = useState(false)
-
-  useEffect(() => {
-    setIsAnimating(true)
-  }, [])
-
-  if (!participant) {
-    return (
-      <div className="text-center p-6">
-        <div className="size-32 mx-auto bg-gradient-to-br from-cyan-200 to-blue-200 rounded-2xl animate-pulse" />
-      </div>
-    )
-  }
-
-  return (
-    <div className="text-center space-y-2">
-      <div className="space-y-3">
-        <Sparkles className="size-14 mx-auto text-white animate-spin" />
-        <h2 className="text-xl font-bold text-white">
-          Drawing...
-        </h2>
-      </div>
-
-      <div
-        className={cn(
-          "mx-auto max-w-md transform transition-all duration-200",
-          isAnimating ? "scale-100 opacity-100 blur-sm" : "scale-95 opacity-0"
-        )}
-      >
-        <Card className="border-2 border-primary shadow-2xl shadow-primary/30 bg-gradient-to-br from-cyan-50 via-white to-blue-50">
-          <CardContent className="p-8 space-y-3">
-            <div className="size-20 mx-auto bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-              {participant.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p className="font-bold text-xl">{participant.name}</p>
-              <p className="text-sm text-muted-foreground">{participant.email}</p>
-              {participant.company && (
-                <p className="text-sm text-muted-foreground font-medium">{participant.company}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-// Winner Reveal Component
-function WinnerReveal({
-  winner,
-  onConfirm,
-  onRedraw,
-}: {
-  winner: User
-  onConfirm: () => void
-  onRedraw: () => void
-}) {
-  const [isRevealing, setIsRevealing] = useState(false)
-
-  useEffect(() => {
-    setIsRevealing(true)
-  }, [])
-
-  return (
-    <div className="text-center space-y-6">
-      {/* Winner Card */}
-      <div
-        className={cn(
-          "mx-auto max-w-md transition-all duration-500 delay-500",
-          isRevealing ? "scale-100 opacity-100 rotate-0" : "scale-50 opacity-0 rotate-12"
-        )}
-      >
-        <Card className="border-4 border-cyan-500 shadow-2xl shadow-cyan-500/50 bg-gradient-to-br from-cyan-50 via-white to-blue-50">
-          <CardContent className="p-8 space-y-3">
-            <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600 text-base px-3 py-1">
-              <Trophy className="size-4 mr-1" />
-              WINNER
-            </Badge>
-
-            <div className="size-24 mx-auto bg-gradient-to-br from-cyan-600 to-blue-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-xl">
-              {winner.name.charAt(0).toUpperCase()}
-            </div>
-
-            <div className="space-y-1">
-              <p className="font-bold text-2xl">{winner.name}</p>
-              <p className="text-muted-foreground text-sm">{winner.email}</p>
-              {winner.company && (
-                <p className="text-base font-semibold text-cyan-700">{winner.company}</p>
-              )}
-              {winner.division && (
-                <p className="text-sm text-muted-foreground">{winner.division}</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Actions */}
-      <div
-        className={cn(
-          "flex gap-3 justify-center transition-all duration-700 delay-700",
-          isRevealing ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        )}
-      >
-        <Button
-          variant="outline"
-          onClick={onRedraw}
-          size="lg"
-          className="border-2 border-slate-300 hover:bg-slate-50"
-        >
-          <RotateCcw className="size-4 mr-2" />
-          Undi Ulang
-        </Button>
-
-        <Button
-          onClick={onConfirm}
-          size="lg"
-          className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 shadow-lg shadow-cyan-500/30"
-        >
-          <Check className="size-4 mr-2" />
-          Konfirmasi Winner
-        </Button>
       </div>
     </div>
   )
