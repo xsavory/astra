@@ -1256,15 +1256,6 @@ CREATE TABLE draw_winners (
 - **Hard validation:** Group must have exactly 2 members (validated in API layer)
 - **Group submission validation:** Group must not have submitted before (`is_submitted = false`)
 - **Company validation:** Both members must be from different companies (compare `users.company` field)
-- **Company case validation (Critical):** Neither group member can have submitted an ideation with the same `company_case` before
-  - System checks ALL groups where participants were/are members (via `group_members` junction table)
-  - System checks ALL individual ideations by participants
-  - Validation applies to ALL participants in the group, not just the creator
-  - Example scenarios:
-    - ✅ User A + User B → Submit Case X (first time for both)
-    - ❌ User A + User C → Submit Case X (blocked: User A already submitted Case X)
-    - ❌ User B + User D → Submit Case X (blocked: User B was in group that submitted Case X)
-    - ✅ User C + User D → Submit Case X (allowed: neither has submitted Case X before)
 - Leader fills ideation form: title, description, company_case
 - System creates ideation record in `ideations` table linked to group via `group_id`
 - Sets `is_group = true` on the ideation record
@@ -1275,7 +1266,6 @@ CREATE TABLE draw_winners (
 **Individual Ideation:**
 - Only `participant_type = 'online'` can submit individual ideation
 - Each online participant can submit multiple ideations
-- **Company case validation:** Participant cannot submit two ideations with the same `company_case`
 - Creates ideation record with `is_group = false` and `group_id = NULL`
 - Database enforces uniqueness via partial unique constraint on `(creator_id, company_case)` for individual ideations
 - Ideation content stored directly in `ideations` table

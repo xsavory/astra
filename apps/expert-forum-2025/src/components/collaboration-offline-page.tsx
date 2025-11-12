@@ -228,10 +228,11 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
       {/* Floating Action Button (FAB) for Creating New Group */}
       <Button
         size="lg"
-        className="fixed bottom-6 right-6 rounded-full bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white hover:scale-110 h-14 w-14 p-0 z-50"
+        className="fixed bottom-6 right-6 rounded-xl bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white hover:scale-110 p-0 z-50"
         onClick={() => setCreateDialogOpen(true)}
       >
         <Plus className="size-6" />
+        Create Group
       </Button>
 
       {/* Group Detail Dialog - Controlled by URL query params */}

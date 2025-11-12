@@ -7,6 +7,7 @@ interface GroupDetailInviteProps {
   selectedParticipantId: string
   onSelectParticipant: (participantId: string) => void
   excludeUserIds: string[]
+  excludeCompany?: string
   onInvite: () => void
   isInviting: boolean
 }
@@ -15,6 +16,7 @@ const GroupDetailInvite = memo(function GroupDetailInvite({
   selectedParticipantId,
   onSelectParticipant,
   excludeUserIds,
+  excludeCompany,
   onInvite,
   isInviting,
 }: GroupDetailInviteProps) {
@@ -27,6 +29,7 @@ const GroupDetailInvite = memo(function GroupDetailInvite({
         selectedParticipantId={selectedParticipantId}
         onSelectParticipant={onSelectParticipant}
         excludeUserIds={excludeUserIds}
+        excludeCompany={excludeCompany}
         label="Undang Anggota Baru"
         placeholder="Cari participant..."
         searchPlaceholder="Cari berdasarkan nama, email, atau company"

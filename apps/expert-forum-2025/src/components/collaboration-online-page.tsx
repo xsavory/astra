@@ -89,9 +89,6 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
     return <CollaborationOnlinePageSkeleton />
   }
 
-  // Extract already submitted company cases for validation
-  const submittedCompanyCases = ideations.map((ideation) => ideation.company_case)
-
   return (
     <div className="space-y-4 pb-20">
       {/* Back Button */}
@@ -224,7 +221,6 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
           await createIdeationMutation.mutateAsync(data)
         }}
         isSubmitting={createIdeationMutation.isPending}
-        existingCompanyCases={submittedCompanyCases}
       />
     </div>
   )

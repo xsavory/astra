@@ -20,6 +20,7 @@ import {
 } from '@repo/react-components/ui'
 import { useIsMobile } from '@repo/react-components/hooks'
 import ParticipantSearchSelector from './collaboration-participant-search'
+import useAuth from 'src/hooks/use-auth'
 
 interface GroupCreateDialogProps {
   open: boolean
@@ -39,6 +40,7 @@ function GroupCreateDialog({
   currentUserId,
 }: GroupCreateDialogProps) {
   const isMobile = useIsMobile()
+  const { user } = useAuth()
   const [groupName, setGroupName] = useState('')
   const [selectedParticipantId, setSelectedParticipantId] = useState('')
 
@@ -86,6 +88,7 @@ function GroupCreateDialog({
         selectedParticipantId={selectedParticipantId}
         onSelectParticipant={setSelectedParticipantId}
         excludeUserIds={[currentUserId]}
+        excludeCompany={user?.company ?? undefined}
       />
 
       <div className="bg-muted/50 p-3 rounded-md">

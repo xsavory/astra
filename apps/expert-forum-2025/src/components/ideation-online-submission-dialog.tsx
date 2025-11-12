@@ -32,7 +32,6 @@ interface IdeationOnlineSubmissionDialogProps {
   onOpenChange: (open: boolean) => void
   onSubmit: (data: { title: string; description: string; company_case: string }) => Promise<void>
   isSubmitting: boolean
-  existingCompanyCases?: string[] // Company cases already submitted by user
 }
 
 const MINIMUM_TITLE_LENGTH = 10
@@ -43,7 +42,6 @@ function IdeationOnlineSubmissionDialog({
   onOpenChange,
   onSubmit,
   isSubmitting,
-  existingCompanyCases = [],
 }: IdeationOnlineSubmissionDialogProps) {
   const isMobile = useIsMobile()
   const [title, setTitle] = useState('')
@@ -75,9 +73,7 @@ function IdeationOnlineSubmissionDialog({
     companyCase.length > 0
 
   // Filter available company cases (exclude already submitted ones)
-  const availableCompanyCases = COMPANY_OPTIONS.filter(
-    (option) => !existingCompanyCases.includes(option)
-  )
+  const availableCompanyCases = COMPANY_OPTIONS
 
   const formContent = (
     <div className="space-y-4">
@@ -89,24 +85,13 @@ function IdeationOnlineSubmissionDialog({
             <SelectValue placeholder="Pilih company case" />
           </SelectTrigger>
           <SelectContent>
-            {availableCompanyCases.length === 0 ? (
-              <div className="p-2 text-sm text-muted-foreground text-center">
-                Semua company case sudah disubmit
-              </div>
-            ) : (
-              availableCompanyCases.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
-                </SelectItem>
-              ))
-            )}
+            {availableCompanyCases.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        {existingCompanyCases.length > 0 && (
-          <p className="text-xs text-muted-foreground">
-            Anda sudah submit: {existingCompanyCases.join(', ')}
-          </p>
-        )}
       </div>
 
       {/* Title Input */}
@@ -162,7 +147,7 @@ function IdeationOnlineSubmissionDialog({
           <DrawerFooter className="pt-4">
             <Button
               onClick={handleSubmit}
-              disabled={!isFormValid || isSubmitting || availableCompanyCases.length === 0}
+              disabled={!isFormValid || isSubmitting}
               className="w-full"
             >
               {isSubmitting ? (
@@ -214,7 +199,7 @@ function IdeationOnlineSubmissionDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={!isFormValid || isSubmitting || availableCompanyCases.length === 0}
+            disabled={!isFormValid || isSubmitting}
           >
             {isSubmitting ? (
               <>

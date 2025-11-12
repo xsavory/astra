@@ -93,6 +93,14 @@ export class GroupsAPI extends BaseAPI {
               throw new Error(`${member.name}: Participant belum check-in`)
             }
 
+            // Validate company - tidak boleh dari company yang sama dengan creator
+            if (member.company && creatorData.company &&
+                member.company.toLowerCase() === creatorData.company.toLowerCase()) {
+              throw new Error(
+                `${member.name}: Tidak boleh membuat grup dengan anggota dari company yang sama`
+              )
+            }
+
             validatedMemberIds.push(member.id)
           }
         }
@@ -420,8 +428,12 @@ export class GroupsAPI extends BaseAPI {
    * Get available participants (offline, checked in only)
    * No filtering by group membership for performance (validation done at submission)
    * @param searchQuery - Optional search query to filter by name, email, or company
+   * @param excludeCompany - Optional company name to exclude participants from the same company
    */
-  async getAvailableParticipants(searchQuery?: string): Promise<User[]> {
+  async getAvailableParticipants(
+    searchQuery?: string,
+    excludeCompany?: string
+  ): Promise<User[]> {
     try {
       let query = supabase
         .from('users')
@@ -429,6 +441,11 @@ export class GroupsAPI extends BaseAPI {
         .eq('role', 'participant')
         .eq('participant_type', 'offline')
         .eq('is_checked_in', true)
+
+      // Exclude participants from the same company
+      if (excludeCompany && excludeCompany.trim().length > 0) {
+        query = query.neq('company', excludeCompany.trim())
+      }
 
       // Add search filters if query provided
       if (searchQuery && searchQuery.trim().length > 0) {

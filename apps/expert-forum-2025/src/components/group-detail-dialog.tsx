@@ -249,6 +249,7 @@ function GroupDetailDialog({
             selectedParticipantId={selectedParticipantId}
             onSelectParticipant={setSelectedParticipantId}
             excludeUserIds={group?.participants?.map((p) => p.id) || []}
+            excludeCompany={group?.creator?.company ?? undefined}
             onInvite={() => inviteMutation.mutate(selectedParticipantId)}
             isInviting={inviteMutation.isPending}
           />

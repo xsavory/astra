@@ -23,6 +23,7 @@ interface ParticipantSearchSelectorProps {
   selectedParticipantId: string
   onSelectParticipant: (participantId: string) => void
   excludeUserIds?: string[]
+  excludeCompany?: string
   label?: string
   placeholder?: string
   searchPlaceholder?: string
@@ -50,6 +51,7 @@ function ParticipantSearchSelector({
   selectedParticipantId,
   onSelectParticipant,
   excludeUserIds = [],
+  excludeCompany,
   label = 'Pilih Participant untuk Diundang *',
   placeholder = 'Pilih participant...',
   searchPlaceholder = 'Cari berdasarkan nama, email, atau company',
@@ -64,8 +66,8 @@ function ParticipantSearchSelector({
 
   // Fetch available participants with server-side search
   const { data: availableParticipants = [], isLoading: isLoadingParticipants } = useQuery<User[]>({
-    queryKey: ['availableParticipants', debouncedSearch],
-    queryFn: () => api.groups.getAvailableParticipants(debouncedSearch),
+    queryKey: ['availableParticipants', debouncedSearch, excludeCompany],
+    queryFn: () => api.groups.getAvailableParticipants(debouncedSearch, excludeCompany),
     enabled: debouncedSearch.length >= 3,
   })
 
