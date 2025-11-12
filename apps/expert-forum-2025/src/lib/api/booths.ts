@@ -1,7 +1,7 @@
 import { supabase } from './client'
 import { BaseAPI } from './base'
 import type { Database } from 'src/types/database'
-import type { Booth } from 'src/types/schema'
+import type { Booth, BoothQuestion } from 'src/types/schema'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
 type DBBooth = Database['public']['Tables']['booths']['Row']
@@ -15,7 +15,7 @@ export class BoothsAPI extends BaseAPI {
 
   /**
    * Get all booths ordered by order field
-   * Questions are stored as JSONB array and returned as string[]
+   * Questions are stored as JSONB array and returned as BoothQuestion[]
    */
   async getBooths(): Promise<Booth[]> {
     try {
@@ -36,20 +36,20 @@ export class BoothsAPI extends BaseAPI {
 
   /**
    * Transform database booth to schema Booth
-   * Converts JSONB questions to string array
+   * Converts JSONB questions to BoothQuestion array
    */
   private transformBooth(dbBooth: DBBooth): Booth {
     return {
       ...dbBooth,
       questions: Array.isArray(dbBooth.questions)
-        ? dbBooth.questions as string[]
+        ? (dbBooth.questions as unknown as BoothQuestion[])
         : [],
     } as Booth
   }
 
   /**
    * Get booth by ID
-   * Questions are stored as JSONB array and returned as string[]
+   * Questions are stored as JSONB array and returned as BoothQuestion[]
    */
   async getBooth(boothId: string): Promise<Booth> {
     try {
@@ -71,16 +71,53 @@ export class BoothsAPI extends BaseAPI {
   }
 
   /**
-   * Get a random question from booth's questions array
-   * Frontend helper to randomly select one question for participant
+   * Get a random starting question index from booth's questions array
+   * Frontend helper to randomly select starting position for question sequence
+   *
+   * @returns Random index (0-4) for starting question
    */
-  getRandomQuestion(booth: Booth): string {
+  getRandomQuestionIndex(booth: Booth): number {
     if (!booth.questions || booth.questions.length === 0) {
       throw new Error('Booth has no questions')
     }
 
-    const randomIndex = Math.floor(Math.random() * booth.questions.length)
-    return booth.questions[randomIndex] as string
+    return Math.floor(Math.random() * booth.questions.length)
+  }
+
+  /**
+   * Validate if selected answer is correct
+   *
+   * @param booth - The booth containing questions
+   * @param questionIndex - Index of the question being answered
+   * @param selectedAnswer - Index of the selected option (0-3)
+   * @returns true if answer is correct, false otherwise
+   */
+  validateAnswer(booth: Booth, questionIndex: number, selectedAnswer: number): boolean {
+    if (!booth.questions || questionIndex >= booth.questions.length || questionIndex < 0) {
+      throw new Error('Invalid question index')
+    }
+
+    const question = booth.questions[questionIndex]
+    if (!question) {
+      throw new Error('Question not found')
+    }
+    return question.correct_answer === selectedAnswer
+  }
+
+  /**
+   * Calculate points based on number of attempts
+   * Point distribution: 1st=100, 2nd=80, 3rd=60, 4th=40, 5th=20, 6+=10
+   *
+   * @param attempts - Number of attempts before correct answer
+   * @returns Points earned (10-100)
+   */
+  calculatePoints(attempts: number): number {
+    if (attempts === 1) return 100
+    if (attempts === 2) return 80
+    if (attempts === 3) return 60
+    if (attempts === 4) return 40
+    if (attempts === 5) return 20
+    return 10 // 6+ attempts
   }
 
   /**
@@ -113,11 +150,11 @@ export class BoothsAPI extends BaseAPI {
           if (event === 'DELETE') {
             // For DELETE events, only old data is available
             const oldBooth = payload.old as DBBooth
-            callback('DELETE', oldBooth ? oldBooth as Booth : null)
+            callback('DELETE', oldBooth ? this.transformBooth(oldBooth) : null)
           } else {
             // For INSERT and UPDATE, use new data
             const newBooth = payload.new as DBBooth
-            callback(event, newBooth as Booth)
+            callback(event, this.transformBooth(newBooth))
           }
         }
       )

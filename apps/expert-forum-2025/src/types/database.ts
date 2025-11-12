@@ -23,25 +23,28 @@ export type Database = {
     Tables: {
       booth_checkins: {
         Row: {
-          answer: string | null
+          attempts: number
           booth_id: string
           checkin_time: string
           id: string
           participant_id: string
+          points: number
         }
         Insert: {
-          answer?: string | null
+          attempts?: number
           booth_id: string
           checkin_time?: string
           id?: string
           participant_id: string
+          points?: number
         }
         Update: {
-          answer?: string | null
+          attempts?: number
           booth_id?: string
           checkin_time?: string
           id?: string
           participant_id?: string
+          points?: number
         }
         Relationships: [
           {

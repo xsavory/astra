@@ -43,7 +43,6 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
 
   const [checkInDialogOpen, setCheckInDialogOpen] = useState(false)
   const [isPosterOpen, setIsPosterOpen] = useState(false)
-  const [randomQuestion, setRandomQuestion] = useState<string>('')
 
   // Fetch booth data based on booth_id from URL
   const { data: booth, isLoading } = useQuery<Booth>({
@@ -56,20 +55,22 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
 
   // Booth check-in mutation
   const checkInMutation = useMutation({
-    mutationFn: async (answer: string) => {
+    mutationFn: async ({ points, attempts }: { points: number; attempts: number }) => {
       if (!booth?.id) throw new Error('Booth not found')
       return api.checkins.checkinBooth(user.id, {
         booth_id: booth.id,
-        answer: answer,
+        points,
+        attempts,
       })
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate queries to refresh booth checkins data
       queryClient.invalidateQueries({ queryKey: ['boothCheckins', user.id] })
       queryClient.invalidateQueries({ queryKey: ['currentUser'] })
 
-      // Show success toast
-      toast.success(`Check-in berhasil ke booth ${booth?.name}!`)
+      // Show success toast with points
+      const points = data.checkin.points
+      toast.success(`Check-in berhasil! Anda mendapat ${points} poin`)
 
       // Close dialogs and navigate back
       setCheckInDialogOpen(false)
@@ -82,20 +83,11 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     },
   })
 
-  // Generate random question when booth data is loaded
-  useEffect(() => {
-    if (booth && booth.questions.length > 0) {
-      const question = api.booths.getRandomQuestion(booth)
-      setRandomQuestion(question)
-    }
-  }, [booth])
-
   // Reset states when dialog closes
   useEffect(() => {
     if (!open) {
       setCheckInDialogOpen(false)
       setIsPosterOpen(false)
-      setRandomQuestion('')
     }
   }, [open])
 
@@ -105,8 +97,8 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
   }, [])
 
   // Handle check-in submission
-  const handleCheckInSubmit = useCallback(async (answer: string) => {
-    checkInMutation.mutate(answer)
+  const handleCheckInSubmit = useCallback(async (points: number, attempts: number) => {
+    checkInMutation.mutate({ points, attempts })
   }, [checkInMutation])
 
   // Booth content component - Memoized to prevent unnecessary re-renders
@@ -138,19 +130,23 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
 
         {/* Check-in Status Card - Show if already checked in */}
         {hasCheckedIn && existingCheckin && (
-          <Card className="border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20">
+          <Card className="gap-3! border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/20">
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2 text-green-700 dark:text-green-400">
+              <CardTitle className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400">
                 <CheckCircle2 className="size-5" />
                 Anda sudah check-in ke booth ini
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <p className="text-sm font-medium mb-2">Jawaban Anda:</p>
-                <div className="text-sm text-muted-foreground bg-background/50 p-3 rounded-md border">
-                  {existingCheckin.answer || 'Tidak ada jawaban'}
+                <div className="flex items-baseline gap-2">
+                  <p className="text-sm font-medium mb-2">Poin yang Didapat:</p>
+                  <span className="text-3xl font-bold text-primary">{existingCheckin.points}</span>
+                  <span className="text-sm text-muted-foreground">poin</span>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Diselesaikan dalam {existingCheckin.attempts} percobaan
+                </p>
               </div>
               <p className="text-xs text-muted-foreground">
                 Check-in pada: {new Date(existingCheckin.checkin_time).toLocaleString('id-ID', {
@@ -309,13 +305,15 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
           </DialogContent>
         </Dialog>
 
-        <BoothCheckinDialog
-          open={checkInDialogOpen}
-          onOpenChange={setCheckInDialogOpen}
-          question={randomQuestion}
-          onSubmit={handleCheckInSubmit}
-          isSubmitting={checkInMutation.isPending}
-        />
+        {booth && (
+          <BoothCheckinDialog
+            open={checkInDialogOpen}
+            onOpenChange={setCheckInDialogOpen}
+            booth={booth}
+            onSubmit={handleCheckInSubmit}
+            isSubmitting={checkInMutation.isPending}
+          />
+        )}
       </>
     )
   }
@@ -387,13 +385,47 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
         </DrawerContent>
       </Drawer>
 
-      <BoothCheckinDialog
-        open={checkInDialogOpen}
-        onOpenChange={setCheckInDialogOpen}
-        question={randomQuestion}
-        onSubmit={handleCheckInSubmit}
-        isSubmitting={checkInMutation.isPending}
-      />
+      {/* Nested Poster Drawer */}
+      <Drawer open={isPosterOpen} onOpenChange={setIsPosterOpen}>
+        <DrawerContent>
+          <DrawerHeader className="text-left">
+            <DrawerTitle className="flex items-center gap-2">
+              <Image className="size-5" />
+              Poster {booth?.name}
+            </DrawerTitle>
+            <DrawerDescription>
+              Geser untuk menutup
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
+            {booth?.poster_url && (
+              <img
+                src={booth.poster_url}
+                alt={`Poster ${booth.name}`}
+                className="w-full h-auto rounded-lg"
+              />
+            )}
+          </div>
+          <DrawerFooter className="pt-4">
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                <X className="size-4 mr-2" />
+                Tutup
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {booth && (
+        <BoothCheckinDialog
+          open={checkInDialogOpen}
+          onOpenChange={setCheckInDialogOpen}
+          booth={booth}
+          onSubmit={handleCheckInSubmit}
+          isSubmitting={checkInMutation.isPending}
+        />
+      )}
     </>
   )
 }

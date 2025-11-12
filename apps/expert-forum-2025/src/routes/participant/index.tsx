@@ -26,8 +26,6 @@ import api from 'src/lib/api'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
 import type { User, BoothCheckin } from 'src/types/schema'
 
-import logoAstraOtoparts from 'src/assets/logo-astra-otoparts.png'
-
 export const Route = createFileRoute('/participant/')({
   component: ParticipantIndexPage,
   pendingComponent: PageLoader,
@@ -218,8 +216,7 @@ function ParticipantIndexPage() {
         <CardHeader className="relative space-y-1 pb-4">
           <div className='space-y-2'>
             <div className='flex items-center justify-between'>
-            <img src={logoAstraOtoparts} className='w-32' />
-
+            <Badge variant='outline'>{user.company}</Badge>
             <Badge
               variant={user.participant_type === 'offline' ? 'default' : 'secondary'}
               className="shadow-lg">

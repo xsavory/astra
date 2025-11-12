@@ -321,9 +321,119 @@ After successful check-in, participant landing page (`/participant`) displays:
   * **Booth name**
   * **Description**
   * **Poster image URL**
-  * **Multiple questions** (stored as JSON array, one randomly selected per participant)
+  * **5 multiple-choice questions** (stored as JSONB array, each with 4 options A-D)
 * Purpose: Introduce Astra subsidiaries, educate about company products.
-* **Question Display Logic:** When participant accesses a booth, frontend randomly selects ONE question from the available questions array to display
+* **Question Format:** Multiple-choice questions with point-based scoring system
+
+---
+
+### 6.1.1 Question Structure & Point System
+
+#### Question Format
+
+Each booth contains **5 multiple-choice questions** stored as JSONB array with the following structure:
+
+```json
+{
+  "question": "Question text here?",
+  "options": ["Option A", "Option B", "Option C", "Option D"],
+  "correct_answer": 0  // Index (0-3) of the correct answer
+}
+```
+
+**Key Rules:**
+- Exactly **4 options** per question (A, B, C, D)
+- Only **one correct answer** per question
+- Questions are stored in JSONB format in database
+
+#### Point System & Attempt Logic
+
+**Point Distribution:**
+
+| Attempt # | Points Awarded | Description |
+|-----------|---------------|-------------|
+| 1st | 100 points | Answered correctly on first try |
+| 2nd | 80 points | Answered correctly on second try |
+| 3rd | 60 points | Answered correctly on third try |
+| 4th | 40 points | Answered correctly on fourth try |
+| 5th | 20 points | Answered correctly on fifth try |
+| 6+ | 10 points | Answered correctly after cycling (minimum base) |
+
+**Question Flow Logic:**
+
+1. **Initial Display:**
+   - System randomly selects ONE question as starting point from 5 available
+   - Creates question sequence: [random start, next, next, next, next]
+   - Example: If random start = 2, sequence = [2, 3, 4, 0, 1]
+
+2. **Answer Submission:**
+   - Participant selects one of 4 options (A, B, C, D)
+   - System validates answer against `correct_answer` index
+
+3. **If Answer is WRONG:**
+   - System **immediately** moves to next question in sequence
+   - Attempt counter increments
+   - No feedback message shown (seamless transition)
+   - Selected option resets for next question
+
+4. **If Answer is CORRECT:**
+   - Check-in recorded with:
+     - `points`: Calculated based on attempt count (100, 80, 60, 40, 20, or 10)
+     - `attempts`: Total number of attempts before correct answer
+   - Success notification: "Check-in berhasil! Anda mendapat X poin"
+   - Dialogs close and booth marked as completed
+
+5. **After 5 Wrong Answers (Cycling):**
+   - System loops back to **first question** in sequence
+   - Order remains the same (no reshuffle)
+   - Points locked at **10 (minimum base)** for any subsequent correct answer
+   - Participant must answer correctly to complete check-in (no escape until correct)
+
+#### UI Display Elements
+
+**Attempt Counter:**
+- Shows current attempt number
+- Format: "Percobaan X dari 5" (for attempts 1-5)
+- After 5 attempts: "Percobaan 6", "Percobaan 7", etc.
+
+**Points Display:**
+- Real-time calculation shown to participant
+- Format: "Poin: 100" (updates as attempts increase)
+- Motivates participants to answer correctly quickly
+
+**Question Options:**
+- Radio button group with 4 options
+- Labels: A, B, C, D
+- Submit button disabled until option selected
+
+#### Database Storage
+
+**booth_checkins table:**
+```sql
+- id (UUID)
+- participant_id (UUID FK)
+- booth_id (UUID FK)
+- points (INTEGER) -- Points earned (10-100)
+- attempts (INTEGER) -- Total attempts before correct answer
+- checkin_time (TIMESTAMP)
+```
+
+**Key Changes from Previous System:**
+- ❌ Removed: `answer` (TEXT) column
+- ✅ Added: `points` (INTEGER) column
+- ✅ Added: `attempts` (INTEGER) column
+
+#### Business Rules
+
+1. **No Re-attempts:** Once checked in to a booth, participant cannot retry (enforced by unique constraint on `participant_id, booth_id`)
+
+2. **Eligibility Calculation:** Still based on booth count, not points:
+   - Offline: Complete 10 booths → `is_eligible_to_draw = true`
+   - Online: Complete 6 booths → `is_eligible_to_draw = true`
+
+3. **No Leaderboard:** Points are for individual achievement tracking only, no competitive ranking system
+
+4. **Historical Data:** Existing booth_checkins with `answer` text will be cleared (system not in production yet)
 
 ---
 
@@ -354,22 +464,23 @@ This page displays different UI based on participant type (offline vs online).
      - **CTA button: "Check-in"**
 6. Participant clicks **"Check-in"** button
 7. **Nested dialog opens** (booth check-in form) showing:
-   - Question text (randomly selected from booth questions)
-   - Text input field for answer
+   - Multiple-choice question (one of 5, randomly selected)
+   - 4 radio button options (A, B, C, D)
+   - Attempt counter ("Percobaan 1 dari 5")
+   - Current points display ("Poin: 100")
    - Submit button
-8. Participant types answer and clicks Submit
-9. System records booth check-in:
-   ```ts
-   {
-     boothId,
-     participantId,
-     checkinTime,
-     answer
-   }
-   ```
-10. Success toast/notification appears
-11. Both dialogs close (nested dialog + booth detail dialog)
-12. Booth card appears in the list
+8. Participant selects an option and clicks Submit
+9. **If answer is wrong:**
+   - Dialog stays open
+   - Next question appears immediately
+   - Attempt counter increments
+   - Points decrease
+   - Selected option resets
+10. **If answer is correct:**
+    - System records booth check-in with points and attempts
+    - Success toast shows points earned
+    - Both dialogs close
+    - Booth card appears in the list
 
 **After Booth Check-ins:**
 - Display **card list** of checked-in booths (newest first)
@@ -381,8 +492,8 @@ This page displays different UI based on participant type (offline vs online).
   - Booth name
   - Booth description
   - Poster image (if available)
-  - Question text
-  - Answer that was submitted (read-only)
+  - Points earned (large display)
+  - Attempts taken
   - Check-in timestamp
   - No check-in button (already completed)
 
@@ -437,15 +548,22 @@ This page displays different UI based on participant type (offline vs online).
    - **CTA button: "Check-in"**
 3. Participant clicks **"Check-in"** button
 4. **Nested dialog opens** (booth check-in form) showing:
-   - Question text (randomly selected from booth questions)
-   - Text input field for answer
+   - Multiple-choice question (one of 5, randomly selected)
+   - 4 radio button options (A, B, C, D)
+   - Attempt counter ("Percobaan 1 dari 5")
+   - Current points display ("Poin: 100")
    - Submit button
-5. Participant types answer and clicks Submit
-6. System records booth check-in
-7. Success notification
-8. Both dialogs close (nested dialog + booth detail dialog)
-9. Booth card updates to "Completed" state
-10. Progress bar updates
+5. Participant selects an option and clicks Submit
+6. **If answer is wrong:**
+   - Dialog stays open
+   - Next question appears immediately
+   - Attempt counter increments, points decrease
+7. **If answer is correct:**
+   - System records booth check-in with points and attempts
+   - Success notification shows points earned
+   - Both dialogs close
+   - Booth card updates to "Completed" state
+   - Progress bar updates
 
 **Interaction Flow (Completed Booth):**
 1. Participant clicks on completed booth card
@@ -453,8 +571,8 @@ This page displays different UI based on participant type (offline vs online).
    - Booth poster image
    - Booth name
    - Full description
-   - Question text
-   - Answer that was submitted (read-only, no edit)
+   - Points earned (large display)
+   - Attempts taken
    - Check-in timestamp
    - "Completed" badge
    - No check-in button (already completed)

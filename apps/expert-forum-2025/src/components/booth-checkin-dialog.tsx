@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { CheckCircle2 } from 'lucide-react'
 
 import {
@@ -15,65 +15,154 @@ import {
   DrawerTitle,
   DrawerFooter,
   Button,
-  Textarea,
   Label,
+  RadioGroup,
+  RadioGroupItem,
 } from '@repo/react-components/ui'
 import { useIsMobile } from '@repo/react-components/hooks'
+import type { Booth, BoothQuestion } from 'src/types/schema'
+import api from 'src/lib/api'
 
 interface BoothCheckinDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  question: string
-  onSubmit: (answer: string) => Promise<void>
+  booth: Booth
+  onSubmit: (points: number, attempts: number) => Promise<void>
   isSubmitting: boolean
 }
-
-const MINIMUM_ANSWER_LENGTH = 20
 
 function BoothCheckinDialog({
   open,
   onOpenChange,
-  question,
+  booth,
   onSubmit,
   isSubmitting,
 }: BoothCheckinDialogProps) {
   const isMobile = useIsMobile()
-  const [answer, setAnswer] = useState('')
 
-  // Reset answer when dialog closes
+  // State management
+  const [questionSequence, setQuestionSequence] = useState<number[]>([])
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [attempts, setAttempts] = useState(1)
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
+
+  // Initialize question sequence when dialog opens
+  useEffect(() => {
+    if (open && booth.questions.length > 0) {
+      // Generate random starting position
+      const randomStart = api.booths.getRandomQuestionIndex(booth)
+      // Create sequence of 5 questions starting from random position
+      const sequence = Array.from({ length: 5 }, (_, i) => (randomStart + i) % 5)
+      setQuestionSequence(sequence)
+      setCurrentQuestionIndex(0)
+      setAttempts(1)
+      setSelectedAnswer(null)
+    }
+  }, [open, booth])
+
+  // Reset states when dialog closes
   useEffect(() => {
     if (!open) {
-      setAnswer('')
+      setQuestionSequence([])
+      setCurrentQuestionIndex(0)
+      setAttempts(1)
+      setSelectedAnswer(null)
     }
   }, [open])
 
-  // Handle submit
-  const handleSubmit = useCallback(async () => {
-    await onSubmit(answer.trim())
-  }, [answer, onSubmit])
+  // Get current question
+  const currentQuestion: BoothQuestion | null = useMemo(() => {
+    if (questionSequence.length === 0 || !booth.questions) return null
+    const qIndex = questionSequence[currentQuestionIndex]
+    if (qIndex === undefined) return null
+    return booth.questions[qIndex] || null
+  }, [booth, questionSequence, currentQuestionIndex])
 
-  const questionContent = (
+  // Calculate current points (for display)
+  const currentPoints = useMemo(() => {
+    return api.booths.calculatePoints(attempts)
+  }, [attempts])
+
+  // Handle answer selection and validation
+  const handleAnswerSubmit = useCallback(async () => {
+    if (selectedAnswer === null || !currentQuestion) return
+
+    // Validate answer
+    const isCorrect = currentQuestion.correct_answer === selectedAnswer
+
+    if (isCorrect) {
+      // Correct answer! Submit check-in with points
+      const points = api.booths.calculatePoints(attempts)
+      await onSubmit(points, attempts)
+      // Note: Parent component will close dialog and reset will happen via useEffect
+    } else {
+      // Wrong answer - move to next question
+      const nextIndex = (currentQuestionIndex + 1) % 5
+      setCurrentQuestionIndex(nextIndex)
+      setAttempts((prev) => prev + 1)
+      setSelectedAnswer(null) // Reset selection for next question
+    }
+  }, [selectedAnswer, currentQuestion, attempts, currentQuestionIndex, onSubmit])
+
+  // Get attempt display text
+  const attemptText = useMemo(() => {
+    if (attempts <= 5) {
+      return `Percobaan ${attempts} dari 5`
+    }
+    return `Percobaan ${attempts}`
+  }, [attempts])
+
+  // Question content component
+  const questionContent = currentQuestion ? (
     <div className="space-y-4">
+      {/* Attempt Counter */}
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="text-sm font-medium text-muted-foreground">
+          {attemptText}
+        </div>
+        <div className="text-sm font-semibold text-primary">
+          Poin: {currentPoints}
+        </div>
+      </div>
+
+      {/* Question Text */}
       <div className="space-y-2">
-        <Label htmlFor="answer">Pertanyaan Check-in</Label>
-        <p className="text-sm text-muted-foreground">
-          {question}
+        <Label htmlFor="question" className='text-muted-foreground'>Pertanyaan:</Label>
+        <p className="text-sm leading-relaxed text-primary font-bold">
+          {currentQuestion.question}
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Textarea
-          id="answer"
-          placeholder="Tuliskan jawaban Anda di sini..."
-          value={answer}
-          onChange={(e) => setAnswer(e.target.value)}
-          rows={6}
-          className="resize-none"
-        />
-        <p className="text-xs text-muted-foreground">
-          Minimal {MINIMUM_ANSWER_LENGTH} karakter
-        </p>
+      {/* Answer Options (Radio Group) */}
+      <div className="space-y-3">
+        <Label className='font-bold text-muted-foreground'>Pilih Jawaban</Label>
+        <RadioGroup
+          value={selectedAnswer !== null ? String(selectedAnswer) : ''}
+          onValueChange={(value) => setSelectedAnswer(Number(value))}
+        >
+          {currentQuestion.options.map((option, index) => (
+            <div
+              key={index}
+              className="flex items-center space-x-3 border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+            >
+              <RadioGroupItem value={String(index)} id={`option-${index}`} />
+              <Label
+                htmlFor={`option-${index}`}
+                className="flex-1 cursor-pointer font-normal"
+              >
+                <span className="font-semibold mr-2">
+                  {String.fromCharCode(65 + index)}.
+                </span>
+                {option}
+              </Label>
+            </div>
+          ))}
+        </RadioGroup>
       </div>
+    </div>
+  ) : (
+    <div className="py-8 text-center text-muted-foreground">
+      Loading question...
     </div>
   )
 
@@ -85,16 +174,16 @@ function BoothCheckinDialog({
           <DrawerHeader className="text-left">
             <DrawerTitle>Check-in ke Booth</DrawerTitle>
             <DrawerDescription>
-              Jawab pertanyaan berikut untuk check-in
+              Jawab pertanyaan dengan benar untuk check-in
             </DrawerDescription>
           </DrawerHeader>
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-4 max-h-[60vh] overflow-y-auto">
             {questionContent}
           </div>
-          <DrawerFooter className="pt-4">
+          <DrawerFooter className="pt-4 border-t">
             <Button
-              onClick={handleSubmit}
-              disabled={!answer.trim() || answer.trim().length < MINIMUM_ANSWER_LENGTH || isSubmitting}
+              onClick={handleAnswerSubmit}
+              disabled={selectedAnswer === null || isSubmitting}
               className="w-full"
             >
               {isSubmitting ? (
@@ -105,12 +194,12 @@ function BoothCheckinDialog({
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Submit Check-in
+                  Submit Jawaban
                 </>
               )}
             </Button>
             <DrawerClose asChild>
-              <Button variant="outline" className="w-full">
+              <Button variant="outline" className="w-full" disabled={isSubmitting}>
                 Batal
               </Button>
             </DrawerClose>
@@ -123,11 +212,11 @@ function BoothCheckinDialog({
   // Render Dialog for desktop
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Check-in ke Booth</DialogTitle>
           <DialogDescription>
-            Jawab pertanyaan berikut untuk check-in
+            Jawab pertanyaan dengan benar untuk check-in
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -137,12 +226,13 @@ function BoothCheckinDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
           >
             Batal
           </Button>
           <Button
-            onClick={handleSubmit}
-            disabled={!answer.trim() || answer.trim().length < MINIMUM_ANSWER_LENGTH || isSubmitting}
+            onClick={handleAnswerSubmit}
+            disabled={selectedAnswer === null || isSubmitting}
           >
             {isSubmitting ? (
               <>
@@ -152,7 +242,7 @@ function BoothCheckinDialog({
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Submit Check-in
+                Submit Jawaban
               </>
             )}
           </Button>

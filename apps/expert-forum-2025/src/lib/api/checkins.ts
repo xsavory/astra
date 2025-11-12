@@ -99,7 +99,7 @@ export class CheckinsAPI extends BaseAPI {
   }
 
   /**
-   * Check-in participant to booth
+   * Check-in participant to booth with points and attempts
    * Calculates and updates eligibility in API layer
    */
   async checkinBooth(
@@ -145,13 +145,22 @@ export class CheckinsAPI extends BaseAPI {
         throw new Error('Booth sudah dikunjungi')
       }
 
-      // Create booth checkin record
+      // Validate points (10-100) and attempts (>=1)
+      if (data.points < 10 || data.points > 100) {
+        throw new Error('Invalid points value')
+      }
+      if (data.attempts < 1) {
+        throw new Error('Invalid attempts value')
+      }
+
+      // Create booth checkin record with points and attempts
       const { data: checkinData, error: checkinError } = await supabase
         .from('booth_checkins')
         .insert({
           participant_id: participantId,
           booth_id: data.booth_id,
-          answer: data.answer,
+          points: data.points,
+          attempts: data.attempts,
         })
         .select()
         .single()

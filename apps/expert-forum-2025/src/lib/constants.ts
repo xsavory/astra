@@ -41,9 +41,9 @@ export const COMPANY_OPTIONS = [
 // Maps booth ID to visual image path from /public folder
 // Set to null for booths without images yet - will show placeholder
 export const BOOTH_VISUAL_IMAGES: Record<string, string | null> = {
-  'fe32d446-3a40-405f-acda-fee60680108a': boothMock1,
-  'a1462a04-38de-4e11-876e-e5d231ac4c0e': boothMock2,
-  '9798a826-3a23-4847-8b54-567167546c89': boothMock3,
+  'a43092af-dfc2-40ff-85a2-6af8397d294f': boothMock1,
+  'f4c7a4e2-9513-42cb-94c0-3946e3ccffcd': boothMock2,
+  'c8d80f15-743c-4ca0-8bc2-ae25dae8bb6a': boothMock3,
   'booth-004': null,
   'booth-005': null,
 } as const

@@ -57,12 +57,19 @@ export interface UpdateUserInput {
 
 // ==================== Booth Types ====================
 
+// Multiple-choice question structure
+export interface BoothQuestion {
+  question: string
+  options: [string, string, string, string] // Exactly 4 options (A, B, C, D)
+  correct_answer: number // Index of correct answer (0-3)
+}
+
 export interface Booth {
   id: string
   name: string
   description?: string | null
   poster_url?: string | null
-  questions: string[] // Array of question strings (stored as JSONB in database)
+  questions: BoothQuestion[] // Array of multiple-choice questions (stored as JSONB in database)
   order: number
   created_at: string
   updated_at: string
@@ -74,7 +81,8 @@ export interface BoothCheckin {
   id: string
   participant_id: string
   booth_id: string
-  answer?: string | null
+  points: number // Points earned (10-100) based on attempts
+  attempts: number // Number of attempts before correct answer
   checkin_time: string
 }
 
@@ -87,7 +95,8 @@ export interface BoothCheckinWithDetails extends BoothCheckin {
 // Create Booth Check-in Input
 export interface CreateBoothCheckinInput {
   booth_id: string
-  answer: string
+  points: number // Points earned (calculated client-side)
+  attempts: number // Total attempts before correct answer
 }
 
 // ==================== Group Types ====================
