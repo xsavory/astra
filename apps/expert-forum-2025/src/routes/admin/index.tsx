@@ -33,7 +33,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download, Award } from 'lucide-react'
 import { useState, useMemo } from 'react'
-import { toast } from '@repo/react-components/ui'
+import { toast, Switch, Label, Button } from '@repo/react-components/ui'
 
 import AdminStatsCard from 'src/components/admin-stats-card'
 import AdminParticipantFilters, {
@@ -48,7 +48,6 @@ import AdminCheckinDialog from 'src/components/admin-checkin-dialog'
 import AdminDrawHistoryDialog from 'src/components/admin-draw-history-dialog'
 import AdminBoothVotesResultDialog from 'src/components/admin-booth-votes-result-dialog'
 import PageLoader from 'src/components/page-loader'
-import { Button } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import { exportParticipantsToCSV, exportSubmissionsToCSV } from 'src/lib/csv-export'
 import type { Stats, ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
@@ -98,6 +97,13 @@ function AdminIndexPage() {
   // State for check-in dialog
   const [isCheckinDialogOpen, setIsCheckinDialogOpen] = useState(false)
   const [checkinUser, setCheckinUser] = useState<User | null>(null)
+
+  // Fetch current event
+  const { data: event } = useQuery({
+    queryKey: ['current-event'],
+    queryFn: () => api.events.getEvent(),
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  })
 
   // Fetch stats with real-time updates
   const { data: stats, isLoading: isStatsLoading, refetch, isFetching } = useQuery<Stats>({
@@ -228,6 +234,22 @@ function AdminIndexPage() {
     },
   })
 
+  // Mutation to toggle event active status
+  const toggleEventActiveMutation = useMutation({
+    mutationFn: async (isActive: boolean) => {
+      if (!event?.id) throw new Error('No active event')
+      await api.events.updateEventActive(event.id, isActive)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['current-event'] })
+      queryClient.invalidateQueries({ queryKey: ['adminStats'] })
+      toast.success('Event status updated successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update event status')
+    },
+  })
+
   // Handle add participant
   const handleAddParticipant = () => {
     setEditingUser(null)
@@ -347,7 +369,7 @@ function AdminIndexPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header with refresh button */}
+      {/* Header with refresh button and event toggle */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Dashboard Overview</h2>
@@ -355,18 +377,40 @@ function AdminIndexPage() {
             Monitor event statistics and manage participants
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            refetch()
-            refetchParticipants()
-          }}
-          disabled={isFetching}
-        >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-4">
+          {/* Event Active Toggle */}
+          {event && (
+            <div className="flex items-center gap-3 px-4 py-2 border rounded-md bg-card cursor-pointer">
+              <Label
+                htmlFor="event-active-toggle"
+                className="text-sm font-medium cursor-pointer"
+              >
+                Event Active
+              </Label>
+              <Switch
+                id="event-active-toggle"
+                checked={event.is_active}
+                onCheckedChange={(checked) => toggleEventActiveMutation.mutate(checked)}
+                disabled={toggleEventActiveMutation.isPending}
+                className='cursor-pointer'
+              />
+            </div>
+          )}
+
+          {/* Refresh Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetch()
+              refetchParticipants()
+            }}
+            disabled={isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -416,35 +460,35 @@ function AdminIndexPage() {
         />
       </div>
 
+      <div className='flex gap-3 flex-wrap'>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsBoothVotesResultDialogOpen(true)}>
+          <Award className="h-4 w-4 mr-2" />
+          Booth Votes
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsSubmissionDrawerOpen(true)}>
+          <FileText className="h-4 w-4 mr-2" />
+          Ideations
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsDrawHistoryDialogOpen(true)}>
+          <Trophy className="h-4 w-4 mr-2" />
+          Draw History
+        </Button>
+      </div>
+
       {/* Participant Management Section */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-semibold">Participant Management</h3>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsSubmissionDrawerOpen(true)}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              View Submissions
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsDrawHistoryDialogOpen(true)}
-            >
-              <Trophy className="h-4 w-4 mr-2" />
-              Draw History
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsBoothVotesResultDialogOpen(true)}
-            >
-              <Award className="h-4 w-4 mr-2" />
-              Votes Result
-            </Button>
             <Button
               variant="outline"
               size="sm"

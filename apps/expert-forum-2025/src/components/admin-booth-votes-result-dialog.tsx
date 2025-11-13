@@ -7,7 +7,7 @@
  * - Consistent with admin design system
  */
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Dialog,
   DialogContent,
@@ -20,8 +20,11 @@ import {
   Skeleton,
   Alert,
   AlertDescription,
+  Switch,
+  Label,
 } from '@repo/react-components/ui'
 import { Trophy, Medal, Award, AlertCircle, Clock, Lock } from 'lucide-react'
+import { toast } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import type { BoothVoteResultWithDetails } from 'src/types/schema'
 
@@ -52,6 +55,8 @@ export function AdminBoothVotesResult({
   open,
   onClose,
 }: AdminBoothVotesResultProps) {
+  const queryClient = useQueryClient()
+
   // Fetch current event
   const { data: event } = useQuery({
     queryKey: ['current-event'],
@@ -77,6 +82,22 @@ export function AdminBoothVotesResult({
   const totalVotes = results.reduce((sum, result) => sum + result.final_vote_count, 0)
   // Calculate total voters (each voter votes for 2 booths)
   const totalVoters = totalVotes > 0 ? Math.floor(totalVotes / 2) : 0
+
+  // Mutation to toggle voting open status
+  const toggleVotesOpenMutation = useMutation({
+    mutationFn: async (isOpen: boolean) => {
+      if (!event?.id) throw new Error('No active event')
+      await api.events.updateVotesOpen(event.id, isOpen)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['current-event'] })
+      queryClient.invalidateQueries({ queryKey: ['votingState'] })
+      toast.success('Voting status updated successfully')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update voting status')
+    },
+  })
 
   // Medal colors for top 3
   const getMedalColor = (rank: number) => {
@@ -109,13 +130,43 @@ export function AdminBoothVotesResult({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-primary" />
-            Booth Votes Result
-          </DialogTitle>
-          <DialogDescription className='text-left'>
-            Final voting results snapshot - Rankings and vote counts
-          </DialogDescription>
+          <div className="flex items-end justify-between">
+            <div className="space-y-1">
+              <DialogTitle className="flex items-center gap-2">
+                <Trophy className="h-5 w-5 text-primary" />
+                Booth Votes Result
+              </DialogTitle>
+              <DialogDescription className='text-left'>
+                Final voting results snapshot - Rankings and vote counts
+              </DialogDescription>
+            </div>
+
+            {/* Toggle for voting open status */}
+            {event && !event.is_votes_lock && (
+              <div className="flex items-center gap-3">
+                <Label
+                  htmlFor="votes-open-toggle"
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Voting Open
+                </Label>
+                <Switch
+                  id="votes-open-toggle"
+                  checked={event.is_votes_open}
+                  onCheckedChange={(checked) => toggleVotesOpenMutation.mutate(checked)}
+                  disabled={toggleVotesOpenMutation.isPending}
+                />
+              </div>
+            )}
+
+            {/* Show lock badge if voting is locked */}
+            {event?.is_votes_lock && (
+              <Badge variant="secondary" className="shrink-0">
+                <Lock className="h-3 w-3 mr-1" />
+                Locked
+              </Badge>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="overflow-y-auto max-h-[calc(85vh-120px)] pr-2">

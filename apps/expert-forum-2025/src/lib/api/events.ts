@@ -96,4 +96,42 @@ export class EventsAPI extends BaseAPI {
       }
     }
   }
+
+  /**
+   * Update voting open status
+   * Admin can toggle whether voting is open for participants
+   */
+  async updateVotesOpen(eventId: string, isOpen: boolean): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ is_votes_open: isOpen })
+        .eq('id', eventId)
+
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      this.handleError(error, 'updateVotesOpen')
+    }
+  }
+
+  /**
+   * Update event active status
+   * Admin can toggle whether event is active
+   */
+  async updateEventActive(eventId: string, isActive: boolean): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ is_active: isActive })
+        .eq('id', eventId)
+
+      if (error) {
+        throw error
+      }
+    } catch (error) {
+      this.handleError(error, 'updateEventActive')
+    }
+  }
 }
