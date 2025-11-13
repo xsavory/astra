@@ -63,6 +63,42 @@ export type Database = {
           },
         ]
       }
+      booth_votes: {
+        Row: {
+          booth_id: string
+          id: string
+          participant_id: string
+          voted_at: string
+        }
+        Insert: {
+          booth_id: string
+          id?: string
+          participant_id: string
+          voted_at?: string
+        }
+        Update: {
+          booth_id?: string
+          id?: string
+          participant_id?: string
+          voted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booth_votes_booth_id_fkey"
+            columns: ["booth_id"]
+            isOneToOne: false
+            referencedRelation: "booths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booth_votes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booths: {
         Row: {
           created_at: string
@@ -100,16 +136,25 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          prize_name: string | null
+          prize_template: string | null
+          slot_count: number | null
           staff_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          prize_name?: string | null
+          prize_template?: string | null
+          slot_count?: number | null
           staff_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          prize_name?: string | null
+          prize_template?: string | null
+          slot_count?: number | null
           staff_id?: string | null
         }
         Relationships: [

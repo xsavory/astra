@@ -1,4 +1,4 @@
-import { LogOut, Maximize, Minimize, CheckSquare, HelpCircle, Gift, Eye, EyeOff, MenuIcon } from 'lucide-react'
+import { LogOut, Maximize, Minimize, CheckSquare, Award, HelpCircle, Gift, Eye, EyeOff, MenuIcon } from 'lucide-react'
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { Button, Separator } from '@repo/react-components/ui'
 import useAuth from 'src/hooks/use-auth'
@@ -42,6 +42,7 @@ function StaffPageLayout({ children }: Props) {
     { path: '/staff/checkin', label: 'Check-in', icon: CheckSquare },
     { path: '/staff/helpdesk', label: 'Helpdesk', icon: HelpCircle },
     { path: '/staff/draw', label: 'Draw', icon: Gift },
+    { path: '/staff/votes', label: 'Votes', icon: Award },
   ]
 
   const isActive = (path: string) => {

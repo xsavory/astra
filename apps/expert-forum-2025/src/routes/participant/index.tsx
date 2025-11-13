@@ -7,10 +7,12 @@ import {
   Building2,
   Video,
   Lightbulb,
+  Award,
 } from 'lucide-react'
 
 import PageLoader from 'src/components/page-loader'
 import ZoomDialog from 'src/components/zoom-dialog'
+import BoothVotingDialog from 'src/components/booth-voting-dialog'
 import ParticipantPreCheckinPage from 'src/components/participant-pre-checkin-page'
 import {
   Card,
@@ -78,6 +80,16 @@ function ParticipantIndexSkeleton() {
             </CardContent>
           </Card>
         </div>
+        {/* Additional row skeleton for voting card */}
+        <Card>
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col items-center space-y-3">
+              <Skeleton className="size-12 sm:size-14 rounded-full" />
+              <Skeleton className="h-4 sm:h-5 w-24" />
+              <Skeleton className="h-3 w-32 sm:w-40" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Voucher Section Skeleton */}
@@ -102,6 +114,8 @@ function ParticipantIndexPage() {
 
   // State for zoom dialog
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false)
+  // State for voting dialog
+  const [isVotingDialogOpen, setIsVotingDialogOpen] = useState(false)
 
   // Fetch current user
   const { data: user, isLoading: isLoadingUser } = useQuery<User | null>({
@@ -324,7 +338,7 @@ function ParticipantIndexPage() {
                   <Video className="size-5 sm:size-6 text-white" />
                 </div>
                 <div className="space-y-1">
-                  <h3 className="font-bold text-sm sm:text-base text-white">Join Zoom Meeting</h3>
+                  <h3 className="font-bold text-white">Join Zoom Meeting</h3>
                   <p className="text-xs text-white/80">
                     Bergabung dengan sesi virtual
                   </p>
@@ -333,6 +347,26 @@ function ParticipantIndexPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Third Row: Booth Voting Card - Available for all participants */}
+        <Card
+          className="cursor-pointer bg-gradient-to-r from-primary via-blue-600 to-cyan-500 border-2 border-white/30 shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/50 group"
+          onClick={() => setIsVotingDialogOpen(true)}
+        >
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="rounded-full bg-white/20 backdrop-blur-sm p-3 sm:p-4 group-hover:scale-110 transition-transform duration-300">
+                <Award className="size-5 sm:size-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-white">Booth Voting</h3>
+                <p className="text-xs text-white/80">
+                  Vote for your favorite booths
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Voucher Section - Moved to bottom */}
@@ -406,6 +440,13 @@ function ParticipantIndexPage() {
       <ZoomDialog
         open={isZoomDialogOpen}
         onOpenChange={setIsZoomDialogOpen}
+        user={user}
+      />
+
+      {/* Booth Voting Dialog - Dialog for desktop, Bottom Sheet for mobile */}
+      <BoothVotingDialog
+        open={isVotingDialogOpen}
+        onOpenChange={setIsVotingDialogOpen}
         user={user}
       />
     </div>

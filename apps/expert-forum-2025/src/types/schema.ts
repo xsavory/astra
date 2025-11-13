@@ -99,6 +99,37 @@ export interface CreateBoothCheckinInput {
   attempts: number // Total attempts before correct answer
 }
 
+// ==================== Booth Voting Types ====================
+
+export interface BoothVote {
+  id: string
+  participant_id: string
+  booth_id: string
+  voted_at: string
+}
+
+// Booth Vote with populated booth data
+export interface BoothVoteWithBooth extends BoothVote {
+  booth?: Booth
+}
+
+// Create Booth Vote Input
+export interface CreateBoothVoteInput {
+  booth_id: string
+}
+
+// Submit Multiple Votes Input (exactly 2 booths)
+export interface SubmitBoothVotesInput {
+  booth_ids: [string, string] // Exactly 2 booth IDs
+}
+
+// Booth with vote statistics
+export interface BoothWithVoteStats extends Booth {
+  vote_count: number
+  vote_percentage: number
+  rank: number
+}
+
 // ==================== Group Types ====================
 
 export interface Group {

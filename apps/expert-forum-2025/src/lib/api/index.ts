@@ -7,6 +7,7 @@ import { IdeationsAPI } from './ideations'
 import { DrawsAPI } from './draws'
 import { EventsAPI } from './events'
 import { StatsAPI } from './stats'
+import { VotesAPI } from './votes'
 
 /**
  * Main API object that combines all API modules
@@ -22,6 +23,7 @@ const api = {
   draws: new DrawsAPI(),
   events: new EventsAPI(),
   stats: new StatsAPI(),
+  votes: new VotesAPI(),
 } as const
 
 // Export singleton instance as default
