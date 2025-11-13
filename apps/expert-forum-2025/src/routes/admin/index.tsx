@@ -1,37 +1,10 @@
 /**
  * Admin Dashboard - Main Page
- *
- * Implementation Status:
- * =====================
- * Phase 1: Core Foundation ✅ DONE
- * - AdminPageLayout: ✅ Complete (navbar with user info, logout, fullscreen)
- * - AdminStatsCard: ✅ Complete (reusable stats component)
- * - Stats Section: ✅ Complete (4 metrics with real-time updates)
- *
- * Phase 2: Data Display ✅ DONE
- * - ✅ AdminParticipantFilters (type, status, company, search)
- * - ✅ AdminParticipantTable (read-only with pagination)
- * - [ ] Click row to open detail drawer (Phase 4)
- *
- * Phase 3: CRUD Operations ✅ DONE
- * - ✅ AdminParticipantFormDrawer (add/edit)
- * - ✅ Delete with validation
- * - ✅ CSV export functionality
- *
- * Phase 4: Detail View ✅ DONE
- * - ✅ AdminParticipantDetailDrawer (basic info + timeline)
- * - ✅ Click row to open detail drawer
- * - ✅ Edit/Delete actions from detail drawer
- *
- * Phase 5: Submission Management ✅ DONE
- * - ✅ AdminSubmissionDrawer (list + detail + export)
- *
- * @see PRD.md Section 9 for full requirements
  */
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download, Award } from 'lucide-react'
+import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download, Award, QrCodeIcon } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { toast, Switch, Label, Button } from '@repo/react-components/ui'
 
@@ -47,6 +20,7 @@ import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmat
 import AdminCheckinDialog from 'src/components/admin-checkin-dialog'
 import AdminDrawHistoryDialog from 'src/components/admin-draw-history-dialog'
 import AdminBoothVotesResultDialog from 'src/components/admin-booth-votes-result-dialog'
+import AdminBoothCheckinsDialog from 'src/components/admin-booth-checkins-dialog'
 import PageLoader from 'src/components/page-loader'
 import api from 'src/lib/api'
 import { exportParticipantsToCSV, exportSubmissionsToCSV } from 'src/lib/csv-export'
@@ -89,6 +63,9 @@ function AdminIndexPage() {
 
   // State for booth votes result dialog
   const [isBoothVotesResultDialogOpen, setIsBoothVotesResultDialogOpen] = useState(false)
+
+  // State for booth checkins stats info dialog
+  const [isBoothCheckinsDialogOpen, setIsBoothCheckinsDialogOpen] = useState(false)
 
   // State for delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -464,6 +441,13 @@ function AdminIndexPage() {
         <Button
           variant="outline"
           size="sm"
+          onClick={() => setIsBoothCheckinsDialogOpen(true)}>
+          <QrCodeIcon className="h-4 w-4 mr-2" />
+          Booth Checkins
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => setIsBoothVotesResultDialogOpen(true)}>
           <Award className="h-4 w-4 mr-2" />
           Booth Votes
@@ -583,6 +567,12 @@ function AdminIndexPage() {
       <AdminBoothVotesResultDialog
         open={isBoothVotesResultDialogOpen}
         onClose={() => setIsBoothVotesResultDialogOpen(false)}
+      />
+
+      {/* Booth Checkins Dialog */}
+      <AdminBoothCheckinsDialog
+        open={isBoothCheckinsDialogOpen}
+        onClose={() => setIsBoothCheckinsDialogOpen(false)}
       />
     </div>
   )

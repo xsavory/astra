@@ -7,6 +7,7 @@ import PageLoader from 'src/components/page-loader'
 import StaffEventQRScannerDialog from 'src/components/staff-event-qr-scanner-dialog'
 import CheckinGreetingAnimation from 'src/components/checkin-greeting-animation'
 import CheckinErrorDialog from 'src/components/checkin-error-dialog'
+import CheckinLoadingDialog from 'src/components/checkin-loading-dialog'
 import {
   Card,
   CardContent,
@@ -135,6 +136,9 @@ function StaffCheckinPage() {
           onOpenChange={setIsScannerOpen}
           onScanSuccess={handleScanSuccess}
         />
+
+        {/* Loading Dialog */}
+        <CheckinLoadingDialog open={checkinMutation.isPending} />
 
         {/* Greeting Dialog */}
         <CheckinGreetingAnimation

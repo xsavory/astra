@@ -270,6 +270,59 @@ export class CheckinsAPI extends BaseAPI {
   }
 
   /**
+   * Get booth checkins statistics (for admin)
+   * Returns count of online and offline participants per booth
+   */
+  async getBoothCheckinsStats(): Promise<Array<{
+    booth_id: string
+    booth_name: string
+    booth_order: number
+    total_checkins: number
+    online_checkins: number
+    offline_checkins: number
+  }>> {
+    try {
+      // Get all booths
+      const { data: booths, error: boothsError } = await supabase
+        .from('booths')
+        .select('id, name, order')
+        .order('order', { ascending: true })
+
+      if (boothsError) throw boothsError
+
+      // Get all booth checkins with participant type
+      const { data: checkins, error: checkinsError } = await supabase
+        .from('booth_checkins')
+        .select(`
+          booth_id,
+          participant:users!booth_checkins_participant_id_fkey(participant_type)
+        `)
+
+      if (checkinsError) throw checkinsError
+
+      // Aggregate stats
+      const stats = (booths || []).map(booth => {
+        const boothCheckins = (checkins || []).filter(c => c.booth_id === booth.id)
+        const onlineCount = boothCheckins.filter(c => c.participant?.participant_type === 'online').length
+        const offlineCount = boothCheckins.filter(c => c.participant?.participant_type === 'offline').length
+
+        return {
+          booth_id: booth.id,
+          booth_name: booth.name,
+          booth_order: booth.order,
+          total_checkins: boothCheckins.length,
+          online_checkins: onlineCount,
+          offline_checkins: offlineCount,
+        }
+      })
+
+      return stats
+    } catch (error) {
+      this.handleError(error, 'getBoothCheckinsStats')
+    }
+  }
+
+  /**
    * Subscribe to progress updates for a participant (Realtime Feature #2)
    *
    * This enables real-time progress tracking:
