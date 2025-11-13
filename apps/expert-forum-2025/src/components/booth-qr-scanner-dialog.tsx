@@ -42,10 +42,7 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
   }, [open])
 
   // Handler: QR Code scan
-  const handleScan = useCallback((data: string, parsedData?: unknown) => {
-    console.log('QR Code scanned:', data)
-    console.log('Parsed data:', parsedData)
-
+  const handleScan = useCallback((data: string) => {
     try {
       // Parse URL from QR code
       const url = new URL(data)

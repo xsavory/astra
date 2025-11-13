@@ -11,6 +11,8 @@ export interface Event {
   name: string
   date: string
   is_active: boolean
+  is_votes_open: boolean // Controls when participants can vote
+  is_votes_lock: boolean // Locks voting permanently after finalization
   zoom_meeting_url?: string
   created_at: string
   updated_at: string
@@ -128,6 +130,26 @@ export interface BoothWithVoteStats extends Booth {
   vote_count: number
   vote_percentage: number
   rank: number
+}
+
+// ==================== Booth Vote Results Types ====================
+// Final voting results snapshot (immutable after submission)
+
+export interface BoothVoteResult {
+  id: string
+  event_id: string
+  booth_id: string
+  final_vote_count: number
+  final_rank: number
+  submitted_at: string
+  submitted_by: string | null
+}
+
+// Booth Vote Result with populated data
+export interface BoothVoteResultWithDetails extends BoothVoteResult {
+  booth?: Booth
+  event?: Event
+  staff?: User
 }
 
 // ==================== Group Types ====================

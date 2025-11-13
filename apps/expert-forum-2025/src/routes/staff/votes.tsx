@@ -1,12 +1,26 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { Users, TrendingUp } from 'lucide-react'
-import { Card, CardContent } from '@repo/react-components/ui'
+import { Users, TrendingUp, Lock, Loader2, AlertTriangle, AlertCircle } from 'lucide-react'
+import {
+  Card,
+  CardContent,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Alert,
+  AlertDescription,
+  Badge,
+} from '@repo/react-components/ui'
 import { useIsMobile } from '@repo/react-components/hooks'
 import api from 'src/lib/api'
 import type { BoothWithVoteStats } from 'src/types/schema'
 import PageLoader from 'src/components/page-loader'
+import useAuth from 'src/hooks/use-auth'
 
 import bgImage from 'src/assets/background.png'
 import bgMobileImage from 'src/assets/background-mobile.png'
@@ -22,7 +36,10 @@ const ANIMATION_DURATION = 1000 // 1 second pulse animation
 
 function StaffVotesPage() {
   const isMobile = useIsMobile()
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [animatingBoothIds, setAnimatingBoothIds] = useState<Set<string>>(new Set())
+  const [showFinalizeDialog, setShowFinalizeDialog] = useState(false)
 
   // Fetch booth votes with auto-refresh
   const {
@@ -40,6 +57,28 @@ function StaffVotesPage() {
     queryKey: ['total-voters'],
     queryFn: () => api.votes.getTotalVoters(),
     refetchInterval: REFRESH_INTERVAL,
+  })
+
+  // Fetch current event and voting state
+  const { data: event } = useQuery({
+    queryKey: ['current-event'],
+    queryFn: () => api.events.getEvent(),
+    refetchInterval: REFRESH_INTERVAL,
+  })
+
+  // Finalize results mutation
+  const finalizeResultsMutation = useMutation({
+    mutationFn: async () => {
+      if (!event || !user) {
+        throw new Error('Missing event or user data')
+      }
+      await api.voteResults.submitFinalResults(event.id, user.id, boothsWithVotes)
+    },
+    onSuccess: () => {
+      // Refresh event data to reflect locked state
+      queryClient.invalidateQueries({ queryKey: ['current-event'] })
+      setShowFinalizeDialog(false)
+    },
   })
 
   // Subscribe to realtime vote changes
@@ -104,6 +143,91 @@ function StaffVotesPage() {
           className="h-full w-full object-cover"
         />
       </div>
+
+      {/* Floating Finalize Button - Top Left */}
+      {!event?.is_votes_lock && (
+        <div className="fixed top-6 left-6 z-50">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowFinalizeDialog(true)}
+          >
+            <Lock />
+          </Button>
+        </div>
+      )}
+
+      {/* Locked Badge - Top Left (when locked) */}
+      {event?.is_votes_lock && (
+        <div className="fixed top-6 left-6 z-50">
+          <Badge className="px-4 py-2 text-sm font-semibold bg-gray-600 text-white shadow-xl">
+            <Lock className="size-4 mr-2" />
+            Results Finalized
+          </Badge>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showFinalizeDialog} onOpenChange={setShowFinalizeDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="size-5 text-amber-600" />
+              Finalize Voting Results
+            </DialogTitle>
+            <DialogDescription>
+              This action will permanently lock the voting and save the current results.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>Current statistics:</p>
+            <ul className="list-disc list-inside space-y-1 ml-2">
+              <li>Total Voters: <strong>{totalVoters}</strong></li>
+              <li>Total Votes: <strong>{boothsWithVotes.reduce((sum, b) => sum + b.vote_count, 0)}</strong></li>
+              <li>Booths: <strong>{boothsWithVotes.length}</strong></li>
+            </ul>
+          </div>
+
+          {finalizeResultsMutation.error && (
+            <Alert variant="destructive">
+              <AlertCircle className="size-4" />
+              <AlertDescription>
+                {finalizeResultsMutation.error instanceof Error
+                  ? finalizeResultsMutation.error.message
+                  : 'Failed to finalize results. Please try again.'}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFinalizeDialog(false)}
+              disabled={finalizeResultsMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => finalizeResultsMutation.mutate()}
+              disabled={finalizeResultsMutation.isPending}
+            >
+              {finalizeResultsMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Finalizing...
+                </>
+              ) : (
+                <>
+                  <Lock className="size-4 mr-2" />
+                  Confirm Finalize
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="container px-4 py-4 mx-auto h-screen relative z-10 flex flex-col">
         {/* Logo */}

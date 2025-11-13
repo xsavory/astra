@@ -37,9 +37,6 @@ function StaffEventQRScannerDialog({
 
   // Handler: QR Code scan
   const handleScan = useCallback((data: string, parsedData?: unknown) => {
-    console.log('QR Code scanned:', data)
-    console.log('Parsed data:', parsedData)
-
     try {
       // Parse JSON data from QR code
       const qrData = typeof parsedData === 'object' && parsedData !== null

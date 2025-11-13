@@ -31,7 +31,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download } from 'lucide-react'
+import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download, Award } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { toast } from '@repo/react-components/ui'
 
@@ -46,6 +46,7 @@ import AdminSubmissionDrawer from 'src/components/admin-submission-drawer'
 import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmation-dialog'
 import AdminCheckinDialog from 'src/components/admin-checkin-dialog'
 import AdminDrawHistoryDialog from 'src/components/admin-draw-history-dialog'
+import AdminBoothVotesResultDialog from 'src/components/admin-booth-votes-result-dialog'
 import PageLoader from 'src/components/page-loader'
 import { Button } from '@repo/react-components/ui'
 import api from 'src/lib/api'
@@ -86,6 +87,9 @@ function AdminIndexPage() {
 
   // State for draw history dialog
   const [isDrawHistoryDialogOpen, setIsDrawHistoryDialogOpen] = useState(false)
+
+  // State for booth votes result dialog
+  const [isBoothVotesResultDialogOpen, setIsBoothVotesResultDialogOpen] = useState(false)
 
   // State for delete dialog
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -436,6 +440,14 @@ function AdminIndexPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setIsBoothVotesResultDialogOpen(true)}
+            >
+              <Award className="h-4 w-4 mr-2" />
+              Votes Result
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleExportCSV}
             >
               <Download className="h-4 w-4 mr-2" />
@@ -521,6 +533,12 @@ function AdminIndexPage() {
       <AdminDrawHistoryDialog
         open={isDrawHistoryDialogOpen}
         onClose={() => setIsDrawHistoryDialogOpen(false)}
+      />
+
+      {/* Booth Votes Result Dialog */}
+      <AdminBoothVotesResultDialog
+        open={isBoothVotesResultDialogOpen}
+        onClose={() => setIsBoothVotesResultDialogOpen(false)}
       />
     </div>
   )

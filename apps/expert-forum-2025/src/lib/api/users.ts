@@ -301,8 +301,6 @@ export class UsersAPI extends BaseAPI {
       participantId: string,
       callback: (user: User) => void
     ): () => void {
-      console.log(`[Realtime] Opening WebSocket connection for user: ${participantId}`)
-  
       const channel = supabase
         .channel(`user:${participantId}`)
         .on(
@@ -314,7 +312,6 @@ export class UsersAPI extends BaseAPI {
             filter: `id=eq.${participantId}`,
           },
           (payload) => {
-            console.log(`[Realtime] Received UPDATE event for user: ${participantId}`, payload.new)
             const updatedUser = payload.new as DBUser
             callback(updatedUser as User)
           }
@@ -324,7 +321,6 @@ export class UsersAPI extends BaseAPI {
         })
   
       return () => {
-        console.log(`[Realtime] Closing WebSocket connection for user: ${participantId}`)
         supabase.removeChannel(channel)
       }
     }

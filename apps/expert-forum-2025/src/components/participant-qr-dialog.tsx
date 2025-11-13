@@ -34,9 +34,7 @@ function ParticipantQRDialog({
   // Handler: QR code generated
   const handleQRGenerated = useCallback((success: boolean) => {
     setQrGenerated(success)
-    if (success) {
-      console.log('QR code generated successfully')
-    } else {
+    if (!success) {
       console.error('Failed to generate QR code')
     }
   }, [])

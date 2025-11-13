@@ -42,7 +42,6 @@ function StaffCheckinPage() {
       return api.checkins.checkinEvent(data.participantId, 'qr', data.staffId)
     },
     onSuccess: (user) => {
-      console.log('Check-in successful:', user)
       // Show greeting dialog
       setGreetingData({ name: user.name })
     },
@@ -66,8 +65,6 @@ function StaffCheckinPage() {
       })
       return
     }
-
-    console.log('Participant scanned:', participantData)
 
     // Perform check-in
     checkinMutation.mutate({

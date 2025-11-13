@@ -172,8 +172,6 @@ export class VotesAPI extends BaseAPI {
         throw boothsError
       }
 
-      console.log('Total booths fetched:', booths?.length)
-
       // Fetch all votes
       const { data: votes, error: votesError } = await supabase
         .from('booth_votes')
@@ -182,8 +180,6 @@ export class VotesAPI extends BaseAPI {
       if (votesError) {
         throw votesError
       }
-
-      console.log('Total votes fetched:', votes?.length)
 
       // Count votes per booth
       const voteCounts: Record<string, number> = {}
@@ -202,8 +198,6 @@ export class VotesAPI extends BaseAPI {
           rank: 0, // Will be set after sorting
         }
       })
-
-      console.log('Total booths with stats:', boothsWithStats.length)
 
       // Sort by vote count (descending), then by name for stable sorting
       boothsWithStats.sort((a, b) => {

@@ -51,4 +51,49 @@ export class EventsAPI extends BaseAPI {
       return null
     }
   }
+
+  /**
+   * Check if voting is open
+   * Returns true if participants can currently vote
+   */
+  async isVotesOpen(): Promise<boolean> {
+    try {
+      const event = await this.getEvent()
+      return event.is_votes_open
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Check if voting is locked
+   * Returns true if voting has been finalized and locked
+   */
+  async isVotesLocked(): Promise<boolean> {
+    try {
+      const event = await this.getEvent()
+      return event.is_votes_lock
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Get voting state (open and lock status)
+   * Returns both voting flags in a single call for efficiency
+   */
+  async getVotingState(): Promise<{ isOpen: boolean; isLocked: boolean }> {
+    try {
+      const event = await this.getEvent()
+      return {
+        isOpen: event.is_votes_open,
+        isLocked: event.is_votes_lock,
+      }
+    } catch {
+      return {
+        isOpen: false,
+        isLocked: false,
+      }
+    }
+  }
 }

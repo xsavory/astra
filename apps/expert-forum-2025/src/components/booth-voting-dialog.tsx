@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Award, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react'
+import { Award, CheckCircle2, AlertCircle, Loader2, X, Clock, Lock } from 'lucide-react'
 
 import {
   Dialog,
@@ -83,6 +83,16 @@ function BoothVotingDialog({ open, onOpenChange, user }: BoothVotingDialogProps)
     enabled: open,
   })
 
+  // Fetch voting state (is_votes_open, is_votes_lock)
+  const {
+    data: votingState = { isOpen: false, isLocked: false },
+    isLoading: isLoadingVotingState,
+  } = useQuery({
+    queryKey: ['votingState'],
+    queryFn: () => api.events.getVotingState(),
+    enabled: open,
+  })
+
   // Submit votes mutation
   const submitVotesMutation = useMutation({
     mutationFn: (boothIds: [string, string]) =>
@@ -94,7 +104,7 @@ function BoothVotingDialog({ open, onOpenChange, user }: BoothVotingDialogProps)
     },
   })
 
-  const isLoading = isLoadingBooths || isLoadingVotes
+  const isLoading = isLoadingBooths || isLoadingVotes || isLoadingVotingState
   const hasVoted = userVotes.length > 0
   const error = boothsError || votesError
 
@@ -140,7 +150,79 @@ function BoothVotingDialog({ open, onOpenChange, user }: BoothVotingDialogProps)
       )
     }
 
-    // Completed state - User has already voted
+    // State 1: Voting not open yet
+    if (!votingState.isOpen && !votingState.isLocked) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-gradient-to-br from-blue-500/15 to-cyan-500/10 p-6 border-2 border-blue-500/40 shadow-lg shadow-blue-500/20">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="rounded-full bg-blue-500/20 p-4">
+                <Clock className="size-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-blue-700 dark:text-blue-300 mb-2">
+                  Voting Has Not Started Yet
+                </p>
+                <p className="text-sm text-blue-600/80 dark:text-blue-400/80">
+                  Please wait for the announcement. Voting will open soon.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // State 2: Voting locked (finalized)
+    if (votingState.isLocked) {
+      return (
+        <div className="space-y-4">
+          <div className="rounded-xl bg-gradient-to-br from-gray-500/15 to-slate-500/10 p-6 border-2 border-gray-500/40 shadow-lg shadow-gray-500/20">
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="rounded-full bg-gray-500/20 p-4">
+                <Lock className="size-8 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Voting Has Ended
+                </p>
+                <p className="text-sm text-gray-600/80 dark:text-gray-400/80">
+                  Results have been finalized. Thank you for participating.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Show user's votes if they voted */}
+          {hasVoted && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold">Your Votes:</h4>
+              {userVotes.map((vote) => (
+                <div
+                  key={vote.id}
+                  className="flex items-center gap-3 p-3 rounded-lg border-2 border-gray-500/30 bg-gray-500/5"
+                >
+                  <CheckCircle2 className="size-5 text-gray-600 dark:text-gray-400 shrink-0" />
+                  <span className="font-medium">{vote.booth?.name || 'Unknown Booth'}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Show message if user didn't vote */}
+          {!hasVoted && (
+            <Alert>
+              <AlertCircle className="size-4" />
+              <AlertDescription className="text-sm">
+                You did not participate in the voting
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      )
+    }
+
+    // State 3: User has already voted (but voting is still open)
     if (hasVoted) {
       return (
         <div className="space-y-4">

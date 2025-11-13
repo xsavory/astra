@@ -99,6 +99,58 @@ export type Database = {
           },
         ]
       }
+      booth_votes_results: {
+        Row: {
+          booth_id: string
+          event_id: string
+          final_rank: number
+          final_vote_count: number
+          id: string
+          submitted_at: string
+          submitted_by: string | null
+        }
+        Insert: {
+          booth_id: string
+          event_id: string
+          final_rank: number
+          final_vote_count?: number
+          id?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Update: {
+          booth_id?: string
+          event_id?: string
+          final_rank?: number
+          final_vote_count?: number
+          id?: string
+          submitted_at?: string
+          submitted_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booth_votes_results_booth_id_fkey"
+            columns: ["booth_id"]
+            isOneToOne: false
+            referencedRelation: "booths"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booth_votes_results_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booth_votes_results_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booths: {
         Row: {
           created_at: string
@@ -209,6 +261,8 @@ export type Database = {
           date: string
           id: string
           is_active: boolean
+          is_votes_lock: boolean
+          is_votes_open: boolean
           name: string
           updated_at: string
           zoom_meeting_url: string | null
@@ -218,6 +272,8 @@ export type Database = {
           date: string
           id?: string
           is_active?: boolean
+          is_votes_lock?: boolean
+          is_votes_open?: boolean
           name: string
           updated_at?: string
           zoom_meeting_url?: string | null
@@ -227,6 +283,8 @@ export type Database = {
           date?: string
           id?: string
           is_active?: boolean
+          is_votes_lock?: boolean
+          is_votes_open?: boolean
           name?: string
           updated_at?: string
           zoom_meeting_url?: string | null
