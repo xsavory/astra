@@ -16,6 +16,7 @@
 
 import { Search, X } from 'lucide-react'
 import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Button } from '@repo/react-components/ui'
+import { COMPANY_OPTIONS } from 'src/lib/constants'
 import type { ParticipantType } from 'src/types/schema'
 
 export interface ParticipantFilters {
@@ -29,13 +30,11 @@ export interface ParticipantFilters {
 interface AdminParticipantFiltersProps {
   filters: ParticipantFilters
   onFiltersChange: (filters: ParticipantFilters) => void
-  companies?: string[]
 }
 
 function AdminParticipantFilters({
   filters,
   onFiltersChange,
-  companies = [],
 }: AdminParticipantFiltersProps) {
   // Check if any filters are active
   const hasActiveFilters = Object.values(filters).some(
@@ -175,7 +174,7 @@ function AdminParticipantFilters({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Companies</SelectItem>
-              {companies.map((company) => (
+              {COMPANY_OPTIONS.map((company) => (
                 <SelectItem key={company} value={company}>
                   {company}
                 </SelectItem>
