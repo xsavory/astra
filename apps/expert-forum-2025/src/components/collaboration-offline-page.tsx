@@ -103,16 +103,17 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
   }
 
   return (
-    <div className="space-y-4 pb-20">
+    <div className="space-y-4 relative pb-20">
       {/* Back & Refresh Buttons */}
-      <div className="flex items-center justify-between mb-2 -mx-2">
+      <div className="flex items-center justify-between mb-2">
         <Button
-          variant="secondary"
+          variant="outline"
           size="sm"
+          className="hover:bg-primary/10"
           onClick={() => navigate({ to: '/participant' })}
         >
-          <ArrowLeft className="size-4 mr-2" />
-          Kembali
+          <ArrowLeft className="size-4" />
+          Back
         </Button>
 
         <Button
@@ -160,6 +161,13 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
             <p className="text-sm text-muted-foreground">
               Total: {groups.length} group
             </p>
+            <Button
+              className="rounded-md transition-all duration-300 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
+              onClick={() => setCreateDialogOpen(true)}
+            >
+              <Plus className="size-6" />
+              Create Group
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:gap-4">
@@ -224,16 +232,6 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
           </div>
         </div>
       )}
-
-      {/* Floating Action Button (FAB) for Creating New Group */}
-      <Button
-        size="lg"
-        className="fixed bottom-6 right-6 rounded-xl bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white hover:scale-110 p-0 z-50"
-        onClick={() => setCreateDialogOpen(true)}
-      >
-        <Plus className="size-6" />
-        Create Group
-      </Button>
 
       {/* Group Detail Dialog - Controlled by URL query params */}
       <GroupDetailDialog

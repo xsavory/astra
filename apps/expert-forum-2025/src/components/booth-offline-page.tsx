@@ -102,16 +102,25 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
 
   return (
     <div className="space-y-4 pb-24 relative min-h-screen">
-      {/* Back Button */}
-      <Button
-        variant="outline"
-        size="sm"
-        className="mb-3 hover:bg-primary/10"
-        onClick={() => navigate({ to: '/participant' })}
-      >
-        <ArrowLeft className="size-4 mr-2" />
-        Back
-      </Button>
+
+      <div className='flex justify-between items-center mb-3'>
+        <Button
+          variant="outline"
+          size="sm"
+          className="hover:bg-primary/10"
+          onClick={() => navigate({ to: '/participant' })}
+        >
+          <ArrowLeft className="size-4" />
+          Back
+        </Button>
+        <Button
+          className="rounded-md transition-all duration-300 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
+          onClick={() => setIsScannerOpen(true)}
+        >
+          <QrCode className="size-6" />
+          <span>Scan QR Code</span>
+        </Button>
+      </div>
 
       {/* Header with gradient background */}
       <Collapsible open={isProgressOpen} onOpenChange={setIsProgressOpen}>
@@ -285,17 +294,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
             )
           })}
         </div>
-      )}
-
-      {/* Floating Action Button (FAB) */}
-      <Button
-        size="lg"
-        className="fixed bottom-6 right-6 rounded-xl transition-all duration-300 z-50 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
-        onClick={() => setIsScannerOpen(true)}
-      >
-        <QrCode className="size-6" />
-        <span>Scan QR Code</span>
-      </Button>
+      )}      
 
       {/* QR Scanner Dialog */}
       <BoothQRScannerDialog

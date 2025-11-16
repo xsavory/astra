@@ -315,7 +315,7 @@ function GroupDetailDialog({
           </DrawerTitle>
           <DrawerDescription className='text-left'>Kelola anggota dan submit ideation group</DrawerDescription>
         </DrawerHeader>
-        <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">{contentJSX}</div>
+        <div className="px-4 pb-4 overflow-y-auto">{contentJSX}</div>
         <DrawerFooter className="pt-4 border-t">
           <DrawerClose asChild>
             <Button variant="outline" className="w-full">
