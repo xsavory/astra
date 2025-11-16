@@ -306,7 +306,7 @@ function GroupDetailDialog({
 
   // Render Drawer (bottom sheet) for mobile
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} repositionInputs={false}>
       <DrawerContent>
         <DrawerHeader className="text-left">
           <DrawerTitle className="flex items-center gap-2">
