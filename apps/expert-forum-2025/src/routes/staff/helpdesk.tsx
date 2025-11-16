@@ -107,17 +107,6 @@ function StaffHelpdeskPage() {
       }),
   })
 
-  // Get unique companies for filter dropdown (from current data)
-  const companies = useMemo(() => {
-    const uniqueCompanies = new Set<string>()
-    participantsData?.items.forEach((user) => {
-      if (user.company) {
-        uniqueCompanies.add(user.company)
-      }
-    })
-    return Array.from(uniqueCompanies).sort()
-  }, [participantsData])
-
   // Handle filter changes
   const handleFiltersChange = (newFilters: ParticipantFilters) => {
     setFilters(newFilters)
@@ -305,7 +294,6 @@ function StaffHelpdeskPage() {
         <AdminParticipantFilters
           filters={filters}
           onFiltersChange={handleFiltersChange}
-          companies={companies}
         />
 
         {/* Table */}
