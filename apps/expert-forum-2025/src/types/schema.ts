@@ -14,6 +14,7 @@ export interface Event {
   is_votes_open: boolean // Controls when participants can vote
   is_votes_lock: boolean // Locks voting permanently after finalization
   zoom_meeting_url?: string
+  event_dates?: string | null // Scheduled date and time for the event
   created_at: string
   updated_at: string
 }

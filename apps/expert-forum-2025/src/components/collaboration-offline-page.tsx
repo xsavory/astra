@@ -138,16 +138,23 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
       {/* Empty State - No groups yet */}
       {groups.length === 0 && (
         <Card className="border-dashed">
-          <CardContent className="pt-6">
+          <CardContent>
             <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-              <div className="rounded-full bg-muted p-4">
+              <div className="rounded-full bg-muted">
                 <Users className="size-8 text-muted-foreground" />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <h3 className="font-semibold text-lg">Belum ada group</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Anda belum membuat group apapun. Klik tombol "+" di bawah untuk membuat group baru.
+                  Anda belum membuat group apapun. Klik tombol di bawah untuk membuat group baru.
                 </p>
+                <Button
+                  className="rounded-md transition-all duration-300 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
+                  onClick={() => setCreateDialogOpen(true)}
+                >
+                  <Plus className="size-6" />
+                  Create Group
+                </Button>
               </div>
             </div>
           </CardContent>

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import {
-  Button,
   Input,
   Label,
   Dialog,
@@ -14,6 +13,7 @@ import {
   InputOTP,
   InputOTPGroup,
   InputOTPSlot,
+  Button,
 } from '@repo/react-components/ui'
 import { requiresPasswordInput, requiresOTPLogin } from 'src/lib/constants'
 import { getRedirectUrl } from 'src/lib/route-guards'
@@ -23,6 +23,43 @@ import AppButton from './app-button'
 
 type LoginStep = 'email' | 'password' | 'otp'
 
+// Helper function to format error messages
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const message = error.message
+
+    // Handle specific error codes
+    if (message.includes('invalid_credentials') || message.includes('Invalid login credentials')) {
+      return 'Invalid email or password. Please check your credentials and try again.'
+    }
+    if (message.includes('invalid_grant') || message.includes('Invalid Grant')) {
+      return 'Your session has expired. Please try logging in again.'
+    }
+    if (message.includes('Email not confirmed')) {
+      return 'Please verify your email address before logging in.'
+    }
+    if (message.includes('User not found')) {
+      return 'No account found with this email address.'
+    }
+    if (message.includes('Too many requests')) {
+      return 'Too many login attempts. Please try again later.'
+    }
+    if (message.includes('OTP')) {
+      return 'Invalid OTP code. Please check the code and try again.'
+    }
+
+    // Return the original message if it's already user-friendly (no code)
+    if (!message.includes('Code:') && !message.includes('(')) {
+      return message
+    }
+
+    // Default error for unhandled cases
+    return 'An error occurred. Please try again.'
+  }
+
+  return 'An unexpected error occurred. Please try again.'
+}
+
 export default function LoginDialog() {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
@@ -31,6 +68,7 @@ export default function LoginDialog() {
   const [currentStep, setCurrentStep] = useState<LoginStep>('email')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
   const isLoggingIn = useRef(false)
 
   const { login, user, isAuthenticated, isLoading: isAuthLoading } = useAuth()
@@ -72,14 +110,14 @@ export default function LoginDialog() {
         setIsLoading(false)
       } catch (err) {
         console.error('OTP request error:', err)
-        setError(err instanceof Error ? err.message : 'Gagal mengirim OTP. Silakan coba lagi.')
+        setError(formatErrorMessage(err))
         setIsLoading(false)
       }
     } else if (requiresPasswordInput(email)) {
       // Staff or Participant - show password field
       setCurrentStep('password')
     } else {
-      setError('Email tidak terdaftar.')
+      setError('Email not registered.')
     }
   }
 
@@ -97,7 +135,7 @@ export default function LoginDialog() {
       // Redirect will be handled by useEffect when user state updates
     } catch (err) {
       console.error('Login error:', err)
-      setError(err instanceof Error ? err.message : 'Login gagal. Periksa email dan password Anda.')
+      setError(formatErrorMessage(err))
       isLoggingIn.current = false
       setIsLoading(false)
     }
@@ -117,7 +155,7 @@ export default function LoginDialog() {
       // Redirect will be handled by useEffect when user state updates
     } catch (err) {
       console.error('OTP verification error:', err)
-      setError(err instanceof Error ? err.message : 'Kode OTP tidak valid. Silakan coba lagi.')
+      setError(formatErrorMessage(err))
       isLoggingIn.current = false
       setIsLoading(false)
     }
@@ -142,11 +180,11 @@ export default function LoginDialog() {
           Login
         </AppButton>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="lg:max-w-md">
         <DialogHeader>
           <DialogTitle className='text-primary'>Login</DialogTitle>
           <DialogDescription>
-            Masukkan email Anda untuk melanjutkan
+            Enter your email to continue
           </DialogDescription>
         </DialogHeader>
 
@@ -165,7 +203,7 @@ export default function LoginDialog() {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="nama@email.com"
+                  placeholder="name@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -175,7 +213,7 @@ export default function LoginDialog() {
 
               <AppButton type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
-                {isLoading ? 'Memproses...' : 'Lanjutkan'}
+                {isLoading ? 'Processing...' : 'Continue'}
               </AppButton>
             </form>
           )}
@@ -196,15 +234,32 @@ export default function LoginDialog() {
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Masukkan password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoFocus
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoFocus
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4 text-muted-foreground" />
+                    ) : (
+                      <Eye className="size-4 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div className="flex gap-2">
@@ -218,11 +273,11 @@ export default function LoginDialog() {
                     setError(null)
                   }}
                 >
-                  Kembali
+                  Back
                 </AppButton>
                 <AppButton type="submit" className="flex-1" disabled={isLoading}>
                   {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {isLoading ? 'Memproses...' : 'Login'}
+                  {isLoading ? 'Processing...' : 'Login'}
                 </AppButton>
               </div>
             </form>
@@ -243,7 +298,7 @@ export default function LoginDialog() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="otp">Kode OTP</Label>
+                <Label htmlFor="otp">OTP Code</Label>
                 <InputOTP
                   maxLength={6}
                   value={otpCode}
@@ -260,12 +315,12 @@ export default function LoginDialog() {
                   </InputOTPGroup>
                 </InputOTP>
                 <p className="text-xs text-muted-foreground">
-                  Kode OTP telah dikirim ke email Anda
+                  OTP code has been sent to your email
                 </p>
               </div>
 
               <div className="flex gap-2">
-                <Button
+                <AppButton
                   type="button"
                   variant="outline"
                   className="flex-1"
@@ -275,12 +330,12 @@ export default function LoginDialog() {
                     setError(null)
                   }}
                 >
-                  Kembali
-                </Button>
-                <Button type="submit" className="flex-1" disabled={isLoading || otpCode.length !== 6}>
+                  Back
+                </AppButton>
+                <AppButton type="submit" className="flex-1" disabled={isLoading || otpCode.length !== 6}>
                   {isLoading ? <Loader2 className="size-4 animate-spin" /> : null}
-                  {isLoading ? 'Memproses...' : 'Verifikasi'}
-                </Button>
+                  {isLoading ? 'Processing...' : 'Verify'}
+                </AppButton>
               </div>
             </form>
           )}

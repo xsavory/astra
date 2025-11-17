@@ -26,7 +26,7 @@ import {
 } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
-import type { User, BoothCheckin } from 'src/types/schema'
+import type { User, BoothCheckin, Event } from 'src/types/schema'
 
 export const Route = createFileRoute('/participant/')({
   component: ParticipantIndexPage,
@@ -130,16 +130,20 @@ function ParticipantIndexPage() {
     enabled: !!user?.id && user.is_checked_in === true,
   })
 
+  // Fetch event data to check if event is active
+  const { data: event } = useQuery<Event>({
+    queryKey: ['event'],
+    queryFn: () => api.events.getEvent(),
+  })
+
   // Subscribe to realtime user changes (for QR check-in and eligibility updates)
   // with Page Visibility API to save WebSocket connections
   useEffect(() => {
-    if (
-      !user?.id || 
-      user?.participant_type === 'online' ||
-      (user?.participant_type === 'offline' && user?.is_checked_in)
-    ) {
-      return
-    }
+    // Early returns to prevent unnecessary subscriptions
+    if (!user?.id) return
+    if (!event?.is_active) return
+    if (user.participant_type === 'online') return
+    if (user.participant_type === 'offline' && user.is_checked_in) return
 
     let unsubscribe: (() => void) | null = null
 
@@ -189,7 +193,7 @@ function ParticipantIndexPage() {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       teardownSubscription()
     }
-  }, [user?.id, user?.is_checked_in, user?.participant_type, queryClient])
+  }, [user?.id, user?.is_checked_in, user?.participant_type, event?.is_active, queryClient])
 
   const isLoading = isLoadingUser || (user?.is_checked_in && isLoadingCheckins)
 
@@ -200,7 +204,7 @@ function ParticipantIndexPage() {
 
   // PRE CHECK-IN STATE: Show pre-checkin page component
   if (!user.is_checked_in) {
-    return <ParticipantPreCheckinPage user={user} />
+    return <ParticipantPreCheckinPage user={user} event={event} />
   }
 
   // POST CHECK-IN STATE: Show full participant dashboard

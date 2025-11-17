@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { QrCode, LogIn, Loader2 } from 'lucide-react'
 
 import ParticipantQRDialog from 'src/components/participant-qr-dialog'
+import EventCountdownDialog from 'src/components/event-countdown-dialog'
 import {
   Card,
   CardContent,
@@ -14,15 +15,34 @@ import {
   toast,
 } from '@repo/react-components/ui'
 import api from 'src/lib/api'
-import type { User } from 'src/types/schema'
+import type { User, Event } from 'src/types/schema'
 
 interface ParticipantPreCheckinPageProps {
   user: User
+  event?: Event
 }
 
-function ParticipantPreCheckinPage({ user }: ParticipantPreCheckinPageProps) {
+function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPageProps) {
   const queryClient = useQueryClient()
   const [isQRDialogOpen, setIsQRDialogOpen] = useState(false)
+  const [isCountdownDialogOpen, setIsCountdownDialogOpen] = useState(false)
+
+  // Auto-show countdown dialog when event is not active and hasn't started yet
+  useEffect(() => {
+    if (!event) return
+
+    const shouldShowCountdown = !event.is_active && event.event_dates
+
+    if (shouldShowCountdown && event.event_dates) {
+      const eventDate = new Date(event.event_dates)
+      const now = new Date()
+
+      // Only show if event hasn't started yet
+      if (eventDate > now) {
+        setIsCountdownDialogOpen(true)
+      }
+    }
+  }, [event])
 
   // Manual check-in mutation for online participants
   const checkInMutation = useMutation({
@@ -106,6 +126,14 @@ function ParticipantPreCheckinPage({ user }: ParticipantPreCheckinPageProps) {
           onOpenChange={setIsQRDialogOpen}
         />
       )}
+
+      {/* Event Countdown Dialog - Auto-shown when event is not active */}
+      <EventCountdownDialog
+        open={isCountdownDialogOpen}
+        onOpenChange={setIsCountdownDialogOpen}
+        eventDate={event?.event_dates || null}
+        isActive={event?.is_active || false}
+      />
     </div>
   )
 }
