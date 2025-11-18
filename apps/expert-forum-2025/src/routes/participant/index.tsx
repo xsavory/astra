@@ -131,7 +131,7 @@ function ParticipantIndexPage() {
   })
 
   // Fetch event data to check if event is active
-  const { data: event } = useQuery<Event>({
+  const { data: event, isLoading: loadingEvent } = useQuery<Event>({
     queryKey: ['event'],
     queryFn: () => api.events.getEvent(),
   })
@@ -198,7 +198,7 @@ function ParticipantIndexPage() {
   const isLoading = isLoadingUser || (user?.is_checked_in && isLoadingCheckins)
 
   // Show skeleton while loading
-  if (isLoading || !user) {
+  if (isLoading || loadingEvent || !user) {
     return <ParticipantIndexSkeleton />
   }
 
