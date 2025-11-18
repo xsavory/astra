@@ -158,67 +158,61 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                 <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
                   Daftar Booth yang Dikunjungi
                 </h3>
-                {boothsCompleted === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Belum ada booth yang dikunjungi. Scan QR code untuk mulai mengunjungi booth.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {booths.map((booth) => {
-                      const isCompleted = boothCheckinMap.has(booth.id)
-                      const checkin = boothCheckinMap.get(booth.id)
+                <div className="space-y-2">
+                  {booths.map((booth) => {
+                    const isCompleted = boothCheckinMap.has(booth.id)
+                    const checkin = boothCheckinMap.get(booth.id)
 
-                      return (
-                        <div
-                          key={booth.id}
-                          className={`flex items-start gap-3 p-3 rounded-lg transition-all cursor-pointer ${
-                            isCompleted
-                              ? 'bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100/50 dark:hover:bg-green-900/30'
-                              : 'bg-muted/30 hover:bg-muted/50'
-                          }`}
-                          onClick={() => {
-                            navigate({
-                              to: '/participant/booth',
-                              search: { booth_id: booth.id },
-                              resetScroll: false,
-                            })
-                            setIsProgressOpen(false)
-                          }}
-                        >
-                          <div className="mt-0.5">
-                            {isCompleted ? (
-                              <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
-                            ) : (
-                              <Circle className="size-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium line-clamp-1 ${
-                              isCompleted
-                                ? 'text-green-700 dark:text-green-300'
-                                : 'text-muted-foreground'
-                            }`}>
-                              {booth.name}
-                            </p>
-                            {isCompleted && checkin && (
-                              <div className="flex items-center gap-1.5 mt-1">
-                                <Clock className="size-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(checkin.checkin_time).toLocaleString('id-ID', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
-                                  })}
-                                </span>
-                              </div>
-                            )}
-                          </div>
+                    return (
+                      <div
+                        key={booth.id}
+                        className={`flex items-start gap-3 p-3 rounded-lg transition-all cursor-pointer ${
+                          isCompleted
+                            ? 'bg-green-50/50 dark:bg-green-950/20 hover:bg-green-100/50 dark:hover:bg-green-900/30'
+                            : 'bg-muted/30 hover:bg-muted/50'
+                        }`}
+                        onClick={() => {
+                          navigate({
+                            to: '/participant/booth',
+                            search: { booth_id: booth.id },
+                            resetScroll: false,
+                          })
+                          setIsProgressOpen(false)
+                        }}
+                      >
+                        <div className="mt-0.5">
+                          {isCompleted ? (
+                            <CheckCircle2 className="size-5 text-green-600 dark:text-green-400" />
+                          ) : (
+                            <Circle className="size-5 text-muted-foreground" />
+                          )}
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium line-clamp-1 ${
+                            isCompleted
+                              ? 'text-green-700 dark:text-green-300'
+                              : 'text-muted-foreground'
+                          }`}>
+                            {booth.name}
+                          </p>
+                          {isCompleted && checkin && (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <Clock className="size-3 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             </CardContent>
           </CollapsibleContent>
