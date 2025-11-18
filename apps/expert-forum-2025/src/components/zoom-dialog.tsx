@@ -62,8 +62,8 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
           <AlertCircle className="size-4" />
           <AlertDescription>
             {isLoadingEvent
-              ? 'Memuat informasi meeting...'
-              : 'Link Zoom Meeting belum tersedia. Silakan hubungi panitia atau cek kembali nanti.'}
+              ? 'Loading meeting information...'
+              : 'Zoom Meeting link is not available yet. Please contact the organizers or check back later.'}
           </AlertDescription>
         </Alert>
       ) : (
@@ -83,9 +83,9 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
               <Clock className="size-5 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Tanggal</p>
+                <p className="text-sm font-medium">Date</p>
                 <p className="text-sm text-muted-foreground">
-                  {event?.date ? new Date(event.date).toLocaleDateString('id-ID', {
+                  {event?.date ? new Date(event.date).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
@@ -99,7 +99,7 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
             <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
               <Users className="size-5 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Tipe Participant</p>
+                <p className="text-sm font-medium">Participant Type</p>
                 <p className="text-sm text-muted-foreground capitalize">{user.participant_type}</p>
               </div>
             </div>
@@ -126,11 +126,11 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
 
           {/* Instructions */}
           <div className="rounded-lg bg-muted/50 p-4 space-y-2">
-            <p className="font-semibold text-sm">Petunjuk:</p>
+            <p className="font-semibold text-sm">Instructions:</p>
             <ul className="space-y-1.5 text-sm text-muted-foreground list-disc list-inside">
-              <li>Pastikan aplikasi Zoom terinstall atau gunakan browser</li>
-              <li>Gunakan nama Anda yang terdaftar saat join</li>
-              <li>Pastikan audio dan video berfungsi baik</li>
+              <li>Make sure Zoom app is installed or use a browser</li>
+              <li>Use your registered name when joining</li>
+              <li>Ensure your audio and video are working properly</li>
             </ul>
           </div>
         </>
@@ -149,7 +149,7 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
               Zoom Meeting
             </DialogTitle>
             <DialogDescription>
-              Bergabung dengan sesi virtual Expert Forum 2025
+              Join the Expert Forum 2025 virtual session
             </DialogDescription>
           </DialogHeader>
           <ZoomContent />
@@ -168,7 +168,7 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
             Zoom Meeting
           </DrawerTitle>
           <DrawerDescription>
-            Bergabung dengan sesi virtual Expert Forum 2025
+            Join the Expert Forum 2025 virtual session
           </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-4 overflow-y-auto max-h-[70vh]">
@@ -178,7 +178,7 @@ function ZoomDialog({ open, onOpenChange, user }: ZoomDialogProps) {
           <DrawerClose asChild>
             <Button variant="outline" size="sm">
               <X className="size-4 mr-2" />
-              Tutup
+              Close
             </Button>
           </DrawerClose>
         </DrawerFooter>

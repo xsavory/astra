@@ -235,11 +235,11 @@ function ParticipantIndexPage() {
             </Badge>
             </div>
             <CardTitle className="text-xl sm:text-2xl bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent font-bold">
-              Selamat Datang, {user.name}!
+              Welcome, {user.name}!
             </CardTitle>
           </div>
           <CardDescription className="text-base">
-            Terima kasih telah mengikuti Expert Forum 2025.
+            Thank you for joining Expert Forum 2025.
           </CardDescription>
         </CardHeader>
         <CardContent className="relative space-y-4">
@@ -247,7 +247,7 @@ function ParticipantIndexPage() {
           <div className="space-y-2 rounded bg-gradient-to-br from-primary/10 to-cyan-500/5 p-4 border border-primary/20">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-foreground">
-                Progress Booth: {boothsCompleted} dari {totalBooths}
+                Booth Progress: {boothsCompleted} of {totalBooths}
               </span>
               <span className="font-bold text-primary">
                 {Math.round(progressPercentage)}%
@@ -260,7 +260,7 @@ function ParticipantIndexPage() {
           {!isEligible && (
             <div className="rounded bg-gradient-to-br from-amber-500/10 to-orange-500/5 p-2 border-2 border-amber-500/30 shadow-lg shadow-amber-500/10">
               <p className="text-xs font-medium">
-                Selesaikan <span className="font-bold text-amber-600 dark:text-amber-400">{remainingBooths} booth lagi</span> untuk mendapatkan voucher dan mengikuti undian
+                Complete <span className="font-bold text-amber-600 dark:text-amber-400">{remainingBooths} more booth{remainingBooths > 1 ? 's' : ''}</span> to get a voucher and participate in the lucky draw
               </p>
             </div>
           )}
@@ -272,7 +272,7 @@ function ParticipantIndexPage() {
                   <CheckCircle2 className="size-5 text-green-600 dark:text-green-400 shrink-0" />
                 </div>
                 <p className="text-sm font-semibold text-green-700 dark:text-green-300">
-                  Selamat! Anda telah menyelesaikan semua booth
+                  Congratulations! You have completed all booths
                 </p>
               </div>
             </div>
@@ -295,7 +295,7 @@ function ParticipantIndexPage() {
                   <div className="space-y-1">
                     <h3 className="font-bold text-white">Booth Checkin</h3>
                     <p className="text-xs text-white/80">
-                      Kunjungi booth
+                      Visit booths
                     </p>
                   </div>
                 </div>
@@ -314,7 +314,7 @@ function ParticipantIndexPage() {
                   <div className="space-y-1">
                     <h3 className="font-bold text-white">Collaboration</h3>
                     <p className="text-xs text-white/80">
-                      {user.participant_type === 'offline' ? 'Buat grup ideasi' : 'Submit ideasi'}
+                      {user.participant_type === 'offline' ? 'Create idea group' : 'Submit ideas'}
                     </p>
                   </div>
                 </div>
@@ -337,7 +337,7 @@ function ParticipantIndexPage() {
                 <div className="space-y-1">
                   <h3 className="font-bold text-white">Join Zoom Meeting</h3>
                   <p className="text-xs text-white/80">
-                    Bergabung dengan sesi virtual
+                    Join virtual session
                   </p>
                 </div>
               </div>
@@ -373,7 +373,7 @@ function ParticipantIndexPage() {
 
         <CardHeader className="relative pb-3">
           <CardTitle className="text-base sm:text-lg bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent font-bold">
-            Voucher & Undian
+            Voucher & Lucky Draw
           </CardTitle>
         </CardHeader>
         <CardContent className="relative">
@@ -387,9 +387,9 @@ function ParticipantIndexPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <h3 className="font-bold text-base sm:text-lg">Voucher Terkunci</h3>
+                <h3 className="font-bold text-base sm:text-lg">Voucher Locked</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Selesaikan <span className="font-bold text-primary">{remainingBooths} booth lagi</span> untuk membuka voucher dan mengikuti undian berhadiah
+                  Complete <span className="font-bold text-primary">{remainingBooths} more booth{remainingBooths > 1 ? 's' : ''}</span> to unlock voucher and participate in the lucky draw
                 </p>
               </div>
             </div>
@@ -420,10 +420,10 @@ function ParticipantIndexPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="font-bold text-sm text-green-700 dark:text-green-300">
-                      Anda Memenuhi Syarat!
+                      You're Eligible!
                     </p>
                     <p className="text-sm text-green-600/80 dark:text-green-400/80">
-                      Selamat! Anda telah memenuhi syarat untuk mengikuti undian berhadiah Expert Forum 2025
+                      Congratulations! You are eligible to participate in the Expert Forum 2025 lucky draw
                     </p>
                   </div>
                 </div>

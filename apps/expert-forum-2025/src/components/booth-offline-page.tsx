@@ -132,7 +132,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                   Booth Offline
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Progress: <span className='font-bold text-foreground'>{boothsCompleted}</span> dari <span className='font-bold text-foreground'>{totalBooths}</span> booth selesai
+                  Progress: <span className='font-bold text-foreground'>{boothsCompleted}</span> of <span className='font-bold text-foreground'>{totalBooths}</span> booth{totalBooths > 1 ? 's' : ''} completed
                 </p>
               </div>
               <CollapsibleTrigger asChild>
@@ -156,7 +156,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
             <CardContent className="relative pt-0 space-y-2">
               <div className="border-t border-primary/10 pt-4">
                 <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
-                  Daftar Booth yang Dikunjungi
+                  Visited Booths List
                 </h3>
                 <div className="space-y-2">
                   {booths.map((booth) => {
@@ -199,7 +199,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                             <div className="flex items-center gap-1.5 mt-1">
                               <Clock className="size-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">
-                                {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                                {new Date(checkin.checkin_time).toLocaleString('en-US', {
                                   day: '2-digit',
                                   month: 'short',
                                   hour: '2-digit',
@@ -228,9 +228,9 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                 <QrCode className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">Belum ada booth yang dikunjungi</h3>
+                <h3 className="font-semibold text-lg">No booths visited yet</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Klik tombol scan di bawah untuk mulai mengunjungi booth dan menjawab pertanyaan
+                  Click the scan button below to start visiting booths and answering questions
                 </p>
               </div>
             </div>
@@ -265,7 +265,7 @@ function BoothOfflinePage({ user }: BoothOfflinePageProps) {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Clock className="size-4" />
                         <span>
-                          {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                          {new Date(checkin.checkin_time).toLocaleString('en-US', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric',

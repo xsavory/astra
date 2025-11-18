@@ -54,10 +54,10 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
       // Invalidate user query to refetch updated data
       queryClient.invalidateQueries({ queryKey: ['currentUser'] })
 
-      toast.success('Check-in berhasil! Selamat datang di Expert Forum 2025')
+      toast.success('Check-in successful! Welcome to Expert Forum 2025')
     },
     onError: (error) => {
-      toast.warning(error instanceof Error ? error.message : 'Terjadi kesalahan saat check-in')
+      toast.warning(error instanceof Error ? error.message : 'An error occurred during check-in')
     },
   })
 
@@ -65,7 +65,7 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Selamat Datang!</CardTitle>
+          <CardTitle className="text-2xl">Welcome!</CardTitle>
           <CardDescription>
             {user.name}
           </CardDescription>
@@ -79,8 +79,8 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
         <CardContent className="space-y-4">
           <p className="text-center text-sm text-muted-foreground">
             {user.participant_type === 'offline'
-              ? 'Tunjukkan QR Code Anda kepada staff untuk melakukan check-in'
-              : 'Klik tombol di bawah untuk melakukan check-in dan mengakses event'
+              ? 'Show your QR Code to staff to check in'
+              : 'Click the button below to check in and access the event'
             }
           </p>
 
@@ -92,7 +92,7 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
               className="w-full"
             >
               <QrCode className="mr-2 size-5" />
-              Tampilkan QR Code
+              Show QR Code
             </Button>
           ) : (
             // Online: Show Check-in button
@@ -105,12 +105,12 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
               {checkInMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 size-5 animate-spin" />
-                  Memproses...
+                  Processing...
                 </>
               ) : (
                 <>
                   <LogIn className="mr-2 size-5" />
-                  Check-in Sekarang
+                  Check-in Now
                 </>
               )}
             </Button>

@@ -28,10 +28,10 @@ function CheckinErrorDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertCircle className="size-5" />
-            Check-in Gagal
+            Check-in Failed
           </DialogTitle>
           <DialogDescription>
-            Terjadi kesalahan saat melakukan check-in
+            An error occurred during check-in
           </DialogDescription>
         </DialogHeader>
 
@@ -39,7 +39,7 @@ function CheckinErrorDialog({
           {/* Participant info if available */}
           {participantName && (
             <div className="p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">Peserta:</p>
+              <p className="text-sm font-medium">Participant:</p>
               <p className="text-sm text-muted-foreground">{participantName}</p>
             </div>
           )}
@@ -47,7 +47,7 @@ function CheckinErrorDialog({
           {/* Error message */}
           <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
             <p className="text-sm text-destructive font-medium mb-1">
-              Pesan Error:
+              Error Message:
             </p>
             <p className="text-sm text-muted-foreground">
               {errorMessage}
@@ -56,7 +56,7 @@ function CheckinErrorDialog({
 
           {/* Instructions */}
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>Silakan coba lagi atau hubungi tim teknis jika masalah berlanjut.</p>
+            <p>Please try again or contact the technical team if the problem persists.</p>
           </div>
         </div>
 
@@ -65,7 +65,7 @@ function CheckinErrorDialog({
             onClick={() => onOpenChange(false)}
             className="w-full"
           >
-            Tutup
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>

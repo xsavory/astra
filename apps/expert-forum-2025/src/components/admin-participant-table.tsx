@@ -34,6 +34,7 @@ import type { User as UserType } from 'src/types/schema'
 interface AdminParticipantTableProps {
   users: UserType[]
   isLoading?: boolean
+  isHelpdesk?: boolean
   onRowClick?: (user: UserType) => void
   onDelete?: (userId: string) => void
   // Pagination props
@@ -92,6 +93,7 @@ function EmptyState() {
 function AdminParticipantTable({
   users,
   isLoading = false,
+  isHelpdesk,
   onRowClick,
   onDelete,
   page,
@@ -119,7 +121,9 @@ function AdminParticipantTable({
               <TableHead className='font-bold'>Company</TableHead>
               <TableHead className='font-bold'>Check-in</TableHead>
               <TableHead className='font-bold'>Eligibility</TableHead>
-              <TableHead className="text-right font-bold">Actions</TableHead>
+              {!isHelpdesk && (
+                <TableHead className="text-right font-bold">Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -175,24 +179,26 @@ function AdminParticipantTable({
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation() // Prevent row click
-                        onDelete?.(user.id)
-                      }}
-                      disabled={user.is_checked_in}
-                      title={
-                        user.is_checked_in
-                          ? 'Cannot delete checked-in participant'
-                          : 'Delete participant'
-                      }
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
+                  {!isHelpdesk && (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation() // Prevent row click
+                          onDelete?.(user.id)
+                        }}
+                        disabled={user.is_checked_in}
+                        title={
+                          user.is_checked_in
+                            ? 'Cannot delete checked-in participant'
+                            : 'Delete participant'
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
           </TableBody>

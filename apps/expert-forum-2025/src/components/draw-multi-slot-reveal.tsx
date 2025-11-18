@@ -71,7 +71,7 @@ export function MultiSlotReveal({
           className="border-2 border-white bg-white/90 hover:bg-white text-primary"
         >
           <RotateCcw className="size-4 mr-2" />
-          Undi Ulang
+          Redraw
         </Button>
 
         <Button
@@ -80,7 +80,7 @@ export function MultiSlotReveal({
           className="bg-white text-primary hover:bg-white/90 shadow-lg shadow-white/30"
         >
           <Check className="size-4 mr-2" />
-          Konfirmasi Winners
+          Confirm Winners
         </Button>
       </div>
     </div>

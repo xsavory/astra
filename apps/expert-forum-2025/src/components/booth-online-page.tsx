@@ -105,7 +105,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                   Booth Online
                 </CardTitle>
                 <p className="text-muted-foreground text-sm">
-                  Progress: <span className='font-bold text-foreground'>{boothsCompleted}</span> dari <span className='font-bold text-foreground'>{totalBooths}</span> booth selesai
+                  Progress: <span className='font-bold text-foreground'>{boothsCompleted}</span> of <span className='font-bold text-foreground'>{totalBooths}</span> booth{totalBooths > 1 ? 's' : ''} completed
                 </p>
               </div>
               <CollapsibleTrigger asChild>
@@ -129,7 +129,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
             <CardContent className="relative pt-0 space-y-2">
               <div className="border-t border-primary/10 pt-4">
                 <h3 className="text-sm font-semibold mb-3 text-muted-foreground">
-                  Daftar Booth
+                  Booth List
                 </h3>
                 <div className="space-y-2">
                   {booths.map((booth) => {
@@ -172,7 +172,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                             <div className="flex items-center gap-1.5 mt-1">
                               <Clock className="size-3 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">
-                                {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                                {new Date(checkin.checkin_time).toLocaleString('en-US', {
                                   day: '2-digit',
                                   month: 'short',
                                   hour: '2-digit',
@@ -201,9 +201,9 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                 <Building2 className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">Belum ada booth tersedia</h3>
+                <h3 className="font-semibold text-lg">No booths available yet</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Booth belum tersedia saat ini. Silakan cek kembali nanti.
+                  Booths are not available at this time. Please check back later.
                 </p>
               </div>
             </div>
@@ -266,7 +266,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                       {booth.name}
                     </CardTitle>
                     <CardDescription className="line-clamp-2 text-xs sm:text-sm">
-                      {booth.description || 'Klik untuk melihat detail booth'}
+                      {booth.description || 'Click to view booth details'}
                     </CardDescription>
                   </div>
 
@@ -276,13 +276,13 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                       <>
                         <Badge variant="outline" className="bg-gradient-to-r from-green-50 to-green-100/50 dark:from-green-950 dark:to-green-900/50 text-green-700 dark:text-green-400 border-green-300 dark:border-green-700 shadow-sm">
                           <CheckCircle className="size-3 mr-1" />
-                          Sudah dikunjungi
+                          Already visited
                         </Badge>
                         {checkin && (
                           <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Clock className="size-3" />
                             <span>
-                              {new Date(checkin.checkin_time).toLocaleString('id-ID', {
+                              {new Date(checkin.checkin_time).toLocaleString('en-US', {
                                 day: '2-digit',
                                 month: 'short',
                                 hour: '2-digit',
@@ -294,7 +294,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                       </>
                     ) : (
                       <Badge variant="outline" className="text-muted-foreground border-dashed">
-                        Belum dikunjungi
+                        Not visited yet
                       </Badge>
                     )}
                   </div>

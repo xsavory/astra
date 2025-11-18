@@ -79,7 +79,7 @@ function ParticipantQRDialog({
       {/* Helper Text */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground">
-          Anda juga dapat menyimpan QR code ini untuk digunakan nanti
+          You can also save this QR code for later use
         </p>
       </div>
     </div>
@@ -94,7 +94,7 @@ function ParticipantQRDialog({
             QR Code Check-in
           </DialogTitle>
           <DialogDescription className='text-left'>
-            Scan QR code untuk melakukan check-in
+            Scan QR code to check in
           </DialogDescription>
         </DialogHeader>
         {content}

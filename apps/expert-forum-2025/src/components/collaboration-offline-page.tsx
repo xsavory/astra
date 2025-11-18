@@ -78,7 +78,7 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
       queryClient.invalidateQueries({ queryKey: ['groups', user.id] })
 
       // Show success toast
-      toast.success('Group berhasil dibuat!')
+      toast.success('Group created successfully!')
 
       // Close create dialog
       setCreateDialogOpen(false)
@@ -92,7 +92,7 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
     },
     onError: (error) => {
       // Show error toast
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat membuat group'
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while creating group'
       toast.warning(errorMessage)
     },
   })
@@ -131,7 +131,7 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Collaboration</h1>
         <p className="text-muted-foreground mt-1">
-          Buat group dan submit ideation bersama tim Anda
+          Create groups and submit ideations with your team
         </p>
       </div>
 
@@ -144,9 +144,9 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
                 <Users className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-3">
-                <h3 className="font-semibold text-lg">Belum ada group</h3>
+                <h3 className="font-semibold text-lg">No groups yet</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Anda belum membuat group apapun. Klik tombol di bawah untuk membuat group baru.
+                  You haven't created any groups yet. Click the button below to create a new group.
                 </p>
                 <Button
                   className="rounded-md transition-all duration-300 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
@@ -166,7 +166,7 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Total: {groups.length} group
+              Total: {groups.length} group{groups.length > 1 ? 's' : ''}
             </p>
             <Button
               className="rounded-md transition-all duration-300 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 hover:from-primary/90 hover:via-blue-600/90 hover:to-cyan-500/90 border-2 border-blue-100 hover:border-white/40 hover:scale-110"
@@ -201,10 +201,10 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
                       {group.is_submitted ? (
                         <>
                           <CheckCircle2 className="size-3 mr-1" />
-                          Sudah Submit
+                          Submitted
                         </>
                       ) : (
-                        'Belum Submit'
+                        'Not Submitted'
                       )}
                     </Badge>
                   </div>
@@ -216,7 +216,7 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
 
                   {/* Group Info */}
                   <CardDescription className="text-xs sm:text-sm">
-                    Group collaboration untuk ideation
+                    Collaboration group for ideation
                   </CardDescription>
 
                   {/* Submission Time (if submitted) */}
@@ -224,7 +224,7 @@ function CollaborationOfflinePage({ user }: CollaborationOfflinePageProps) {
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 pt-2 border-t">
                       <Clock className="size-3" />
                       <span>
-                        Submitted: {new Date(group.submitted_at).toLocaleString('id-ID', {
+                        Submitted: {new Date(group.submitted_at).toLocaleString('en-US', {
                           day: '2-digit',
                           month: 'short',
                           hour: '2-digit',

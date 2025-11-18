@@ -405,14 +405,6 @@ function AdminIndexPage() {
           isLoading={isStatsLoading}
         />
 
-        {/* Eligible for Draw */}
-        <AdminStatsCard
-          title="Eligible for Draw"
-          value={stats?.eligibleForDraw || 0}
-          icon={Trophy}
-          isLoading={isStatsLoading}
-        />
-
         {/* Submissions */}
         <AdminStatsCard
           title="Submissions"
@@ -422,6 +414,14 @@ function AdminIndexPage() {
             { label: 'Individual', value: stats?.submissions.individual || 0 },
           ]}
           icon={FileText}
+          isLoading={isStatsLoading}
+        />
+
+        {/* Eligible for Draw */}
+        <AdminStatsCard
+          title="Eligible for Draw"
+          value={stats?.eligibleForDraw || 0}
+          icon={Trophy}
           isLoading={isStatsLoading}
         />
       </div>

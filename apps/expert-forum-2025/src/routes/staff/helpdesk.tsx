@@ -8,7 +8,7 @@
  * - Export CSV button
  *
  * Features included:
- * - Create/Read/Update/Delete participants
+ * - Read/Update/Delete participants
  * - Filter by type, check-in status, eligibility, company, search
  * - View participant details
  * - Toggle check-in status
@@ -19,7 +19,6 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { toast } from '@repo/react-components/ui'
 
@@ -32,7 +31,6 @@ import AdminParticipantDetailDrawer from 'src/components/admin-participant-detai
 import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmation-dialog'
 import AdminCheckinDialog from 'src/components/admin-checkin-dialog'
 import PageLoader from 'src/components/page-loader'
-import { Button } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import type { ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
 
@@ -184,12 +182,6 @@ function StaffHelpdeskPage() {
     },
   })
 
-  // Handle add participant
-  const handleAddParticipant = () => {
-    setEditingUser(null)
-    setIsFormDrawerOpen(true)
-  }
-
   // Handle edit participant
   const handleEditParticipant = (user: User) => {
     setEditingUser(user)
@@ -277,19 +269,6 @@ function StaffHelpdeskPage() {
 
       {/* Participant Management Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xl font-semibold">Participants</h3>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={handleAddParticipant}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Participant
-            </Button>
-          </div>
-        </div>
-
         {/* Filters */}
         <AdminParticipantFilters
           filters={filters}
@@ -298,6 +277,7 @@ function StaffHelpdeskPage() {
 
         {/* Table */}
         <AdminParticipantTable
+          isHelpdesk
           users={participantsData?.items || []}
           isLoading={isParticipantsLoading}
           onRowClick={handleRowClick}

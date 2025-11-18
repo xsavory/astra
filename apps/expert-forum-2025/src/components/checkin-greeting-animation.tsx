@@ -76,10 +76,10 @@ function CheckinGreetingAnimation({
             }`}
           >
             <h2 className="text-2xl font-bold text-green-600">
-              Check-in Berhasil!
+              Check-in Successful!
             </h2>
             <p className="text-lg font-medium">
-              Selamat Datang,
+              Welcome,
             </p>
             <p className="text-xl font-semibold text-primary">
               {participantName}
@@ -92,7 +92,7 @@ function CheckinGreetingAnimation({
               isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             }`}
           >
-            Nikmati acara Expert Forum 2025
+            Enjoy the Expert Forum 2025 event
           </p>
         </div>
       </DialogContent>

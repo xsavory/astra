@@ -59,12 +59,12 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
           search: { booth_id: boothId },
         })
       } else {
-        setScanError('QR Code tidak valid. Booth ID tidak ditemukan.')
+        setScanError('Invalid QR Code. Booth ID not found.')
       }
     } catch (error) {
       // If URL parsing fails, show error
       console.error('Failed to parse QR code URL:', error)
-      setScanError('QR Code tidak valid. Pastikan Anda scan QR code booth yang benar.')
+      setScanError('Invalid QR Code. Make sure you scan the correct booth QR code.')
     }
   }, [onOpenChange, navigate])
 
@@ -120,7 +120,7 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="text-center text-white">
               <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2"></div>
-              <p className="text-sm">Memuat kamera...</p>
+              <p className="text-sm">Loading camera...</p>
             </div>
           </div>
         )}
@@ -129,9 +129,9 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
       {/* Instructions */}
       {isScanning && !scanError && (
         <div className="text-center space-y-2">
-          <p className="text-sm font-medium">Arahkan kamera ke QR Code booth</p>
+          <p className="text-sm font-medium">Point camera at booth QR Code</p>
           <p className="text-xs text-muted-foreground">
-            QR Code akan di-scan secara otomatis
+            QR Code will be scanned automatically
           </p>
         </div>
       )}
@@ -160,7 +160,7 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
               )}
             </DialogTitle>
             <DialogDescription>
-              Scan QR code pada booth untuk check-in
+              Scan QR code at the booth to check in
             </DialogDescription>
           </DialogHeader>
           {scannerContent}
@@ -190,7 +190,7 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
             )}
           </DrawerTitle>
           <DrawerDescription>
-            Scan QR code pada booth untuk check-in
+            Scan QR code at the booth to check in
           </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
@@ -200,7 +200,7 @@ function BoothQRScannerDialog({ open, onOpenChange }: BoothQRScannerDialogProps)
           <DrawerClose asChild>
             <Button variant="outline" className="w-full">
               <X className="size-4 mr-2" />
-              Tutup
+              Close
             </Button>
           </DrawerClose>
         </div>

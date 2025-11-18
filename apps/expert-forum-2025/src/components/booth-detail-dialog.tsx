@@ -70,7 +70,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
 
       // Show success toast with points
       const points = data.checkin.points
-      toast.success(`Check-in berhasil! Anda mendapat ${points} poin`)
+      toast.success(`Check-in successful! You earned ${points} points`)
 
       // Close dialogs and navigate back
       setCheckInDialogOpen(false)
@@ -78,7 +78,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     },
     onError: (error) => {
       // Show error toast
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat check-in'
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during check-in'
       toast.warning(errorMessage)
     },
   })
@@ -134,22 +134,22 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2 text-green-700 dark:text-green-400">
                 <CheckCircle2 className="size-5" />
-                Anda sudah check-in ke booth ini
+                You have already checked in to this booth
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div>
                 <div className="flex items-baseline gap-2">
-                  <p className="text-sm font-medium mb-2">Poin yang Didapat:</p>
+                  <p className="text-sm font-medium mb-2">Points Earned:</p>
                   <span className="text-3xl font-bold text-primary">{existingCheckin.points}</span>
-                  <span className="text-sm text-muted-foreground">poin</span>
+                  <span className="text-sm text-muted-foreground">points</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Diselesaikan dalam {existingCheckin.attempts} percobaan
+                  Completed in {existingCheckin.attempts} attempt{existingCheckin.attempts > 1 ? 's' : ''}
                 </p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Check-in pada: {new Date(existingCheckin.checkin_time).toLocaleString('id-ID', {
+                Checked in on: {new Date(existingCheckin.checkin_time).toLocaleString('en-US', {
                   day: '2-digit',
                   month: 'long',
                   year: 'numeric',
@@ -169,15 +169,15 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             disabled={hasCheckedIn}
           >
             <CheckCircle2 className="size-4 mr-2" />
-            {hasCheckedIn ? 'Sudah Check-in' : 'Check-in Sekarang'}
+            {hasCheckedIn ? 'Already Checked In' : 'Check-in Now'}
           </Button>
         </div>
 
         {/* Company Description */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold">Tentang {booth.name}</h3>
+          <h3 className="text-lg font-semibold">About {booth.name}</h3>
           <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-            {booth.description || 'Deskripsi booth tidak tersedia'}
+            {booth.description || 'Booth description not available'}
           </div>
         </div>
 
@@ -190,7 +190,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               onClick={() => setIsPosterOpen(true)}
             >
               <Image className="size-4 mr-2" />
-              Lihat Poster Booth
+              View Booth Poster
             </Button>
           </div>
         )}
@@ -217,7 +217,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="size-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Memuat detail booth...</p>
+                  <p className="text-sm text-muted-foreground">Loading booth details...</p>
                 </div>
               </div>
             </div>
@@ -241,7 +241,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               <div className="flex items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="size-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">Memuat detail booth...</p>
+                  <p className="text-sm text-muted-foreground">Loading booth details...</p>
                 </div>
               </div>
             </div>
@@ -250,7 +250,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <DrawerClose asChild>
               <Button variant="outline" className="w-full">
                 <X className="size-4 mr-2" />
-                Tutup
+                Close
               </Button>
             </DrawerClose>
           </DrawerFooter>
@@ -290,7 +290,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
                 Poster {booth?.name}
               </DialogTitle>
               <DialogDescription>
-                Klik pada gambar untuk melihat lebih detail
+                Click on the image to view in more detail
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -341,12 +341,12 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               disabled={hasCheckedIn}
             >
               <CheckCircle2 className="size-4 mr-2" />
-              {hasCheckedIn ? 'Sudah Check-in' : 'Check-in Sekarang'}
+              {hasCheckedIn ? 'Already Checked In' : 'Check-in Now'}
             </Button>
             <DrawerClose asChild>
               <Button variant="outline" className="w-full">
                 <X className="size-4 mr-2" />
-                Tutup
+                Close
               </Button>
             </DrawerClose>
           </DrawerFooter>
@@ -362,7 +362,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               Poster {booth?.name}
             </DrawerTitle>
             <DrawerDescription>
-              Geser untuk menutup
+              Swipe to close
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
@@ -378,7 +378,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <DrawerClose asChild>
               <Button variant="outline" className="w-full">
                 <X className="size-4 mr-2" />
-                Tutup
+                Close
               </Button>
             </DrawerClose>
           </DrawerFooter>
@@ -394,7 +394,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               Poster {booth?.name}
             </DrawerTitle>
             <DrawerDescription>
-              Geser untuk menutup
+              Swipe to close
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
@@ -410,7 +410,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <DrawerClose asChild>
               <Button variant="outline" className="w-full">
                 <X className="size-4 mr-2" />
-                Tutup
+                Close
               </Button>
             </DrawerClose>
           </DrawerFooter>

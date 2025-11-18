@@ -123,7 +123,7 @@ function StaffDrawPage() {
   const handleStartDraw = useCallback(() => {
     // Validation
     if (availableParticipants.length < selectedTemplate.slotCount) {
-      alert(`Tidak cukup peserta! Butuh ${selectedTemplate.slotCount}, tersedia ${availableParticipants.length}`)
+      alert(`Not enough participants! Need ${selectedTemplate.slotCount}, available ${availableParticipants.length}`)
       return
     }
 
@@ -362,8 +362,8 @@ function StaffDrawPage() {
                     {availableParticipants.length < selectedTemplate.slotCount ? (
                       <Alert className="border-cyan-200 bg-white/90">
                         <AlertDescription className="text-center">
-                          Tidak cukup peserta yang eligible. Butuh {selectedTemplate.slotCount}, tersedia {availableParticipants.length}.
-                          {cachedSessions.length > 0 && " Silakan submit sessions yang sudah ada."}
+                          Not enough eligible participants. Need {selectedTemplate.slotCount}, available {availableParticipants.length}.
+                          {cachedSessions.length > 0 && " Please submit existing sessions."}
                         </AlertDescription>
                       </Alert>
                     ) : (
@@ -456,8 +456,8 @@ function StaffDrawPage() {
 
                 {cachedSessions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
-                    Belum ada sessions pending.<br />
-                    <span className="text-xs">Mulai undian untuk memilih pemenang.</span>
+                    No pending sessions yet.<br />
+                    <span className="text-xs">Start a draw to select winners.</span>
                   </div>
                 ) : (
                   <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-1">
@@ -476,7 +476,7 @@ function StaffDrawPage() {
                                 </span>
                               </div>
                               <p className="text-xs text-muted-foreground">
-                                {new Date(session.createdAt).toLocaleString('id-ID', {
+                                {new Date(session.createdAt).toLocaleString('en-US', {
                                   dateStyle: 'medium',
                                   timeStyle: 'short'
                                 })}
@@ -541,10 +541,10 @@ function StaffDrawPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <History className="size-5 text-cyan-600" />
-                Riwayat Undian
+                Draw History
               </DialogTitle>
               <DialogDescription>
-                Total {drawHistory.length} undian yang telah dilakukan
+                Total {drawHistory.length} draw{drawHistory.length > 1 ? 's' : ''} completed
               </DialogDescription>
             </DialogHeader>
 
@@ -557,7 +557,7 @@ function StaffDrawPage() {
                 </div>
               ) : drawHistory.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">
-                  Belum ada riwayat undian
+                  No draw history yet
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -577,14 +577,14 @@ function StaffDrawPage() {
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(draw.created_at).toLocaleString('id-ID', {
+                              {new Date(draw.created_at).toLocaleString('en-US', {
                                 dateStyle: 'full',
                                 timeStyle: 'short'
                               })}
                             </p>
                             {draw.staff && (
                               <p className="text-xs text-muted-foreground">
-                                Oleh: {draw.staff.name}
+                                By: {draw.staff.name}
                               </p>
                             )}
                           </div>

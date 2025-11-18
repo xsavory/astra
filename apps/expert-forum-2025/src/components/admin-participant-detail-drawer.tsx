@@ -71,7 +71,7 @@ function AdminParticipantDetailDrawer({
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-US', {
       dateStyle: 'long',
       timeStyle: 'short',
     }).format(date)
@@ -79,7 +79,7 @@ function AdminParticipantDetailDrawer({
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString)
-    return new Intl.DateTimeFormat('id-ID', {
+    return new Intl.DateTimeFormat('en-US', {
       timeStyle: 'short',
     }).format(date)
   }

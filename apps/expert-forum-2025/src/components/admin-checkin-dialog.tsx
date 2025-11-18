@@ -98,7 +98,7 @@ function AdminCheckinDialog({
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Check-in Time</span>
                     <span className="text-sm">
-                      {new Date(user.event_checkin_time).toLocaleString('id-ID', {
+                      {new Date(user.event_checkin_time).toLocaleString('en-US', {
                         dateStyle: 'medium',
                         timeStyle: 'short',
                       })}

@@ -45,7 +45,7 @@ function StaffEventQRScannerDialog({
 
       // Validate required fields
       if (!qrData.participantId || !qrData.name) {
-        setScanError('QR Code tidak valid. Data peserta tidak lengkap.')
+        setScanError('Invalid QR Code. Participant data is incomplete.')
         return
       }
 
@@ -62,7 +62,7 @@ function StaffEventQRScannerDialog({
     } catch (error) {
       // If JSON parsing fails, show error
       console.error('Failed to parse QR code data:', error)
-      setScanError('QR Code tidak valid. Pastikan Anda scan QR code peserta yang benar.')
+      setScanError('Invalid QR Code. Make sure you scan the correct participant QR code.')
     }
   }, [onOpenChange, onScanSuccess])
 
@@ -119,7 +119,7 @@ function StaffEventQRScannerDialog({
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
             <div className="text-center text-white">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p className="text-sm">Memuat kamera...</p>
+              <p className="text-sm">Loading camera...</p>
             </div>
           </div>
         )}
@@ -128,9 +128,9 @@ function StaffEventQRScannerDialog({
       {/* Instructions */}
       {isScanning && !scanError && (
         <div className="text-center space-y-2">
-          <p className="text-sm font-medium">Arahkan kamera ke QR Code peserta</p>
+          <p className="text-sm font-medium">Point camera at participant QR Code</p>
           <p className="text-xs text-muted-foreground">
-            QR Code akan di-scan secara otomatis
+            QR Code will be scanned automatically
           </p>
         </div>
       )}
@@ -142,7 +142,7 @@ function StaffEventQRScannerDialog({
           variant="outline"
           className="w-full"
         >
-          Coba Lagi
+          Try Again
         </Button>
       )}
     </div>
@@ -155,7 +155,7 @@ function StaffEventQRScannerDialog({
           <DialogTitle className="flex items-center justify-between mr-6">
             <div className="flex items-center gap-3">
               <QrCode className="size-5" />
-              Scan QR Code Peserta
+              Scan Participant QR Code
             </div>
             {/* Scanner Active Indicator */}
             {isScanning && (
@@ -168,7 +168,7 @@ function StaffEventQRScannerDialog({
             )}
           </DialogTitle>
           <DialogDescription>
-            Scan QR code peserta untuk melakukan event check-in
+            Scan participant QR code to perform event check-in
           </DialogDescription>
         </DialogHeader>
         {scannerContent}

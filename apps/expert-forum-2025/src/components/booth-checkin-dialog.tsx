@@ -107,9 +107,9 @@ function BoothCheckinDialog({
   // Get attempt display text
   const attemptText = useMemo(() => {
     if (attempts <= 5) {
-      return `Percobaan ${attempts} dari 5`
+      return `Attempt ${attempts} of 5`
     }
-    return `Percobaan ${attempts}`
+    return `Attempt ${attempts}`
   }, [attempts])
 
   // Question content component
@@ -121,13 +121,13 @@ function BoothCheckinDialog({
           {attemptText}
         </div>
         <div className="text-sm font-semibold text-primary">
-          Poin: {currentPoints}
+          Points: {currentPoints}
         </div>
       </div>
 
       {/* Question Text */}
       <div className="space-y-2">
-        <Label htmlFor="question" className='text-muted-foreground'>Pertanyaan:</Label>
+        <Label htmlFor="question" className='text-muted-foreground'>Question:</Label>
         <p className="text-sm leading-relaxed text-primary font-bold">
           {currentQuestion.question}
         </p>
@@ -135,7 +135,7 @@ function BoothCheckinDialog({
 
       {/* Answer Options (Radio Group) */}
       <div className="space-y-3">
-        <Label className='font-bold text-muted-foreground'>Pilih Jawaban</Label>
+        <Label className='font-bold text-muted-foreground'>Select Answer</Label>
         <RadioGroup
           value={selectedAnswer !== null ? String(selectedAnswer) : ''}
           onValueChange={(value) => setSelectedAnswer(Number(value))}
@@ -172,9 +172,9 @@ function BoothCheckinDialog({
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent>
           <DrawerHeader className="text-left">
-            <DrawerTitle>Check-in ke Booth</DrawerTitle>
+            <DrawerTitle>Check-in to Booth</DrawerTitle>
             <DrawerDescription>
-              Jawab pertanyaan dengan benar untuk check-in
+              Answer the question correctly to check in
             </DrawerDescription>
           </DrawerHeader>
           <div className="px-4 pb-4 max-h-[60vh] overflow-y-auto">
@@ -189,18 +189,18 @@ function BoothCheckinDialog({
               {isSubmitting ? (
                 <>
                   <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                  Mengirim...
+                  Submitting...
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Submit Jawaban
+                  Submit Answer
                 </>
               )}
             </Button>
             <DrawerClose asChild>
               <Button variant="outline" className="w-full" disabled={isSubmitting}>
-                Batal
+                Cancel
               </Button>
             </DrawerClose>
           </DrawerFooter>
@@ -214,9 +214,9 @@ function BoothCheckinDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Check-in ke Booth</DialogTitle>
+          <DialogTitle>Check-in to Booth</DialogTitle>
           <DialogDescription>
-            Jawab pertanyaan dengan benar untuk check-in
+            Answer the question correctly to check in
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -228,7 +228,7 @@ function BoothCheckinDialog({
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
           >
-            Batal
+            Cancel
           </Button>
           <Button
             onClick={handleAnswerSubmit}
@@ -237,12 +237,12 @@ function BoothCheckinDialog({
             {isSubmitting ? (
               <>
                 <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                Mengirim...
+                Submitting...
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 mr-2" />
-                Submit Jawaban
+                Submit Answer
               </>
             )}
           </Button>

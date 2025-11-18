@@ -48,7 +48,7 @@ function StaffCheckinPage() {
     },
     onError: (error, variables) => {
       console.error('Check-in error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat check-in'
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred during check-in'
       // Show error dialog
       setErrorData({
         message: errorMessage,
@@ -61,7 +61,7 @@ function StaffCheckinPage() {
   const handleScanSuccess = (participantData: { participantId: string; name: string }) => {
     if (!staff?.id) {
       setErrorData({
-        message: 'Staff ID tidak ditemukan',
+        message: 'Staff ID not found',
         participantName: participantData.name,
       })
       return
@@ -110,7 +110,7 @@ function StaffCheckinPage() {
               Scan QR Code
             </CardTitle>
             <CardDescription className='sr-only'>
-              Peserta menunjukan QR Code
+              Participant showing QR Code
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -121,11 +121,11 @@ function StaffCheckinPage() {
               className="w-full text-lg h-14"
             >
               <QrCode className="mr-2 size-5" />
-              Buka Scanner
+              Open Scanner
             </AppButton>
 
             <div className="text-center text-sm text-muted-foreground">
-              <p>Pastikan QR code terlihat jelas dan tidak terpotong</p>
+              <p>Make sure QR code is clearly visible and not cut off</p>
             </div>
           </CardContent>
         </Card>

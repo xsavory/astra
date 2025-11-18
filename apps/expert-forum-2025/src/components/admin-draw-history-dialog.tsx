@@ -84,7 +84,7 @@ export function AdminDrawHistoryDialog({
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {new Date(draw.created_at).toLocaleString('id-ID', {
+                          {new Date(draw.created_at).toLocaleString('en-US', {
                             dateStyle: 'medium',
                             timeStyle: 'short',
                           })}

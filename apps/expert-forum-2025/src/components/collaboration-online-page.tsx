@@ -72,14 +72,14 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
       queryClient.invalidateQueries({ queryKey: ['ideations', user.id] })
 
       // Show success toast
-      toast.success('Ideation berhasil disubmit!')
+      toast.success('Ideation submitted successfully!')
 
       // Close submission dialog
       setSubmissionDialogOpen(false)
     },
     onError: (error) => {
       // Show error toast
-      const errorMessage = error instanceof Error ? error.message : 'Terjadi kesalahan saat submit ideation'
+      const errorMessage = error instanceof Error ? error.message : 'An error occurred while submitting ideation'
       toast.warning(errorMessage)
     },
   })
@@ -99,14 +99,14 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
         onClick={() => navigate({ to: '/participant' })}
       >
         <ArrowLeft className="size-4 mr-2" />
-        Kembali
+        Back
       </Button>
 
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold">Collaboration</h1>
         <p className="text-muted-foreground mt-1">
-          Submit ide inovasi atau improvement untuk berbagai company case
+          Submit innovation ideas or improvements for various company cases
         </p>
       </div>
 
@@ -119,9 +119,9 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
                 <Lightbulb className="size-8 text-muted-foreground" />
               </div>
               <div className="space-y-2">
-                <h3 className="font-semibold text-lg">Belum ada ideation</h3>
+                <h3 className="font-semibold text-lg">No ideations yet</h3>
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Anda belum submit ideation apapun. Klik tombol "+" di bawah untuk memulai.
+                  You haven't submitted any ideations yet. Click the "+" button below to get started.
                 </p>
               </div>
             </div>
@@ -134,7 +134,7 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">
-              Total: {ideations.length} ideation
+              Total: {ideations.length} ideation{ideations.length > 1 ? 's' : ''}
             </p>
           </div>
 
@@ -174,7 +174,7 @@ function CollaborationOnlinePage({ user }: CollaborationOnlinePageProps) {
                   <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 pt-2 border-t">
                     <Clock className="size-3" />
                     <span>
-                      {new Date(ideation.submitted_at || ideation.created_at).toLocaleString('id-ID', {
+                      {new Date(ideation.submitted_at || ideation.created_at).toLocaleString('en-US', {
                         day: '2-digit',
                         month: 'short',
                         hour: '2-digit',

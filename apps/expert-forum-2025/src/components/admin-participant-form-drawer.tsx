@@ -217,34 +217,6 @@ function AdminParticipantFormDrawer({
             )}
           </div>
 
-          {/* Company Field */}
-          <div className="space-y-2">
-            <Label htmlFor="company">Company</Label>
-            <Input
-              id="company"
-              placeholder="Enter company name (optional)"
-              {...register('company')}
-              disabled={isSubmitting}
-            />
-            {errors.company && (
-              <p className="text-sm text-destructive">{errors.company.message}</p>
-            )}
-          </div>
-
-          {/* Division Field */}
-          <div className="space-y-2">
-            <Label htmlFor="division">Division</Label>
-            <Input
-              id="division"
-              placeholder="Enter division (optional)"
-              {...register('division')}
-              disabled={isSubmitting}
-            />
-            {errors.division && (
-              <p className="text-sm text-destructive">{errors.division.message}</p>
-            )}
-          </div>
-
           {/* Password Note for Create Mode */}
           {!isEditMode && (
             <div className="rounded-md bg-muted p-4 text-sm">
