@@ -13,6 +13,16 @@ export const ADMIN_EMAILS = [
 export const STAFF_EMAILS = [
   'staff1@expert-forum.com',
   'staff2@expert-forum.com',
+  'staff3@expert-forum.com',
+  'staff4@expert-forum.com',
+  'staff5@expert-forum.com',
+  'staff6@expert-forum.com',
+  'staff7@expert-forum.com',
+  'staff8@expert-forum.com',
+  'staff9@expert-forum.com',
+  'staff10@expert-forum.com',
+  'staff11@expert-forum.com',
+  'staff12@expert-forum.com',
 ] as const
 
 // Booth Completion Thresholds
