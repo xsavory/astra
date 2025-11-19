@@ -53,7 +53,7 @@ function AdminDeleteConfirmationDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Participant</AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="space-y-4">
+            <div className="space-y-4 text-left">
               {canDelete ? (
                 <>
                   <p>
@@ -63,22 +63,22 @@ function AdminDeleteConfirmationDialog({
                   <div className="rounded-md bg-muted p-4 space-y-2">
                     <div>
                       <span className="text-sm font-medium">Name:</span>{' '}
-                      <span className="text-sm">{user.name}</span>
+                      <span className="text-sm font-bold">{user.name}</span>
                     </div>
                     <div>
                       <span className="text-sm font-medium">Email:</span>{' '}
-                      <span className="text-sm">{user.email}</span>
+                      <span className="text-sm font-bold">{user.email}</span>
                     </div>
                     <div>
                       <span className="text-sm font-medium">Type:</span>{' '}
-                      <span className="text-sm capitalize">
+                      <span className="text-sm capitalize font-bold">
                         {user.participant_type}
                       </span>
                     </div>
                     {user.company && (
                       <div>
                         <span className="text-sm font-medium">Company:</span>{' '}
-                        <span className="text-sm">{user.company}</span>
+                        <span className="text-sm font-bold">{user.company}</span>
                       </div>
                     )}
                   </div>

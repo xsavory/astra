@@ -136,10 +136,10 @@ export class UsersAPI extends BaseAPI {
    * Create new user (auth + database)
    * Uses Edge Function for admin operations
    */
-  async createUser(data: CreateUserInput): Promise<User> {
+  async createUser(data: CreateUserInput & { password: string }): Promise<User> {
     try {
       // Validate required fields
-      this.validateRequired(data, ['name', 'email', 'participant_type'])
+      this.validateRequired(data, ['name', 'email', 'participant_type', 'password'])
 
       // Get current session token for authentication
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -156,6 +156,7 @@ export class UsersAPI extends BaseAPI {
             name: data.name,
             email: data.email,
             participant_type: data.participant_type,
+            password: data.password,
             company: data.company,
             division: data.division,
           },

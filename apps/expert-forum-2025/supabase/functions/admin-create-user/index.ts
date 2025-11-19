@@ -9,12 +9,17 @@
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 interface CreateUserRequest {
   name: string
   email: string
   participant_type: 'online' | 'offline'
+  password: string
   company?: string
   division?: string
 }
@@ -86,21 +91,18 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body: CreateUserRequest = await req.json()
-    const { name, email, participant_type, company, division } = body
+    const { name, email, participant_type, password, company, division } = body
 
     // Validate required fields
-    if (!name || !email || !participant_type) {
+    if (!name || !email || !participant_type || !password) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: name, email, participant_type' }),
+        JSON.stringify({ error: 'Missing required fields: name, email, participant_type, password' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
       )
     }
-
-    // Get default password from env
-    const password = Deno.env.get('PARTICIPANT_DEFAULT_PASSWORD') || 'expertforum2025'
 
     // Create auth user
     const { data: authData, error: createAuthError } =

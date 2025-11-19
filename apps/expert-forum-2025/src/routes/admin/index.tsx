@@ -142,7 +142,7 @@ function AdminIndexPage() {
 
   // Mutations for CRUD operations
   const createMutation = useMutation({
-    mutationFn: (data: CreateUserInput) => api.users.createUser(data),
+    mutationFn: (data: CreateUserInput & { password: string }) => api.users.createUser(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminParticipants'] })
       queryClient.invalidateQueries({ queryKey: ['adminStats'] })
@@ -229,7 +229,7 @@ function AdminIndexPage() {
   }
 
   // Handle form submit (create or update)
-  const handleFormSubmit = async (data: CreateUserInput | UpdateUserInput) => {
+  const handleFormSubmit = async (data: (CreateUserInput | UpdateUserInput) & { password?: string }) => {
     if (editingUser) {
       // Update existing user
       await updateMutation.mutateAsync({
@@ -237,8 +237,12 @@ function AdminIndexPage() {
         data: data as UpdateUserInput,
       })
     } else {
-      // Create new user
-      await createMutation.mutateAsync(data as CreateUserInput)
+      // Create new user - password must be provided
+      if (!data.password) {
+        toast.error('Password is required for creating a new participant')
+        return
+      }
+      await createMutation.mutateAsync(data as CreateUserInput & { password: string })
     }
   }
 

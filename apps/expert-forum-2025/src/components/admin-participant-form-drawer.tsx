@@ -14,7 +14,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -30,8 +30,14 @@ import {
   SelectValue,
   Label,
   SheetFooter,
+  Alert,
+  AlertTitle,
+  AlertDescription,
 } from '@repo/react-components/ui'
+import { Copy, CheckCircle2 } from 'lucide-react'
 import type { User, ParticipantType } from 'src/types/schema'
+import { COMPANY_OPTIONS } from 'src/lib/constants'
+import { generatePassword } from 'src/lib/utils'
 
 // Form validation schema
 const participantFormSchema = z.object({
@@ -40,8 +46,7 @@ const participantFormSchema = z.object({
   participant_type: z.enum(['online', 'offline'], {
     message: 'Participant type is required',
   }),
-  company: z.string().max(100, 'Company name is too long').optional(),
-  division: z.string().max(100, 'Division name is too long').optional(),
+  company: z.string().min(1, 'Company is required').max(100, 'Company name is too long'),
 })
 
 type ParticipantFormData = z.infer<typeof participantFormSchema>
@@ -49,7 +54,7 @@ type ParticipantFormData = z.infer<typeof participantFormSchema>
 interface AdminParticipantFormDrawerProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: ParticipantFormData) => Promise<void>
+  onSubmit: (data: ParticipantFormData & { password?: string }) => Promise<void>
   user?: User | null // If provided, edit mode; otherwise create mode
   isSubmitting?: boolean
 }
@@ -62,6 +67,11 @@ function AdminParticipantFormDrawer({
   isSubmitting = false,
 }: AdminParticipantFormDrawerProps) {
   const isEditMode = !!user
+
+  // State for generated password
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   // Initialize form with existing data for edit mode
   const {
@@ -79,18 +89,17 @@ function AdminParticipantFormDrawer({
           email: user.email,
           participant_type: user.participant_type || 'offline',
           company: user.company || '',
-          division: user.division || '',
         }
       : {
           name: '',
           email: '',
           participant_type: 'offline',
           company: '',
-          division: '',
         },
   })
 
   const participantType = watch('participant_type')
+  const company = watch('company')
 
   // Update form values when user prop changes (for edit mode)
   useEffect(() => {
@@ -100,7 +109,6 @@ function AdminParticipantFormDrawer({
         email: user.email,
         participant_type: user.participant_type || 'offline',
         company: user.company || '',
-        division: user.division || '',
       })
     } else {
       reset({
@@ -108,7 +116,6 @@ function AdminParticipantFormDrawer({
         email: '',
         participant_type: 'offline',
         company: '',
-        division: '',
       })
     }
   }, [user, reset])
@@ -116,12 +123,41 @@ function AdminParticipantFormDrawer({
   // Handle form submission
   const onFormSubmit = async (data: ParticipantFormData) => {
     try {
-      await onSubmit(data)
-      reset()
-      onClose()
+      // Generate password only for create mode
+      let password: string | undefined
+      if (!isEditMode) {
+        password = generatePassword(data.name)
+        setGeneratedPassword(password)
+      }
+
+      // Submit form with password
+      await onSubmit({ ...data, password })
+
+      // Show success alert if password was generated
+      if (password) {
+        setShowSuccessAlert(true)
+        setIsCopied(false)
+      } else {
+        // For edit mode, close immediately
+        reset()
+        onClose()
+      }
     } catch (error) {
       // Error handled by parent component
       console.error('Form submission error:', error)
+    }
+  }
+
+  // Handle copy password to clipboard
+  const handleCopyPassword = async () => {
+    if (generatedPassword) {
+      try {
+        await navigator.clipboard.writeText(generatedPassword)
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 2000)
+      } catch (error) {
+        console.error('Failed to copy password:', error)
+      }
     }
   }
 
@@ -129,8 +165,20 @@ function AdminParticipantFormDrawer({
   const handleClose = () => {
     if (!isSubmitting) {
       reset()
+      setShowSuccessAlert(false)
+      setGeneratedPassword(null)
+      setIsCopied(false)
       onClose()
     }
+  }
+
+  // Handle close success alert and drawer
+  const handleCloseSuccess = () => {
+    reset()
+    setShowSuccessAlert(false)
+    setGeneratedPassword(null)
+    setIsCopied(false)
+    onClose()
   }
 
   return (
@@ -164,7 +212,7 @@ function AdminParticipantFormDrawer({
               disabled={isSubmitting}
             />
             {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+              <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
@@ -181,7 +229,7 @@ function AdminParticipantFormDrawer({
               disabled={isSubmitting || isEditMode} // Email cannot be changed in edit mode
             />
             {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
+              <p className="text-xs text-destructive">{errors.email.message}</p>
             )}
             {isEditMode && (
               <p className="text-xs text-muted-foreground">
@@ -211,51 +259,128 @@ function AdminParticipantFormDrawer({
               </SelectContent>
             </Select>
             {errors.participant_type && (
-              <p className="text-sm text-destructive">
+              <p className="text-xs text-destructive">
                 {errors.participant_type.message}
               </p>
             )}
           </div>
 
+          {/* Company Field */}
+          <div className="space-y-2">
+            <Label htmlFor="company">Company <span className="text-destructive">*</span></Label>
+            <Select
+              value={company || ''}
+              onValueChange={(value) => setValue('company', value)}
+              disabled={isSubmitting || isEditMode}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select company" />
+              </SelectTrigger>
+              <SelectContent>
+                {COMPANY_OPTIONS.map((companyOption) => (
+                  <SelectItem key={companyOption} value={companyOption}>
+                    {companyOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.company && (
+              <p className="text-xs text-destructive">{errors.company.message}</p>
+            )}
+            {isEditMode && (
+              <p className="text-xs text-muted-foreground">
+                Company cannot be changed
+              </p>
+            )}
+          </div>
+
+          {/* Success Alert - Show after participant is created */}
+          {showSuccessAlert && generatedPassword && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertTitle className="text-green-900">Participant Created Successfully!</AlertTitle>
+              <AlertDescription className="space-y-3">
+                <div>
+                  <p className="text-sm text-green-800 mb-2">
+                    The participant account has been created. Please save the password below:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={generatedPassword}
+                      readOnly
+                      className="font-mono text-lg font-semibold bg-white"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleCopyPassword}
+                      className="shrink-0"
+                    >
+                      {isCopied ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Password format: {'{FirstName}'}-{'{XXXX}'} (4 random uppercase letters)
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleCloseSuccess}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Password Note for Create Mode */}
-          {!isEditMode && (
-            <div className="rounded-md bg-muted p-4 text-sm">
+          {!isEditMode && !showSuccessAlert && (
+            <div className="rounded-md bg-muted p-4 text-xs">
               <p className="font-medium">Password Generation</p>
               <p className="text-muted-foreground mt-1">
-                A default password will be automatically generated for this
-                participant. The password can be found in the environment
-                configuration.
+                A password will be generated with format: {'{FirstName}'}-{'{XXXX}'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Example: John-ABCD, Maria-XYZW
               </p>
             </div>
           )}
         </form>
 
-        <SheetFooter>
-          {/* Form Actions */}
-          <div className="flex gap-3 w-full">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={handleClose}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="participant-form"
-              className="flex-1"
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? 'Saving...'
-                : isEditMode
-                  ? 'Update Participant'
-                  : 'Create Participant'}
-            </Button>
-          </div>
-        </SheetFooter>
+        {!showSuccessAlert && (
+          <SheetFooter>
+            {/* Form Actions */}
+            <div className="flex gap-3 w-full">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={handleClose}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form="participant-form"
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                {isSubmitting
+                  ? 'Saving...'
+                  : isEditMode
+                    ? 'Update Participant'
+                    : 'Create Participant'}
+              </Button>
+            </div>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   )
