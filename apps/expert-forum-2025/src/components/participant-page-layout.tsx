@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@repo/react-components/ui'
 // import { useIsMobile } from '@repo/react-components/hooks'
 import useAuth from 'src/hooks/use-auth'
+import { useState } from 'react'
 
 import logo from 'src/assets/logo.png'
 import bgHeader from 'src/assets/bg-header.png'
@@ -17,18 +18,31 @@ function ParticipantPageLayout({ children }: Props) {
   // const isMobile = useIsMobile()
   const { logout } = useAuth()
   const navigate = useNavigate()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
     try {
+      setIsLoggingOut(true)
       await logout()
       navigate({ to: '/' })
     } catch (error) {
       console.error('Logout error:', error)
+      setIsLoggingOut(false)
     }
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-background relative">
+      {/* Loading Overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 rounded-lg bg-white p-6 shadow-lg">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-sm font-medium text-muted-foreground">Logging out...</p>
+          </div>
+        </div>
+      )}
+
       {/* Header with logout - Mobile optimized */}
       <header className="sticky top-0 z-50 border-b relative overflow-hidden">
         {/* Background Image */}

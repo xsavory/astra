@@ -374,6 +374,7 @@ export type Database = {
           group_id: string | null
           id: string
           is_group: boolean
+          is_winner: boolean
           submitted_at: string
           title: string
           updated_at: string
@@ -386,6 +387,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_group?: boolean
+          is_winner?: boolean
           submitted_at?: string
           title: string
           updated_at?: string
@@ -398,6 +400,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           is_group?: boolean
+          is_winner?: boolean
           submitted_at?: string
           title?: string
           updated_at?: string

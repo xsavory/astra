@@ -494,4 +494,72 @@ export class IdeationsAPI extends BaseAPI {
       this.handleError(error, 'hasSubmittedCompanyCase')
     }
   }
+
+  /**
+   * Select an ideation as winner
+   * Sets is_winner to true for the specified ideation
+   */
+  async selectAsWinner(ideationId: string): Promise<Ideation> {
+    try {
+      const { data, error } = await supabase
+        .from('ideations')
+        .update({ is_winner: true })
+        .eq('id', ideationId)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return this.ensureData(data, 'Failed to select ideation as winner') as Ideation
+    } catch (error) {
+      this.handleError(error, 'selectAsWinner')
+    }
+  }
+
+  /**
+   * Unselect an ideation as winner
+   * Sets is_winner to false for the specified ideation
+   */
+  async unselectAsWinner(ideationId: string): Promise<Ideation> {
+    try {
+      const { data, error } = await supabase
+        .from('ideations')
+        .update({ is_winner: false })
+        .eq('id', ideationId)
+        .select()
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return this.ensureData(data, 'Failed to unselect ideation as winner') as Ideation
+    } catch (error) {
+      this.handleError(error, 'unselectAsWinner')
+    }
+  }
+
+  /**
+   * Get all winner ideations with creator details
+   * Returns only ideations where is_winner is true
+   */
+  async getWinners(): Promise<Array<Ideation & { creator: User }>> {
+    try {
+      const { data, error } = await supabase
+        .from('ideations')
+        .select('*, creator:users!creator_id(*)')
+        .eq('is_winner', true)
+        .order('submitted_at', { ascending: false })
+
+      if (error) {
+        throw error
+      }
+
+      return (data || []) as Array<Ideation & { creator: User }>
+    } catch (error) {
+      this.handleError(error, 'getWinners')
+    }
+  }
 }

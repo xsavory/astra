@@ -18,7 +18,7 @@
  */
 
 import { useState, useMemo, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Sheet,
   SheetContent,
@@ -40,6 +40,14 @@ import {
   TableHeader,
   TableRow,
   Separator,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@repo/react-components/ui'
 import {
   Download,
@@ -49,9 +57,15 @@ import {
   User as UserIcon,
   Search,
   Lightbulb,
+  Trophy,
+  Award,
+  XCircle,
 } from 'lucide-react'
+import { toast } from '@repo/react-components/ui'
 import api from 'src/lib/api'
 import type { Ideation, User } from 'src/types/schema'
+import AdminWinnersDialog from './admin-winners-dialog'
+import AppButton from './app-button'
 
 interface SubmissionFilters {
   type: 'all' | 'group' | 'individual'
@@ -104,6 +118,23 @@ function AdminSubmissionDrawer({
     participants?: User[]
   } | null>(null)
 
+  // State for winners dialog
+  const [winnersDialogOpen, setWinnersDialogOpen] = useState(false)
+
+  // State for winner confirmation dialog
+  const [confirmWinnerDialog, setConfirmWinnerDialog] = useState<{
+    open: boolean
+    action: 'select' | 'unselect'
+    ideationId: string
+  }>({
+    open: false,
+    action: 'select',
+    ideationId: '',
+  })
+
+  // Query client for invalidation
+  const queryClient = useQueryClient()
+
   // Build API filters
   const apiFilters = useMemo(
     () => ({
@@ -148,6 +179,34 @@ function AdminSubmissionDrawer({
     }
   }, [detailsData])
 
+  // Mutation for selecting winner
+  const selectWinnerMutation = useMutation({
+    mutationFn: (ideationId: string) => api.ideations.selectAsWinner(ideationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminSubmissions'] })
+      queryClient.invalidateQueries({ queryKey: ['submissionDetails'] })
+      queryClient.invalidateQueries({ queryKey: ['winners'] })
+      toast.success('Submission selected as winner')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to select submission as winner')
+    },
+  })
+
+  // Mutation for unselecting winner
+  const unselectWinnerMutation = useMutation({
+    mutationFn: (ideationId: string) => api.ideations.unselectAsWinner(ideationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminSubmissions'] })
+      queryClient.invalidateQueries({ queryKey: ['submissionDetails'] })
+      queryClient.invalidateQueries({ queryKey: ['winners'] })
+      toast.success('Submission removed from winners')
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to remove submission from winners')
+    },
+  })
+
   // Get unique company cases for filter dropdown
   const companyCases = useMemo(() => {
     const cases = new Set<string>()
@@ -186,6 +245,30 @@ function AdminSubmissionDrawer({
     setSubmissionDetails(null)
   }
 
+  // Handle select/unselect winner button click
+  const handleWinnerAction = (action: 'select' | 'unselect', ideationId: string) => {
+    setConfirmWinnerDialog({
+      open: true,
+      action,
+      ideationId,
+    })
+  }
+
+  // Handle confirm winner action
+  const handleConfirmWinnerAction = () => {
+    if (confirmWinnerDialog.action === 'select') {
+      selectWinnerMutation.mutate(confirmWinnerDialog.ideationId)
+    } else {
+      unselectWinnerMutation.mutate(confirmWinnerDialog.ideationId)
+    }
+    setConfirmWinnerDialog({ open: false, action: 'select', ideationId: '' })
+  }
+
+  // Handle cancel confirmation
+  const handleCancelConfirmation = () => {
+    setConfirmWinnerDialog({ open: false, action: 'select', ideationId: '' })
+  }
+
   // Format date
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -208,7 +291,7 @@ function AdminSubmissionDrawer({
               </SheetDescription>
             </SheetHeader>
 
-            <div className="flex-1 px-6 py-4 space-y-4">
+            <div className="flex-1 px-6 pb-4 space-y-4">
               {/* Filters */}
               <div className="space-y-3">
                 <div className="grid gap-3 md:grid-cols-3">
@@ -271,15 +354,25 @@ function AdminSubmissionDrawer({
 
               <Separator />
 
-              {/* Export Button */}
+              {/* Export Button & View Winners */}
               <div className="flex justify-between items-center">
                 <p className="text-sm text-muted-foreground">
                   {submissionsData?.total || 0} submission(s) found
                 </p>
-                <Button variant="outline" size="sm" onClick={onExportCSV}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWinnersDialogOpen(true)}
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    View Winners
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={onExportCSV}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                  </Button>
+                </div>
               </div>
 
               {/* Table */}
@@ -291,19 +384,20 @@ function AdminSubmissionDrawer({
                       <TableHead className='font-bold'>Company Case</TableHead>
                       <TableHead className='font-bold'>Creator</TableHead>
                       <TableHead className='font-bold'>Type</TableHead>
+                      <TableHead className='font-bold'>Winner</TableHead>
                       <TableHead className='font-bold'>Submitted At</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isSubmissionsLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           Loading submissions...
                         </TableCell>
                       </TableRow>
                     ) : submissionsData?.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           No submissions found
                         </TableCell>
                       </TableRow>
@@ -331,6 +425,16 @@ function AdminSubmissionDrawer({
                                 </>
                               )}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {submission.is_winner ? (
+                              <Badge variant="default">
+                                <Trophy className="h-3 w-3 mr-1" />
+                                Winner
+                              </Badge>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {submission.submitted_at ? formatDateTime(submission.submitted_at) : '-'}
@@ -390,33 +494,84 @@ function AdminSubmissionDrawer({
         ) : (
           <>
             {/* Detail View */}
-            <SheetHeader className="px-6 pt-6">
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" onClick={handleBackToList}>
-                  <ChevronLeft className="h-4 w-4 mr-1" />
-                  Back
-                </Button>
+            <div className="flex flex-col h-full">
+              {/* Header with Back Button */}
+              <div className="px-6 pt-6 pb-3 border-b bg-muted/30">
+                <div className="flex items-center justify-between mb-3">
+                  
+                  <Button variant="outline" size="sm" onClick={handleBackToList} className="h-8">
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Back
+                  </Button>
+                  
+                </div>
+                <div>
+                  <div className='flex items-end justify-between'>
+                    <div className="flex items-start gap-3">
+                      <Lightbulb className="h-5 w-5 mt-0.5 text-primary" />
+                      <div className="flex-1 min-w-0">
+                        <h2 className="text-lg font-semibold leading-tight">{selectedSubmission.title}</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                          Submission by <span className="font-semibold">{selectedSubmission.creator.name}</span> from <span>{selectedSubmission.creator.company}</span>
+                        </p>
+                      </div>
+                    </div>
+                    {submissionDetails?.ideation.is_winner ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          handleWinnerAction('unselect', submissionDetails.ideation.id)
+                        }
+                        disabled={
+                          selectWinnerMutation.isPending || unselectWinnerMutation.isPending
+                        }
+                        className="h-8"
+                      >
+                        <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                        Remove from Winners
+                      </Button>
+                    ) : (
+                      <AppButton
+                        size="sm"
+                        onClick={() =>
+                          handleWinnerAction('select', submissionDetails?.ideation.id as string)
+                        }
+                        disabled={
+                          selectWinnerMutation.isPending || unselectWinnerMutation.isPending
+                        }
+                        className="h-8"
+                      >
+                        <Award className="h-3.5 w-3.5 mr-1.5" />
+                        Select as Winner
+                      </AppButton>
+                    )}
+                  </div>
+                </div>
               </div>
-              <SheetTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5" />
-                {selectedSubmission.title}
-              </SheetTitle>
-              <SheetDescription>
-                Submission by {selectedSubmission.creator.name}
-              </SheetDescription>
-            </SheetHeader>
 
-            <div className="flex-1 px-6 py-4 space-y-6">
-              {isDetailsLoading ? (
-                <p className="text-center py-8 text-muted-foreground">Loading details...</p>
-              ) : submissionDetails ? (
-                <>
-                  {/* Basic Info */}
-                  <div className="space-y-3">
-                    <div className="grid gap-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Type</span>
-                        <Badge variant={submissionDetails.ideation.is_group ? 'default' : 'secondary'}>
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto px-6 py-4">
+                {isDetailsLoading ? (
+                  <p className="text-center py-8 text-muted-foreground">Loading details...</p>
+                ) : submissionDetails ? (
+                  <div className="space-y-4">
+                    {/* Metadata Cards */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-lg border bg-card/50">
+                        <p className="text-xs text-muted-foreground mb-1">Winner Status</p>
+                        {submissionDetails.ideation.is_winner ? (
+                          <Badge variant="default" className="h-6">
+                            <Trophy className="h-3 w-3 mr-1" />
+                            Winner
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Not selected</span>
+                        )}
+                      </div>
+                      <div className="p-3 rounded-lg border bg-card/50">
+                        <p className="text-xs text-muted-foreground mb-1">Type</p>
+                        <Badge variant={submissionDetails.ideation.is_group ? 'default' : 'secondary'} className="h-6">
                           {submissionDetails.ideation.is_group ? (
                             <>
                               <UsersIcon className="h-3 w-3 mr-1" />
@@ -430,78 +585,112 @@ function AdminSubmissionDrawer({
                           )}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Company Case</span>
-                        <span className="text-sm font-medium">
-                          {submissionDetails.ideation.company_case}
-                        </span>
+                      <div className="p-3 rounded-lg border bg-card/50">
+                        <p className="text-xs text-muted-foreground mb-1">Company Case</p>
+                        <p className="text-sm font-medium">{submissionDetails.ideation.company_case}</p>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-muted-foreground">Submitted</span>
-                        <span className="text-sm font-medium">
+                      <div className="p-3 rounded-lg border bg-card/50">
+                        <p className="text-xs text-muted-foreground mb-1">Submitted</p>
+                        <p className="text-sm font-medium">
                           {submissionDetails.ideation.submitted_at ? formatDateTime(submissionDetails.ideation.submitted_at) : '-'}
-                        </span>
+                        </p>
                       </div>
                     </div>
-                  </div>
 
-                  <Separator />
-
-                  {/* Description */}
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold">Description</h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {submissionDetails.ideation.description}
-                    </p>
-                  </div>
-
-                  <Separator />
-
-                  {/* Creator */}
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold">Creator</h3>
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">{submissionDetails.creator.name}</p>
-                      <p className="text-sm text-muted-foreground">{submissionDetails.creator.email}</p>
-                      {submissionDetails.creator.company && (
-                        <p className="text-sm text-muted-foreground">
-                          {submissionDetails.creator.company}
-                        </p>
-                      )}
+                    {/* Description */}
+                    <div className="p-4 rounded-lg border bg-card/50">
+                      <h3 className="text-sm font-semibold mb-2">Description</h3>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
+                        {submissionDetails.ideation.description}
+                      </p>
                     </div>
-                  </div>
 
-                  {/* Group Members (if group submission) */}
-                  {submissionDetails.ideation.is_group && submissionDetails.participants && (
-                    <>
-                      <Separator />
-                      <div className="space-y-3">
-                        <h3 className="text-sm font-semibold">
+                    {/* Creator */}
+                    <div className="p-4 rounded-lg border bg-card/50">
+                      <h3 className="text-sm font-semibold mb-2">Creator</h3>
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <UserIcon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{submissionDetails.creator.name}</p>
+                          <p className="text-xs text-muted-foreground">{submissionDetails.creator.email}</p>
+                          {submissionDetails.creator.company && (
+                            <p className="text-xs text-muted-foreground">{submissionDetails.creator.company}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Group Members (if group submission) */}
+                    {submissionDetails.ideation.is_group && submissionDetails.participants && (
+                      <div className="p-4 rounded-lg border bg-card/50">
+                        <h3 className="text-sm font-semibold mb-3">
                           Group Members ({submissionDetails.participants.length})
                         </h3>
                         <div className="space-y-2">
                           {submissionDetails.participants.map((participant) => (
                             <div
                               key={participant.id}
-                              className="p-3 rounded-lg border bg-card space-y-1"
+                              className="flex items-center gap-3 p-3 rounded-md border bg-background/50"
                             >
-                              <p className="text-sm font-medium">{participant.name}</p>
-                              <p className="text-xs text-muted-foreground">{participant.email}</p>
-                              {participant.company && (
-                                <p className="text-xs text-muted-foreground">{participant.company}</p>
-                              )}
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                <UserIcon className="h-4 w-4 text-primary" />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">{participant.name}</p>
+                                <p className="text-xs text-muted-foreground truncate">{participant.email}</p>
+                                {participant.company && (
+                                  <p className="text-xs text-muted-foreground truncate">{participant.company}</p>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    </>
-                  )}
-                </>
-              ) : null}
+                    )}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </>
         )}
       </SheetContent>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog
+        open={confirmWinnerDialog.open}
+        onOpenChange={(open) => {
+          if (!open) handleCancelConfirmation()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className='text-left'>
+              {confirmWinnerDialog.action === 'select'
+                ? 'Select as Winner?'
+                : 'Remove from Winners?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription className='text-left'>
+              {confirmWinnerDialog.action === 'select'
+                ? 'This submission will be marked as a winner.'
+                : 'This submission will be removed from the winners list.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelConfirmation}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmWinnerAction}>
+              {confirmWinnerDialog.action === 'select' ? 'Confirm' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Winners Dialog */}
+      <AdminWinnersDialog
+        open={winnersDialogOpen}
+        onClose={() => setWinnersDialogOpen(false)}
+      />
     </Sheet>
   )
 }

@@ -207,6 +207,7 @@ export interface Ideation {
   creator_id: string
   group_id?: string | null
   is_group: boolean
+  is_winner: boolean
   submitted_at?: string | null
   created_at: string
   updated_at: string

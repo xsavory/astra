@@ -32,7 +32,7 @@ import AdminDeleteConfirmationDialog from 'src/components/admin-delete-confirmat
 import AdminCheckinDialog from 'src/components/admin-checkin-dialog'
 import PageLoader from 'src/components/page-loader'
 import api from 'src/lib/api'
-import type { ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
+import type { ParticipantType, User, UpdateUserInput } from 'src/types/schema'
 
 export const Route = createFileRoute('/staff/helpdesk')({
   component: StaffHelpdeskPage,
@@ -122,19 +122,7 @@ function StaffHelpdeskPage() {
     setPage(1) // Reset to first page on limit change
   }
 
-  // Mutations for CRUD operations
-  const createMutation = useMutation({
-    mutationFn: (data: CreateUserInput) => api.users.createUser(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] })
-      queryClient.invalidateQueries({ queryKey: ['adminStats'] })
-      toast.success('Participant created successfully')
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create participant')
-    },
-  })
-
+  // Mutations for CRUD operations (update only - no create in helpdesk)
   const updateMutation = useMutation({
     mutationFn: ({ userId, data }: { userId: string; data: UpdateUserInput }) =>
       api.users.updateUser(userId, data),
@@ -188,17 +176,14 @@ function StaffHelpdeskPage() {
     setIsFormDrawerOpen(true)
   }
 
-  // Handle form submit (create or update)
-  const handleFormSubmit = async (data: CreateUserInput | UpdateUserInput) => {
+  // Handle form submit (update only - no create in helpdesk)
+  const handleFormSubmit = async (data: UpdateUserInput & { password?: string }) => {
     if (editingUser) {
       // Update existing user
       await updateMutation.mutateAsync({
         userId: editingUser.id,
         data: data as UpdateUserInput,
       })
-    } else {
-      // Create new user
-      await createMutation.mutateAsync(data as CreateUserInput)
     }
   }
 
@@ -307,7 +292,7 @@ function StaffHelpdeskPage() {
         onClose={() => setIsFormDrawerOpen(false)}
         onSubmit={handleFormSubmit}
         user={editingUser}
-        isSubmitting={createMutation.isPending || updateMutation.isPending}
+        isSubmitting={updateMutation.isPending}
       />
 
       {/* Delete Confirmation Dialog */}
