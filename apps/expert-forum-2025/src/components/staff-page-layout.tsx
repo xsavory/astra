@@ -1,4 +1,4 @@
-import { LogOut, Maximize, Minimize, CheckSquare, Award, HelpCircle, Gift, Eye, EyeOff, MenuIcon } from 'lucide-react'
+import { LogOut, Maximize, Minimize, CheckSquare, Award, HelpCircle, Gift, Eye, EyeOff, MenuIcon, Lightbulb, HomeIcon } from 'lucide-react'
 import { useNavigate, useLocation } from '@tanstack/react-router'
 import { Button, Separator } from '@repo/react-components/ui'
 import useAuth from 'src/hooks/use-auth'
@@ -38,11 +38,12 @@ function StaffPageLayout({ children }: Props) {
 
   // Menu items
   const menuItems = [
-    { path: '/staff', label: 'Dashboard', icon: null },
+    { path: '/staff', label: '', icon: HomeIcon },
     { path: '/staff/checkin', label: 'Check-in', icon: CheckSquare },
     { path: '/staff/helpdesk', label: 'Helpdesk', icon: HelpCircle },
     { path: '/staff/draw', label: 'Draw', icon: Gift },
     { path: '/staff/votes', label: 'Votes', icon: Award },
+    { path: '/staff/ideation', label: 'Ideation', icon: Lightbulb },
   ]
 
   const isActive = (path: string) => {
@@ -80,7 +81,7 @@ function StaffPageLayout({ children }: Props) {
 
                   {/* Navbar visibility toggle */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setIsNavbarVisible(!isNavbarVisible)}
                   >
@@ -93,7 +94,7 @@ function StaffPageLayout({ children }: Props) {
 
                   {/* Fullscreen toggle */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={toggleFullscreen}
                   >
@@ -108,7 +109,7 @@ function StaffPageLayout({ children }: Props) {
 
                   {/* Logout button */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={handleLogout}
                   >
@@ -126,7 +127,7 @@ function StaffPageLayout({ children }: Props) {
                     return (
                       <Button
                         key={item.path}
-                        variant={isActive(item.path) ? 'default' : 'ghost'}
+                        variant={isActive(item.path) ? 'default' : 'secondary'}
                         size="sm"
                         onClick={() => navigate({ to: item.path })}
                         className="gap-1.5 sm:gap-2 whitespace-nowrap text-xs sm:text-sm"
@@ -146,7 +147,7 @@ function StaffPageLayout({ children }: Props) {
 
                   {/* Navbar visibility toggle */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => setIsNavbarVisible(!isNavbarVisible)}
                     className="gap-2"
@@ -163,7 +164,7 @@ function StaffPageLayout({ children }: Props) {
 
                   {/* Fullscreen toggle */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={toggleFullscreen}
                     className="gap-2"
@@ -180,7 +181,7 @@ function StaffPageLayout({ children }: Props) {
 
                   {/* Logout button */}
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={handleLogout}
                     className="gap-2"

@@ -282,6 +282,63 @@ export class IdeationsAPI extends BaseAPI {
   }
 
   /**
+   * Get ideations for staff display with participants
+   * Optimized for stage presentation - fetches limited ideations with creator and group member details
+   */
+  async getIdeationsForStaffDisplay(
+    limit: number
+  ): Promise<Array<Ideation & { creator: User; participants?: User[] }>> {
+    try {
+      // Fetch ideations with creator join
+      const { data, error } = await supabase
+        .from('ideations')
+        .select('*, creator:users!creator_id(*)')
+        .order('submitted_at', { ascending: false })
+        .limit(limit)
+
+      if (error) {
+        throw error
+      }
+
+      const ideations = (data || []) as Array<Ideation & { creator: User; participants?: User[] }>
+
+      // Fetch participants for group ideations
+      const ideationsWithParticipants = await Promise.all(
+        ideations.map(async (ideation) => {
+          if (ideation.is_group && ideation.group_id) {
+            // Fetch group members
+            const { data: membersData } = await supabase
+              .from('group_members')
+              .select('participant_id')
+              .eq('group_id', ideation.group_id)
+
+            if (membersData && membersData.length > 0) {
+              const participantIds = membersData.map((m) => m.participant_id)
+
+              const { data: participantsData } = await supabase
+                .from('users')
+                .select('*')
+                .in('id', participantIds)
+                .order('name', { ascending: true })
+
+              return {
+                ...ideation,
+                participants: participantsData as User[],
+              }
+            }
+          }
+
+          return ideation
+        })
+      )
+
+      return ideationsWithParticipants
+    } catch (error) {
+      this.handleError(error, 'getIdeationsForStaffDisplay')
+    }
+  }
+
+  /**
    * Get all ideations for export (no pagination)
    */
   async getAllIdeationsForExport(): Promise<Array<Ideation & { creator: User }>> {
@@ -560,6 +617,36 @@ export class IdeationsAPI extends BaseAPI {
       return (data || []) as Array<Ideation & { creator: User }>
     } catch (error) {
       this.handleError(error, 'getWinners')
+    }
+  }
+
+  /**
+   * Subscribe to realtime ideation changes
+   * Triggers callback when new ideations are inserted
+   *
+   * @param callback - Called when a new ideation is inserted
+   * @returns Unsubscribe function
+   */
+  subscribeToIdeations(callback: (ideation: Ideation) => void): () => void {
+    const channel = supabase
+      .channel('ideations-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ideations',
+        },
+        (payload) => {
+          const newIdeation = payload.new as Ideation
+          callback(newIdeation)
+        }
+      )
+      .subscribe()
+
+    // Return unsubscribe function
+    return () => {
+      supabase.removeChannel(channel)
     }
   }
 }

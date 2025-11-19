@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { CheckSquare, HelpCircle, Gift, Award, ArrowRight, Sparkles } from 'lucide-react'
+import { CheckSquare, HelpCircle, Gift, Award, ArrowRight, Sparkles, Lightbulb } from 'lucide-react'
 
 import PageLoader from 'src/components/page-loader'
 import { Card, CardContent } from '@repo/react-components/ui'
@@ -29,8 +29,8 @@ function StaffIndexPage() {
       description: 'Assist participants with inquiries',
       icon: HelpCircle,
       path: '/staff/helpdesk',
-      gradient: 'from-emerald-500/20 via-green-500/10 to-transparent',
-      iconColor: 'text-emerald-500',
+      gradient: 'from-primary/20 via-blue-500/10 to-transparent',
+      iconColor: 'text-primary',
       borderGlow: 'hover:shadow-emerald-500/20',
     },
     {
@@ -49,6 +49,15 @@ function StaffIndexPage() {
       path: '/staff/votes',
       gradient: 'from-amber-500/20 via-orange-500/10 to-transparent',
       iconColor: 'text-amber-500',
+      borderGlow: 'hover:shadow-amber-500/20',
+    },
+    {
+      title: 'Ideation Submission',
+      description: 'Present ideation entries',
+      icon: Lightbulb,
+      path: '/staff/ideation',
+      gradient: 'from-emerald-500/20 via-green-500/10 to-transparent',
+      iconColor: 'text-emerald-500',
       borderGlow: 'hover:shadow-amber-500/20',
     },
   ]
@@ -94,7 +103,7 @@ function StaffIndexPage() {
                       <h3 className="font-semibold text-base mb-1 group-hover:text-primary transition-colors">
                         {menu.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2">
                         {menu.description}
                       </p>
                     </div>
@@ -106,13 +115,6 @@ function StaffIndexPage() {
               </Card>
             )
           })}
-        </div>
-
-        {/* Quick Stats or Info Section */}
-        <div className="mt-8 p-4 rounded-xl bg-gradient-to-r from-primary/5 via-primary/10 to-primary/5 border border-primary/20">
-          <p className="text-sm text-center text-muted-foreground">
-            Need help? Contact your system administrator.
-          </p>
         </div>
       </div>
     </div>
