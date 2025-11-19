@@ -7,7 +7,10 @@ import boothMock3 from 'src/assets/booth-mock-3.png'
 // Email Lists for Authentication
 export const ADMIN_EMAILS = [
   'dnmiloen@gmail.com',
-  'hafrinugraha@gmail.com'
+  'hafrinugraha@gmail.com',
+  'herrywitoko@absoluteeo.com',
+  'indy@absoluteeo.com',
+  'adi@absoluteeo.com'
 ] as const
 
 export const STAFF_EMAILS = [
