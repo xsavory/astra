@@ -1,6 +1,8 @@
 import { redirect } from '@tanstack/react-router'
+import type { QueryClient } from '@tanstack/react-query'
 import type { AuthContextType } from 'src/contexts/auth'
-import type { User } from 'src/types/schema'
+import type { User, Event } from 'src/types/schema'
+import api from 'src/lib/api'
 
 /**
  * Route guard to ensure user is authenticated
@@ -129,4 +131,39 @@ export function getRedirectUrl(
   }
 
   return { to: '/' }
+}
+
+/**
+ * Route guard to ensure participant can access sub-routes
+ * Checks: 1) user is checked in, 2) event is active
+ * If either condition fails, redirects to main participant page
+ * Allows access to /participant but blocks /participant/booth, /participant/collaboration, etc.
+ * Uses React Query cache to avoid duplicate API calls
+ */
+export async function requireActiveEventAndCheckedIn(
+  queryClient: QueryClient,
+  user: User,
+  currentPath: string
+): Promise<void> {
+  // Allow access to main participant page
+  if (currentPath === '/participant' || currentPath === '/participant/') {
+    return
+  }
+
+  // Check if user is checked in
+  if (!user.is_checked_in) {
+    throw redirect({ to: '/participant' })
+  }
+
+  // Fetch event using React Query - will use cache if available
+  const event = await queryClient.fetchQuery<Event>({
+    queryKey: ['event'],
+    queryFn: () => api.events.getEvent(),
+    staleTime: 1000 * 60 * 5, // 5 minutes - won't refetch if data is fresh
+  })
+
+  // Check if event is active
+  if (!event?.is_active) {
+    throw redirect({ to: '/participant' })
+  }
 }

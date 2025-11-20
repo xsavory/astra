@@ -2,7 +2,7 @@ import { Outlet, createFileRoute } from '@tanstack/react-router'
 
 import ParticipantPageLayout from 'src/components/participant-page-layout'
 import PageLoader from 'src/components/page-loader'
-import { requireParticipant } from 'src/lib/route-guards'
+import { requireParticipant, requireActiveEventAndCheckedIn } from 'src/lib/route-guards'
 
 export const Route = createFileRoute('/participant')({
   component: ParticipantRoute,
@@ -13,6 +13,10 @@ export const Route = createFileRoute('/participant')({
       location.pathname,
       location.search
     )
+
+    // Check if user is checked in and event is active for sub-routes
+    await requireActiveEventAndCheckedIn(context.queryClient, user, location.pathname)
+
     return { user }
   },
 })

@@ -135,9 +135,11 @@ function ParticipantIndexPage() {
   })
 
   // Fetch event data to check if event is active
+  // Uses same query key as route guard - will use cached data
   const { data: event, isLoading: loadingEvent } = useQuery<Event>({
     queryKey: ['event'],
     queryFn: () => api.events.getEvent(),
+    staleTime: 1000 * 60 * 5, // 5 minutes - match route guard staleTime
   })
 
   // Subscribe to realtime user changes (for QR check-in and eligibility updates)

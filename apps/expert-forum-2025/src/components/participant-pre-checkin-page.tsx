@@ -61,6 +61,20 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
     },
   })
 
+  if (!event?.is_active) {
+    return (
+      <div>
+        {/* Event Countdown Dialog - Auto-shown when event is not active */}
+        <EventCountdownDialog
+          open={isCountdownDialogOpen}
+          onOpenChange={setIsCountdownDialogOpen}
+          eventDate={event?.event_dates || null}
+          isActive={event?.is_active || false}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 px-4">
       <Card className="w-full max-w-md">
@@ -127,13 +141,7 @@ function ParticipantPreCheckinPage({ user, event }: ParticipantPreCheckinPagePro
         />
       )}
 
-      {/* Event Countdown Dialog - Auto-shown when event is not active */}
-      <EventCountdownDialog
-        open={isCountdownDialogOpen}
-        onOpenChange={setIsCountdownDialogOpen}
-        eventDate={event?.event_dates || null}
-        isActive={event?.is_active || false}
-      />
+      
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 
 import PageLoader from 'src/components/page-loader'
 import { routeTree } from './routeTree.gen'
@@ -14,7 +15,7 @@ declare module '@tanstack/react-router' {
 // Create a new router instance
 const router = createRouter({
   routeTree,
-  context: { auth: undefined },
+  context: { auth: undefined, queryClient: undefined! },
   defaultPendingComponent: PageLoader,
   defaultPreload: "intent",
   scrollRestoration: true,
@@ -24,8 +25,9 @@ const router = createRouter({
 
 export default function AppRouter() {
   const auth = useAuth()
+  const queryClient = useQueryClient()
 
   return (
-    <RouterProvider router={router} context={{ auth }} />
+    <RouterProvider router={router} context={{ auth, queryClient }} />
   )
 }
