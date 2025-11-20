@@ -8,11 +8,13 @@ import {
   Video,
   Lightbulb,
   Award,
+  FileText,
 } from 'lucide-react'
 
 import PageLoader from 'src/components/page-loader'
 import ZoomDialog from 'src/components/zoom-dialog'
 import BoothVotingDialog from 'src/components/booth-voting-dialog'
+import WallOfExpertDialog from 'src/components/wall-of-expert-dialog'
 import ParticipantPreCheckinPage from 'src/components/participant-pre-checkin-page'
 import {
   Card,
@@ -116,6 +118,8 @@ function ParticipantIndexPage() {
   const [isZoomDialogOpen, setIsZoomDialogOpen] = useState(false)
   // State for voting dialog
   const [isVotingDialogOpen, setIsVotingDialogOpen] = useState(false)
+  // State for wall of expert dialog
+  const [isWallOfExpertDialogOpen, setIsWallOfExpertDialogOpen] = useState(false)
 
   // Fetch current user
   const { data: user, isLoading: isLoadingUser } = useQuery<User | null>({
@@ -364,6 +368,26 @@ function ParticipantIndexPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Fourth Row: Wall of Expert Card - Available for all participants */}
+        <Card
+          className="cursor-pointer bg-gradient-to-r from-primary via-blue-600 to-cyan-500 border-2 border-white/30 shadow-xl shadow-primary/30 transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary/50 group"
+          onClick={() => setIsWallOfExpertDialogOpen(true)}
+        >
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="rounded-full bg-white/20 backdrop-blur-sm p-3 sm:p-4 group-hover:scale-110 transition-transform duration-300">
+                <FileText className="size-5 sm:size-6 text-white" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-white">Wall of Expert</h3>
+                <p className="text-xs text-white/80">
+                  View expert showcase
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Voucher Section - Moved to bottom */}
@@ -445,6 +469,12 @@ function ParticipantIndexPage() {
         open={isVotingDialogOpen}
         onOpenChange={setIsVotingDialogOpen}
         user={user}
+      />
+
+      {/* Wall of Expert Dialog - Dialog for desktop, Bottom Sheet for mobile */}
+      <WallOfExpertDialog
+        open={isWallOfExpertDialogOpen}
+        onOpenChange={setIsWallOfExpertDialogOpen}
       />
     </div>
   )
