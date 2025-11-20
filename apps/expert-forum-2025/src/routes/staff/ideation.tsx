@@ -143,18 +143,18 @@ function StaffIdeationPage() {
       Math.floor(TOTAL * 0.87),
       Math.floor(TOTAL * 0.84),
       Math.floor(TOTAL * 0.80),
-      Math.floor(TOTAL * 0.75),
+      Math.floor(TOTAL * 0.79),
+      Math.floor(TOTAL * 0.77),
+      Math.floor(TOTAL * 0.74),
       Math.floor(TOTAL * 0.70),
-      Math.floor(TOTAL * 0.62),
-      Math.floor(TOTAL * 0.55),
-      Math.floor(TOTAL * 0.48),
-      Math.floor(TOTAL * 0.42),
-      Math.floor(TOTAL * 0.36),
-      Math.floor(TOTAL * 0.30),
-      Math.floor(TOTAL * 0.24),
-      Math.floor(TOTAL * 0.18),
-      Math.floor(TOTAL * 0.12),
-      Math.floor(TOTAL * 0.08),
+      Math.floor(TOTAL * 0.70),
+      Math.floor(TOTAL * 0.72),
+      Math.floor(TOTAL * 0.74),
+      Math.floor(TOTAL * 0.80),
+      Math.floor(TOTAL * 0.84),
+      Math.floor(TOTAL * 0.88),
+      Math.floor(TOTAL * 0.90),
+      Math.floor(TOTAL * 0.96),
       0,
     ]
 
@@ -274,6 +274,7 @@ function StaffIdeationPage() {
                         shouldBlink={d?.id ? recentlyAdded.has(d.id) : false}
                         isWinner={d?.is_winner || false}
                         colorIndex={idx}
+                        isChaos={phase === 'chaos'}
                       />
                     </div>
                   </div>
@@ -285,7 +286,7 @@ function StaffIdeationPage() {
             {phase === 'revealList' && (
               <div className="w-full flex items-center justify-center">
                 <div
-                  className="grid gap-4"
+                  className="grid gap-2"
                   style={{
                     gridTemplateColumns: `repeat(${WIN_LIST_COLS}, minmax(0, 1fr))`,
                     width: '100%',

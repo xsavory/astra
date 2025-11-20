@@ -1,4 +1,4 @@
-import { Lightbulb, Trophy } from 'lucide-react'
+import { Lightbulb } from 'lucide-react'
 import { Card, CardContent } from '@repo/react-components/ui'
 import type { Ideation, User } from 'src/types/schema'
 
@@ -8,6 +8,7 @@ interface IdeationPolygonProps {
   shouldBlink: boolean
   isWinner: boolean
   colorIndex?: number
+  isChaos?: boolean
 }
 
 // Color palette - variations of blue for professional look
@@ -28,6 +29,7 @@ export function IdeationPolygon({
   shouldBlink,
   isWinner,
   colorIndex = 0,
+  isChaos = false,
 }: IdeationPolygonProps) {
 
   const isEmpty = !ideation
@@ -44,11 +46,11 @@ export function IdeationPolygon({
    *  1) BELUM REVEAL
    * ----------------------------------------------- */
   if (!isRevealed) {
-    if (isEmpty) {
-      // Empty → subtle glass effect with color accent
+    if (isEmpty && !isChaos) {
+      // Empty (not in chaos) → subtle glass effect with color accent
       cardClasses += ` ${colorVariant.emptyBg} backdrop-blur-sm border ${colorVariant.emptyBorder}`
     } else {
-      // Normal filled → futuristic gradient with color variant
+      // Normal filled OR chaos mode (all cards look filled) → futuristic gradient with color variant
       cardClasses += ` bg-gradient-to-br ${colorVariant.from} ${colorVariant.via} ${colorVariant.to} border ${colorVariant.border} shadow-lg ${colorVariant.glow}`
 
       if (shouldBlink) {
@@ -64,7 +66,7 @@ export function IdeationPolygon({
     if (isWinnerRevealed) {
       // Winner card → premium gold with glow
       cardClasses =
-        'relative overflow-hidden w-full h-full transition-all duration-500 ease-out bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 border-2 border-amber-300 shadow-2xl shadow-amber-400/50 ring-2 ring-amber-300/50'
+        'py-2 relative overflow-hidden w-full h-full transition-all duration-500 ease-out bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 border-2 border-amber-300 shadow-2xl shadow-amber-400/50 ring-2 ring-amber-300/50'
     } else {
       // Non-winner OR empty → dimmed with color variant
       cardClasses += ` bg-gradient-to-br ${colorVariant.from} ${colorVariant.to} border ${colorVariant.border} opacity-70`
@@ -100,47 +102,67 @@ export function IdeationPolygon({
         {/* NON-WINNER during reveal OR EMPTY OR NORMAL → icon only */}
         {(isEmpty || isNormalFilled || (isRevealed && !isWinner)) && (
           <Lightbulb
-            className={`${iconSize} ${isEmpty ? 'text-primary/30' : 'text-white/90'} drop-shadow-sm`}
+            className={`${iconSize} ${isEmpty && !isChaos ? 'text-primary/30' : 'text-white/90'} drop-shadow-sm`}
           />
         )}
 
         {/* WINNER DETAIL */}
         {isWinnerRevealed && (
-          <div className="text-center space-y-1.5 w-full px-1">
-            {/* Trophy icon */}
-            <div className="flex justify-center">
-              <Trophy className="h-6 w-6 text-amber-700 drop-shadow-md" />
+          <div className="flex flex-col h-full w-full px-2">
+            {/* Header: Trophy + Ideation Info */}
+            <div className="flex-1 flex flex-col justify-center">
+              {/* Ideation Title & Company Case - as unified block */}
+              <div className="text-center space-y-0.5">
+                <h3 className="font-bold text-sm leading-tight tracking-tight text-amber-900 line-clamp-2">
+                  {ideation?.title}
+                </h3>
+                <div className="inline-flex items-center justify-center">
+                  <span className="text-[10px] font-semibold text-amber-800/90 bg-amber-100/50 px-1.5 py-0.5 rounded-sm line-clamp-1">
+                    {ideation?.company_case}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-1 text-amber-900">
-              <h3 className="font-bold text-sm line-clamp-2 leading-tight tracking-tight">
-                {ideation?.title}
-              </h3>
+            {/* Divider */}
+            <div className="w-full h-px bg-amber-700/20 my-1.5" />
 
-              <p className="text-xs font-medium opacity-80 line-clamp-1">
-                {ideation?.company_case}
-              </p>
-
-              <div className="text-[10px] font-medium pt-1.5 border-t border-amber-700/20">
-                {ideation?.is_group ? (
-                  <div className="space-y-0.5">
-                    {ideation?.participants?.slice(0, 3).map((p) => (
-                      <div key={p.id} className="line-clamp-1 opacity-90">
-                        {p.name}
-                      </div>
-                    ))}
-                    {(ideation?.participants?.length ?? 0) > 3 && (
-                      <div className="opacity-70">
-                        +{(ideation?.participants?.length ?? 0) - 3} more
-                      </div>
-                    )}
+            {/* Creator/Team Section */}
+            <div className="text-center">
+              {ideation?.is_group ? (
+                <div className="space-y-0.5">
+                  <p className="text-[9px] font-semibold text-amber-700/70 uppercase tracking-wider mb-0.5">
+                    Team Members
+                  </p>
+                  {ideation?.participants?.slice(0, 3).map((p) => (
+                    <div key={p.id} className="text-[10px] text-amber-900">
+                      <span className="font-semibold line-clamp-1">{p.name}</span>
+                      {p.company && (
+                        <span className="opacity-70 ml-0.5">• {p.company}</span>
+                      )}
+                    </div>
+                  ))}
+                  {(ideation?.participants?.length ?? 0) > 3 && (
+                    <div className="text-[9px] text-amber-700/70 font-medium">
+                      +{(ideation?.participants?.length ?? 0) - 3} more
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  <p className="text-[9px] font-semibold text-amber-700/70 uppercase tracking-wider">
+                    Created by
+                  </p>
+                  <div className="text-[11px] text-amber-900">
+                    <span className="font-bold line-clamp-1">{ideation?.creator?.name}</span>
                   </div>
-                ) : (
-                  <div className="line-clamp-1 opacity-90">
-                    {ideation?.creator?.name}
-                  </div>
-                )}
-              </div>
+                  {ideation?.creator?.company && (
+                    <div className="text-[10px] text-amber-800/80 font-medium line-clamp-1">
+                      {ideation?.creator?.company}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
