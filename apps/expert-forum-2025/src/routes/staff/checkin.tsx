@@ -17,6 +17,7 @@ import {
 } from '@repo/react-components/ui'
 import { useIsMobile } from '@repo/react-components/hooks'
 import api from 'src/lib/api'
+import { VIP_EMAILS } from 'src/lib/constants'
 import useAuth from 'src/hooks/use-auth'
 import AppButton from 'src/components/app-button'
 
@@ -34,8 +35,13 @@ function StaffCheckinPage() {
   const isMobile = useIsMobile()
   const { user: staff } = useAuth()
   const [isScannerOpen, setIsScannerOpen] = useState(false)
-  const [greetingData, setGreetingData] = useState<{ name: string } | null>(null)
+  const [greetingData, setGreetingData] = useState<{ name: string; isVIP: boolean } | null>(null)
   const [errorData, setErrorData] = useState<{ message: string; participantName?: string } | null>(null)
+
+  // Helper function to check if email is VIP
+  const isVIPEmail = (email: string): boolean => {
+    return VIP_EMAILS.includes(email as typeof VIP_EMAILS[number])
+  }
 
   // Event check-in mutation
   const checkinMutation = useMutation({
@@ -43,8 +49,11 @@ function StaffCheckinPage() {
       return api.checkins.checkinEvent(data.participantId, 'qr', data.staffId)
     },
     onSuccess: (user) => {
-      // Show greeting dialog
-      setGreetingData({ name: user.name })
+      // Show greeting dialog with VIP status
+      setGreetingData({
+        name: user.name,
+        isVIP: isVIPEmail(user.email)
+      })
     },
     onError: (error, variables) => {
       console.error('Check-in error:', error)
@@ -144,10 +153,10 @@ function StaffCheckinPage() {
         <CheckinGreetingAnimation
           open={!!greetingData}
           participantName={greetingData?.name || ''}
+          isVIP={greetingData?.isVIP || false}
           onOpenChange={(open) => {
             if (!open) setGreetingData(null)
           }}
-          duration={2000}
         />
 
         {/* Error Dialog */}

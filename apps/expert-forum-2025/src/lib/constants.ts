@@ -31,6 +31,10 @@ export const STAFF_EMAILS = [
   'staff15@expert-forum.com',
 ] as const
 
+export const VIP_EMAILS = [
+  'hafri@test.com',
+] as const
+
 // Booth Completion Thresholds
 export const BOOTH_THRESHOLD = {
   offline: 10,
