@@ -7,37 +7,18 @@ interface IdeationPolygonProps {
   isRevealed: boolean
   shouldBlink: boolean
   isWinner: boolean
-  colorIndex?: number
-  isChaos?: boolean
 }
-
-// Color palette - variations of blue for professional look
-const COLOR_VARIANTS = [
-  { from: 'from-blue-500', via: 'via-blue-600', to: 'to-blue-700', glow: 'shadow-blue-500/30', ring: 'ring-blue-400/60', border: 'border-blue-400/30', emptyBg: 'bg-blue-500/5', emptyBorder: 'border-blue-400/10' },
-  { from: 'from-sky-500', via: 'via-sky-600', to: 'to-blue-600', glow: 'shadow-sky-500/30', ring: 'ring-sky-400/60', border: 'border-sky-400/30', emptyBg: 'bg-sky-500/5', emptyBorder: 'border-sky-400/10' },
-  { from: 'from-cyan-500', via: 'via-cyan-600', to: 'to-blue-600', glow: 'shadow-cyan-500/30', ring: 'ring-cyan-400/60', border: 'border-cyan-400/30', emptyBg: 'bg-cyan-500/5', emptyBorder: 'border-cyan-400/10' },
-  { from: 'from-indigo-500', via: 'via-indigo-600', to: 'to-blue-700', glow: 'shadow-indigo-500/30', ring: 'ring-indigo-400/60', border: 'border-indigo-400/30', emptyBg: 'bg-indigo-500/5', emptyBorder: 'border-indigo-400/10' },
-  { from: 'from-blue-600', via: 'via-blue-700', to: 'to-indigo-700', glow: 'shadow-blue-600/30', ring: 'ring-blue-500/60', border: 'border-blue-500/30', emptyBg: 'bg-blue-600/5', emptyBorder: 'border-blue-500/10' },
-  { from: 'from-sky-600', via: 'via-blue-600', to: 'to-indigo-600', glow: 'shadow-sky-600/30', ring: 'ring-sky-500/60', border: 'border-sky-500/30', emptyBg: 'bg-sky-600/5', emptyBorder: 'border-sky-500/10' },
-  { from: 'from-cyan-600', via: 'via-sky-600', to: 'to-blue-600', glow: 'shadow-cyan-600/30', ring: 'ring-cyan-500/60', border: 'border-cyan-500/30', emptyBg: 'bg-cyan-600/5', emptyBorder: 'border-cyan-500/10' },
-  { from: 'from-blue-400', via: 'via-sky-500', to: 'to-cyan-600', glow: 'shadow-blue-400/30', ring: 'ring-blue-300/60', border: 'border-blue-300/30', emptyBg: 'bg-blue-400/5', emptyBorder: 'border-blue-300/10' },
-]
 
 export function IdeationPolygon({
   ideation,
   isRevealed,
   shouldBlink,
   isWinner,
-  colorIndex = 0,
-  isChaos = false,
 }: IdeationPolygonProps) {
 
   const isEmpty = !ideation
   const isNormalFilled = ideation && !isRevealed
   const isWinnerRevealed = ideation && isRevealed && isWinner
-
-  // Get color variant based on index
-  const colorVariant = COLOR_VARIANTS[colorIndex % COLOR_VARIANTS.length]!
 
   /** BASE CLASS */
   let cardClasses = 'relative overflow-hidden w-full h-full transition-all duration-300 ease-out'
@@ -46,15 +27,15 @@ export function IdeationPolygon({
    *  1) BELUM REVEAL
    * ----------------------------------------------- */
   if (!isRevealed) {
-    if (isEmpty && !isChaos) {
-      // Empty (not in chaos) → subtle glass effect with color accent
-      cardClasses += ` ${colorVariant.emptyBg} backdrop-blur-sm border ${colorVariant.emptyBorder}`
+    if (isEmpty) {
+      // Empty → subtle glass effect
+      cardClasses += ' bg-primary/5 backdrop-blur-sm border border-primary/10'
     } else {
-      // Normal filled OR chaos mode (all cards look filled) → futuristic gradient with color variant
-      cardClasses += ` bg-gradient-to-br ${colorVariant.from} ${colorVariant.via} ${colorVariant.to} border ${colorVariant.border} shadow-lg ${colorVariant.glow}`
+      // Normal filled → futuristic blue gradient
+      cardClasses += ' bg-gradient-to-br from-primary via-primary/90 to-blue-600 border border-cyan-400/30 shadow-lg shadow-cyan-500/20'
 
       if (shouldBlink) {
-        cardClasses += ` animate-pulse ring-2 ${colorVariant.ring} shadow-xl`
+        cardClasses += ' animate-pulse ring-2 ring-cyan-400/60 shadow-xl shadow-cyan-400/40'
       }
     }
   }
@@ -68,8 +49,8 @@ export function IdeationPolygon({
       cardClasses =
         'py-2 relative overflow-hidden w-full h-full transition-all duration-500 ease-out bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 border-2 border-amber-300 shadow-2xl shadow-amber-400/50 ring-2 ring-amber-300/50'
     } else {
-      // Non-winner OR empty → dimmed with color variant
-      cardClasses += ` bg-gradient-to-br ${colorVariant.from} ${colorVariant.to} border ${colorVariant.border} opacity-70`
+      // Non-winner OR empty → dimmed
+      cardClasses += ' bg-gradient-to-br from-primary/80 to-blue-600/80 border border-cyan-400/20 opacity-70'
     }
   }
 
@@ -102,7 +83,7 @@ export function IdeationPolygon({
         {/* NON-WINNER during reveal OR EMPTY OR NORMAL → icon only */}
         {(isEmpty || isNormalFilled || (isRevealed && !isWinner)) && (
           <Lightbulb
-            className={`${iconSize} ${isEmpty && !isChaos ? 'text-primary/30' : 'text-white/90'} drop-shadow-sm`}
+            className={`${iconSize} ${isEmpty ? 'text-primary/30' : 'text-white/90'} drop-shadow-sm`}
           />
         )}
 
@@ -131,12 +112,9 @@ export function IdeationPolygon({
             <div className="text-center">
               {ideation?.is_group ? (
                 <div className="space-y-0.5">
-                  <p className="text-[9px] font-semibold text-amber-700/70 uppercase tracking-wider mb-0.5">
-                    Team Members
-                  </p>
                   {ideation?.participants?.slice(0, 3).map((p) => (
                     <div key={p.id} className="text-[10px] text-amber-900">
-                      <span className="font-semibold line-clamp-1">{p.name}</span>
+                      <span className="font-semibold line-clamp-1 text-amber-700/70">{p.name}</span>
                       {p.company && (
                         <span className="opacity-70 ml-0.5">• {p.company}</span>
                       )}
@@ -150,10 +128,7 @@ export function IdeationPolygon({
                 </div>
               ) : (
                 <div className="space-y-0.5">
-                  <p className="text-[9px] font-semibold text-amber-700/70 uppercase tracking-wider">
-                    Created by
-                  </p>
-                  <div className="text-[11px] text-amber-900">
+                  <div className="text-[11px] font-semibold text-amber-700/70">
                     <span className="font-bold line-clamp-1">{ideation?.creator?.name}</span>
                   </div>
                   {ideation?.creator?.company && (

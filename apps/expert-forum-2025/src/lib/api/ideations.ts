@@ -284,15 +284,27 @@ export class IdeationsAPI extends BaseAPI {
   /**
    * Get ideations for staff display with participants
    * Optimized for stage presentation - fetches limited ideations with creator and group member details
+   * Uses nested joins to fetch all data in a single query (no N+1 problem)
    */
   async getIdeationsForStaffDisplay(
     limit: number
   ): Promise<Array<Ideation & { creator: User; participants?: User[] }>> {
     try {
-      // Fetch ideations with creator join
+      // Fetch ideations with nested joins:
+      // - creator (direct FK)
+      // - group → group_members → participant (users)
       const { data, error } = await supabase
         .from('ideations')
-        .select('*, creator:users!creator_id(*)')
+        .select(`
+          *,
+          creator:users!creator_id(*),
+          group:groups!group_id(
+            id,
+            group_members(
+              participant:users!participant_id(*)
+            )
+          )
+        `)
         .order('submitted_at', { ascending: false })
         .limit(limit)
 
@@ -300,39 +312,37 @@ export class IdeationsAPI extends BaseAPI {
         throw error
       }
 
-      const ideations = (data || []) as Array<Ideation & { creator: User; participants?: User[] }>
+      // Transform the nested data structure to match expected output
+      const ideations = (data || []).map((item) => {
+        // Extract participants from nested group_members
+        let participants: User[] | undefined
 
-      // Fetch participants for group ideations
-      const ideationsWithParticipants = await Promise.all(
-        ideations.map(async (ideation) => {
-          if (ideation.is_group && ideation.group_id) {
-            // Fetch group members
-            const { data: membersData } = await supabase
-              .from('group_members')
-              .select('participant_id')
-              .eq('group_id', ideation.group_id)
-
-            if (membersData && membersData.length > 0) {
-              const participantIds = membersData.map((m) => m.participant_id)
-
-              const { data: participantsData } = await supabase
-                .from('users')
-                .select('*')
-                .in('id', participantIds)
-                .order('name', { ascending: true })
-
-              return {
-                ...ideation,
-                participants: participantsData as User[],
-              }
-            }
+        if (item.is_group && item.group) {
+          const groupData = item.group as {
+            id: string
+            group_members: Array<{ participant: User }>
           }
 
-          return ideation
-        })
-      )
+          if (groupData.group_members && groupData.group_members.length > 0) {
+            participants = groupData.group_members
+              .map((member) => member.participant)
+              .filter((p): p is User => p !== null)
+              .sort((a, b) => a.name.localeCompare(b.name))
+          }
+        }
 
-      return ideationsWithParticipants
+        // Return clean structure without nested group data
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { group, ...ideationData } = item
+
+        return {
+          ...ideationData,
+          creator: item.creator as User,
+          participants,
+        } as Ideation & { creator: User; participants?: User[] }
+      })
+
+      return ideations
     } catch (error) {
       this.handleError(error, 'getIdeationsForStaffDisplay')
     }
