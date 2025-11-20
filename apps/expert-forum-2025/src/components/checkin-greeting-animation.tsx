@@ -44,28 +44,22 @@ function CheckinGreetingAnimation({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-lg border border-amber-400/30 shadow-2xl bg-gradient-to-br from-slate-950 via-amber-950/30 to-slate-950 overflow-hidden"
+          className="sm:max-w-lg border-2 border-white/30 shadow-2xl shadow-primary/30 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 overflow-hidden"
           showCloseButton={false}
         >
-          {/* Subtle background effects */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {/* Subtle gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-amber-900/10 to-transparent" />
-          </div>
-
           <div className="relative text-center space-y-6 py-6">
             {/* VIP Crown Icon with animation */}
             <div className="relative flex justify-center">
               <div className="relative">
                 {/* Subtle glow */}
                 <div
-                  className={`absolute inset-0 -m-3 rounded-full bg-amber-400/20 blur-xl transition-all duration-1000 ${
+                  className={`absolute inset-0 -m-3 rounded-full bg-amber-400/30 blur-xl transition-all duration-1000 ${
                     isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
                   }`}
                 />
                 {/* Icon container */}
                 <div
-                  className={`relative rounded-full bg-gradient-to-br from-amber-500 to-amber-600 p-5 shadow-lg shadow-amber-500/30 transition-all duration-700 ${
+                  className={`relative rounded-full bg-gradient-to-br from-amber-400 to-yellow-500 p-5 shadow-lg shadow-amber-500/50 transition-all duration-700 ${
                     isAnimating ? 'scale-100 rotate-0' : 'scale-0 rotate-180'
                   }`}
                 >
@@ -73,12 +67,12 @@ function CheckinGreetingAnimation({
                 </div>
                 {/* Subtle decorative elements */}
                 <Star
-                  className={`size-4 text-amber-400/70 absolute -top-2 -right-2 transition-all duration-500 delay-300 ${
+                  className={`size-4 text-amber-300 absolute -top-2 -right-2 transition-all duration-500 delay-300 ${
                     isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
                   }`}
                 />
                 <Star
-                  className={`size-3 text-amber-400/60 absolute -bottom-1 -left-2 transition-all duration-500 delay-500 ${
+                  className={`size-3 text-yellow-300 absolute -bottom-1 -left-2 transition-all duration-500 delay-500 ${
                     isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
                   }`}
                 />
@@ -91,7 +85,7 @@ function CheckinGreetingAnimation({
                 isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}
             >
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold tracking-wide">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/50 text-amber-300 text-xs font-semibold tracking-wide">
                 <Crown className="size-3" />
                 VIP GUEST
               </span>
@@ -103,7 +97,7 @@ function CheckinGreetingAnimation({
                 isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}
             >
-              <h2 className="text-xl font-semibold text-amber-400">
+              <h2 className="text-xl font-semibold text-amber-300">
                 Welcome, Distinguished Guest
               </h2>
               <p className="text-2xl font-bold text-white tracking-tight">
@@ -113,7 +107,7 @@ function CheckinGreetingAnimation({
 
             {/* Welcome text */}
             <p
-              className={`text-sm text-slate-400 transition-all duration-500 delay-500 ${
+              className={`text-sm text-white/70 transition-all duration-500 delay-500 ${
                 isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}
             >
@@ -129,7 +123,7 @@ function CheckinGreetingAnimation({
               <Button
                 onClick={handleConfirm}
                 size="lg"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-lg h-12 text-base"
+                className="w-full bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold shadow-lg h-12 text-base"
               >
                 <CheckCircle2 className="mr-2 size-5" />
                 Confirm Check-in
@@ -145,28 +139,22 @@ function CheckinGreetingAnimation({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-lg border border-primary/30 shadow-2xl bg-gradient-to-br from-slate-950 via-blue-950/30 to-slate-950 overflow-hidden"
+        className="sm:max-w-lg border-2 border-white/30 shadow-2xl shadow-primary/30 bg-gradient-to-r from-primary via-blue-600 to-cyan-500 overflow-hidden"
         showCloseButton={false}
       >
-        {/* Subtle background effects */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Subtle gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
-        </div>
-
         <div className="relative text-center space-y-6 py-6">
           {/* Success Icon with animation */}
           <div className="relative flex justify-center">
             <div className="relative">
               {/* Subtle glow */}
               <div
-                className={`absolute inset-0 -m-3 rounded-full bg-primary/20 blur-xl transition-all duration-1000 ${
+                className={`absolute inset-0 -m-3 rounded-full bg-white/20 blur-xl transition-all duration-1000 ${
                   isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-50'
                 }`}
               />
               {/* Icon container */}
               <div
-                className={`relative rounded-full bg-gradient-to-br from-primary to-blue-600 p-5 shadow-lg shadow-primary/30 transition-all duration-700 ${
+                className={`relative rounded-full bg-white/20 backdrop-blur-sm p-5 shadow-lg transition-all duration-700 ${
                   isAnimating ? 'scale-100 rotate-0' : 'scale-0 rotate-180'
                 }`}
               >
@@ -174,12 +162,12 @@ function CheckinGreetingAnimation({
               </div>
               {/* Subtle decorative elements */}
               <Sparkles
-                className={`size-4 text-primary/70 absolute -top-2 -right-2 transition-all duration-500 delay-300 ${
+                className={`size-4 text-white/70 absolute -top-2 -right-2 transition-all duration-500 delay-300 ${
                   isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
                 }`}
               />
               <Sparkles
-                className={`size-3 text-blue-400/60 absolute -bottom-1 -left-2 transition-all duration-500 delay-500 ${
+                className={`size-3 text-cyan-200 absolute -bottom-1 -left-2 transition-all duration-500 delay-500 ${
                   isAnimating ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
                 }`}
               />
@@ -192,10 +180,10 @@ function CheckinGreetingAnimation({
               isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             }`}
           >
-            <h2 className="text-xl font-semibold text-primary">
+            <h2 className="text-xl font-semibold text-white">
               Check-in Successful
             </h2>
-            <p className="text-base text-slate-400">
+            <p className="text-base text-white/70">
               Welcome,
             </p>
             <p className="text-2xl font-bold text-white tracking-tight">
@@ -205,7 +193,7 @@ function CheckinGreetingAnimation({
 
           {/* Welcome text */}
           <p
-            className={`text-sm text-slate-400 transition-all duration-500 delay-500 ${
+            className={`text-sm text-white/70 transition-all duration-500 delay-500 ${
               isAnimating ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
             }`}
           >
@@ -221,7 +209,7 @@ function CheckinGreetingAnimation({
             <Button
               onClick={handleConfirm}
               size="lg"
-              className="w-full bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg h-12 text-base"
+              className="w-full bg-white hover:bg-white/90 text-primary font-semibold shadow-lg h-12 text-base"
             >
               <CheckCircle2 className="mr-2 size-5" />
               Confirm
