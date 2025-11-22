@@ -1,1 +1,10 @@
-/*    /index.html   200
+/participant              /index.html  200
+/participant/booth        /index.html  200
+/participant/collaboration /index.html  200
+/admin                    /index.html  200
+/staff                    /index.html  200
+/staff/votes              /index.html  200
+/staff/draw               /index.html  200
+/staff/helpdesk           /index.html  200
+/staff/checkin            /index.html  200
+/staff/ideation           /index.html  200
