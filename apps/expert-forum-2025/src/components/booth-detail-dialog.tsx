@@ -115,7 +115,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <img
               src={boothVisualImage}
               alt={booth.name}
-              className="w-full h-auto"
+              className="w-full h-full object-contain"
             />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center">

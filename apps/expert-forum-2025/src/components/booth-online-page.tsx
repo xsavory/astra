@@ -242,7 +242,7 @@ function BoothOnlinePage({ user }: BoothOnlinePageProps) {
                       <img
                         src={boothVisualImage}
                         alt={booth.name}
-                        className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
                       <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-primary/5 to-cyan-500/10">
