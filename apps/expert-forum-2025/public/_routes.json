@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/assets/*",
+    "/*.css",
+    "/*.js",
+    "/*.png",
+    "/*.jpg",
+    "/*.jpeg",
+    "/*.ico",
+    "/*.svg",
+    "/*.txt"
+  ],
+  "fallback": {
+    "rewrite": "/index.html"
+  }
+}
