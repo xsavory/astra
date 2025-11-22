@@ -6,9 +6,8 @@ import useAuth from 'src/hooks/use-auth'
 import { useState } from 'react'
 
 import logo from 'src/assets/logo.png'
-import bgHeader from 'src/assets/bg-header.png'
-import headerOrnament from 'src/assets/header-ornament.png'
-// import robotImage from 'src/assets/robot-image.png'
+import bgHeader from 'src/assets/bg-header.webp'
+import headerOrnament from 'src/assets/header-ornament.webp'
 
 interface Props {
   children: React.ReactNode

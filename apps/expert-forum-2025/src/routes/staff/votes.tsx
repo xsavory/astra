@@ -22,8 +22,8 @@ import type { BoothWithVoteStats } from 'src/types/schema'
 import PageLoader from 'src/components/page-loader'
 import useAuth from 'src/hooks/use-auth'
 
-import bgImage from 'src/assets/background.png'
-import bgMobileImage from 'src/assets/background-mobile.png'
+import bgImage from 'src/assets/background.webp'
+import bgMobileImage from 'src/assets/background-mobile.webp'
 import logoHeadline from 'src/assets/logo-headline.png'
 
 export const Route = createFileRoute('/staff/votes')({

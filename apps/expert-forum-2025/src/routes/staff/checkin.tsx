@@ -21,10 +21,10 @@ import { VIP_EMAILS } from 'src/lib/constants'
 import useAuth from 'src/hooks/use-auth'
 import AppButton from 'src/components/app-button'
 
-import bgImage from 'src/assets/background.png'
-import bgMobileImage from 'src/assets/background-mobile.png'
+import bgImage from 'src/assets/background.webp'
+import bgMobileImage from 'src/assets/background-mobile.webp'
 import logoHeadline from 'src/assets/logo-headline.png'
-import robotImage from 'src/assets/robot-image.png'
+import robotImage from 'src/assets/robot-image.webp'
 
 export const Route = createFileRoute('/staff/checkin')({
   component: StaffCheckinPage,

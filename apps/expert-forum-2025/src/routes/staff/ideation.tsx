@@ -8,7 +8,7 @@ import api from 'src/lib/api'
 import AppButton from 'src/components/app-button'
 import IdeationPolygon from 'src/components/ideation-polygon'
 
-import bgImage from 'src/assets/background.png'
+import bgImage from 'src/assets/background.webp'
 import logoHeadline from 'src/assets/logo-headline.png'
 
 import type { Ideation, User } from 'src/types/schema'

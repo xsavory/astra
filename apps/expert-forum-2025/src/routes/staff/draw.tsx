@@ -26,8 +26,8 @@ import { MultiSlotDrawing } from 'src/components/draw-multi-slot-drawing'
 import { MultiSlotReveal } from 'src/components/draw-multi-slot-reveal'
 import { PRIZE_TEMPLATES, DEFAULT_TEMPLATE } from 'src/lib/constants'
 
-import bgImage from 'src/assets/background.png'
-import bgMobileImage from 'src/assets/background-mobile.png'
+import bgImage from 'src/assets/background.webp'
+import bgMobileImage from 'src/assets/background-mobile.webp'
 import logoHeadline from 'src/assets/logo-headline.png'
 
 export const Route = createFileRoute('/staff/draw')({
