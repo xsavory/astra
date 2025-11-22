@@ -1,8 +1,17 @@
 import type { PrizeTemplate } from 'src/types/schema'
 
-import boothMock1 from 'src/assets/booth-mock-1.png'
-import boothMock2 from 'src/assets/booth-mock-2.png'
-import boothMock3 from 'src/assets/booth-mock-3.png'
+import boothAA from 'src/assets/booths/AA.png'
+import boothAAL from 'src/assets/booths/AAL.png'
+import boothADM from 'src/assets/booths/ADM.png'
+import boothAHM from 'src/assets/booths/AHM.png'
+import boothAOP from 'src/assets/booths/AOP.png'
+import boothAGIT from 'src/assets/booths/AGIT.png'
+import boothIAMI from 'src/assets/booths/IAMI.png'
+import boothKRA from 'src/assets/booths/KRA.png'
+import boothPAMA from 'src/assets/booths/PAMA.png'
+import boothTTA from 'src/assets/booths/TTA.png'
+import boothUT from 'src/assets/booths/UT.png'
+import boothUTPE from 'src/assets/booths/UTPE.png'
 
 // Email Lists for Authentication
 export const ADMIN_EMAILS = [
@@ -134,12 +143,20 @@ export const COMPANY_OPTIONS = [
 // Booth Visual Images Mapping
 // Maps booth ID to visual image path from /public folder
 // Set to null for booths without images yet - will show placeholder
+// https://www.expertforum2025.com/participant/booth?booth_id=12a52905-c6c5-408c-b12a-568c5a600eaf
 export const BOOTH_VISUAL_IMAGES: Record<string, string | null> = {
-  'a43092af-dfc2-40ff-85a2-6af8397d294f': boothMock1,
-  'f4c7a4e2-9513-42cb-94c0-3946e3ccffcd': boothMock2,
-  'c8d80f15-743c-4ca0-8bc2-ae25dae8bb6a': boothMock3,
-  'booth-004': null,
-  'booth-005': null,
+  '12a52905-c6c5-408c-b12a-568c5a600eaf': boothAHM,
+  '4da08db7-0db4-4b84-966c-ea9d974671c0': boothUTPE,
+  '610072db-c561-4de6-99c1-ea12d0e5aa63': boothPAMA,
+  '73dd86e3-b5c8-4a3a-b90c-b4abc0a09714': boothUT,
+  '78ef5a3e-4d60-4b3e-a139-1101ce041298': boothAA,
+  '81c20c06-1742-4e8e-97c4-277cdca9be91': boothTTA,
+  '8f31cc0b-7031-4a2c-9dc3-a762fc77f0d6': boothKRA,
+  '93f6eb05-6a66-47d6-964e-3393d3ef85ad': boothAAL,
+  '97458e29-dac0-40be-bcf5-a3d82c7848dc': boothAOP,
+  'a8508212-99b7-4a4f-9f88-a33415a7b370': boothAGIT,
+  'f96b982c-c5f6-4ab9-8e8f-e800d357dc07': boothIAMI,
+  'fcd6f56e-7b43-44a1-b3b4-adebbfad10bd': boothADM,
 } as const
 
 // Check-in Methods

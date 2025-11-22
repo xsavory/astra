@@ -210,7 +210,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
                 Loading...
               </DialogTitle>
               <DialogDescription>
-                Virtual Exhibition Booth
+                Exhibition Booth
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -272,7 +272,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
                 {booth?.name}
               </DialogTitle>
               <DialogDescription>
-                Virtual Exhibition Booth
+                Exhibition Booth
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
