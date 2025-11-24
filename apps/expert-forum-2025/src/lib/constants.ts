@@ -19,7 +19,8 @@ export const ADMIN_EMAILS = [
   'hafrinugraha@gmail.com',
   'herrywitoko@absoluteeo.com',
   'indy@absoluteeo.com',
-  'adi@absoluteeo.com'
+  'adi@absoluteeo.com',
+  'euis.dinahandayani@ai.astra.co.id'
 ] as const
 
 export const STAFF_EMAILS = [
