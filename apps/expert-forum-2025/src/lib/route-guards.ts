@@ -3,6 +3,25 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { AuthContextType } from 'src/contexts/auth'
 import type { User, Event } from 'src/types/schema'
 import api from 'src/lib/api'
+import whitelistedParticipants from 'src/lib/whitelisted-test-user'
+
+// Helper function to generate mock event for whitelisted users
+function getMockEventForWhitelistedUser(realEvent: Event): Event {
+  const today = new Date()
+  today.setHours(8, 0, 0, 0) // Set to 8 AM today
+
+  return {
+    ...realEvent,
+    is_active: true,
+    event_dates: today.toISOString(),
+  }
+}
+
+// Helper function to check if user is whitelisted
+function isUserWhitelisted(email: string | undefined): boolean {
+  if (!email) return false
+  return whitelistedParticipants.includes(email)
+}
 
 /**
  * Route guard to ensure user is authenticated
@@ -158,7 +177,14 @@ export async function requireActiveEventAndCheckedIn(
   // Fetch event using React Query - will use cache if available
   const event = await queryClient.fetchQuery<Event>({
     queryKey: ['event'],
-    queryFn: () => api.events.getEvent(),
+    queryFn: async () => {
+      const realEvent = await api.events.getEvent()
+      // Mock event for whitelisted test users
+      if (isUserWhitelisted(user.email)) {
+        return getMockEventForWhitelistedUser(realEvent)
+      }
+      return realEvent
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes - won't refetch if data is fresh
   })
 

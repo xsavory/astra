@@ -29,6 +29,25 @@ import {
 import api from 'src/lib/api'
 import { BOOTH_THRESHOLD } from 'src/lib/constants'
 import type { User, BoothCheckin, Event } from 'src/types/schema'
+import whitelistedParticipants from 'src/lib/whitelisted-test-user'
+
+// Helper function to generate mock event for whitelisted users
+function getMockEventForWhitelistedUser(realEvent: Event): Event {
+  const today = new Date()
+  today.setHours(8, 0, 0, 0) // Set to 8 AM today
+
+  return {
+    ...realEvent,
+    is_active: true,
+    event_dates: today.toISOString(),
+  }
+}
+
+// Helper function to check if user is whitelisted
+function isUserWhitelisted(email: string | undefined): boolean {
+  if (!email) return false
+  return whitelistedParticipants.includes(email)
+}
 
 export const Route = createFileRoute('/participant/')({
   component: ParticipantIndexPage,
@@ -137,8 +156,16 @@ function ParticipantIndexPage() {
   // Fetch event data to check if event is active
   // Uses same query key as route guard - will use cached data
   const { data: event, isLoading: loadingEvent } = useQuery<Event>({
+    enabled: !!user,
     queryKey: ['event'],
-    queryFn: () => api.events.getEvent(),
+    queryFn: async () => {
+      const realEvent = await api.events.getEvent()
+      // Mock event for whitelisted test users
+      if (isUserWhitelisted(user?.email)) {
+        return getMockEventForWhitelistedUser(realEvent)
+      }
+      return realEvent
+    },
     staleTime: 1000 * 60 * 5, // 5 minutes - match route guard staleTime
   })
 

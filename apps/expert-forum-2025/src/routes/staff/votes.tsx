@@ -18,9 +18,28 @@ import {
 } from '@repo/react-components/ui'
 import { useIsMobile } from '@repo/react-components/hooks'
 import api from 'src/lib/api'
-import type { BoothWithVoteStats } from 'src/types/schema'
+import type { BoothWithVoteStats, Event } from 'src/types/schema'
 import PageLoader from 'src/components/page-loader'
 import useAuth from 'src/hooks/use-auth'
+import whitelistedParticipants from 'src/lib/whitelisted-test-user'
+
+// Helper function to generate mock event for whitelisted users
+function getMockEventForWhitelistedUser(realEvent: Event): Event {
+  const today = new Date()
+  today.setHours(8, 0, 0, 0) // Set to 8 AM today
+
+  return {
+    ...realEvent,
+    is_active: true,
+    event_dates: today.toISOString(),
+  }
+}
+
+// Helper function to check if user is whitelisted
+function isUserWhitelisted(email: string | undefined): boolean {
+  if (!email) return false
+  return whitelistedParticipants.includes(email)
+}
 
 import bgImage from 'src/assets/background.webp'
 import bgMobileImage from 'src/assets/background-mobile.webp'
@@ -60,9 +79,17 @@ function StaffVotesPage() {
   })
 
   // Fetch current event and voting state
-  const { data: event } = useQuery({
+  const { data: event } = useQuery<Event>({
+    enabled: !!user,
     queryKey: ['current-event'],
-    queryFn: () => api.events.getEvent(),
+    queryFn: async () => {
+      const realEvent = await api.events.getEvent()
+      // Mock event for whitelisted test users
+      if (isUserWhitelisted(user?.email)) {
+        return getMockEventForWhitelistedUser(realEvent)
+      }
+      return realEvent
+    },
     refetchInterval: REFRESH_INTERVAL,
   })
 
