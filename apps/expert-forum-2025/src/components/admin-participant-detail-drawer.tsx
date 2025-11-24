@@ -125,6 +125,14 @@ function AdminParticipantDetailDrawer({
                 <span className="text-sm text-muted-foreground">Registered</span>
                 <span className="text-sm font-medium">{formatDateTime(user.created_at)}</span>
               </div>
+
+              {/* Last Sign In */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Last Sign In</span>
+                <span className="text-sm font-medium">
+                  {user.last_sign_in_at ? formatDateTime(user.last_sign_in_at) : 'Never'}
+                </span>
+              </div>
             </div>
           </div>
 

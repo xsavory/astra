@@ -63,6 +63,9 @@ function SkeletonRow() {
         <Skeleton className="h-4 w-[120px]" />
       </TableCell>
       <TableCell>
+        <Skeleton className="h-4 w-[100px]" />
+      </TableCell>
+      <TableCell>
         <Skeleton className="h-5 w-[80px]" />
       </TableCell>
       <TableCell>
@@ -79,7 +82,7 @@ function SkeletonRow() {
 function EmptyState() {
   return (
     <TableRow>
-      <TableCell colSpan={7} className="h-32 text-center">
+      <TableCell colSpan={8} className="h-32 text-center">
         <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
           <User className="h-8 w-8" />
           <p className="text-sm">No participants found</p>
@@ -108,6 +111,18 @@ function AdminParticipantTable({
     return type === 'online' ? 'default' : 'secondary'
   }
 
+  // Format date for last sign in
+  const formatLastSignIn = (dateString?: string | null) => {
+    if (!dateString) return 'Never'
+    const date = new Date(dateString)
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date)
+  }
+
   return (
     <div className="space-y-4">
       {/* Table Container with horizontal scroll */}
@@ -119,6 +134,7 @@ function AdminParticipantTable({
               <TableHead className='font-bold'>Email</TableHead>
               <TableHead className='font-bold'>Type</TableHead>
               <TableHead className='font-bold'>Company</TableHead>
+              <TableHead className='font-bold'>Last Sign In</TableHead>
               <TableHead className='font-bold'>Check-in</TableHead>
               <TableHead className='font-bold'>Eligibility</TableHead>
               {!isHelpdesk && (
@@ -154,6 +170,9 @@ function AdminParticipantTable({
                     </Badge>
                   </TableCell>
                   <TableCell>{user.company || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatLastSignIn(user.last_sign_in_at)}
+                  </TableCell>
                   <TableCell>
                     {user.is_checked_in ? (
                       <Badge variant="default" className="gap-1">

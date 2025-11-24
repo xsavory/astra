@@ -37,6 +37,7 @@ export interface User {
   checked_in_by?: string | null // Staff ID who checked in the participant
   created_at: string
   updated_at: string
+  last_sign_in_at?: string | null // From auth.users via view
 }
 
 // Note: group_id removed - participants can be in multiple groups via group_members table

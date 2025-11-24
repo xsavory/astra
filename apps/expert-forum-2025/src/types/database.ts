@@ -61,6 +61,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "booth_checkins_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
       booth_votes: {
@@ -517,6 +524,46 @@ export type Database = {
           total_submissions: number | null
         }
         Relationships: []
+      }
+      users_with_auth: {
+        Row: {
+          auth_id: string | null
+          checked_in_by: string | null
+          company: string | null
+          created_at: string | null
+          division: string | null
+          email: string | null
+          event_checkin_method:
+            | Database["public"]["Enums"]["checkin_method"]
+            | null
+          event_checkin_time: string | null
+          id: string | null
+          is_checked_in: boolean | null
+          is_eligible_to_draw: boolean | null
+          last_sign_in_at: string | null
+          name: string | null
+          participant_type:
+            | Database["public"]["Enums"]["participant_type"]
+            | null
+          role: Database["public"]["Enums"]["user_role"] | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

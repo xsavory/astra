@@ -30,9 +30,9 @@ export class UsersAPI extends BaseAPI {
       const filters = options?.filters || {}
       const offset = (page - 1) * limit
 
-      // Build query
+      // Build query - use view to include last_sign_in_at from auth.users
       let query = supabase
-        .from('users')
+        .from('users_with_auth')
         .select('*', { count: 'exact' })
         .eq('role', 'participant')
         .order('created_at', { ascending: false })
@@ -88,8 +88,9 @@ export class UsersAPI extends BaseAPI {
    */
   async getAllUsersForExport(): Promise<User[]> {
     try {
+      // Use view to include last_sign_in_at from auth.users
       const { data, error } = await supabase
-        .from('users')
+        .from('users_with_auth')
         .select('*')
         .eq('role', 'participant')
         .order('created_at', { ascending: false })
