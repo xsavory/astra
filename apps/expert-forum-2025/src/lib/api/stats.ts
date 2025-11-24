@@ -1,6 +1,6 @@
 import { supabase } from './client'
 import { BaseAPI } from './base'
-import type { Stats } from 'src/types/schema'
+import type { Stats, SignInStats } from 'src/types/schema'
 
 /**
  * Stats API with Supabase
@@ -134,6 +134,31 @@ export class StatsAPI extends BaseAPI {
       return count || 0
     } catch (error) {
       this.handleError(error, 'getSubmissionsCount')
+    }
+  }
+
+  /**
+   * Get sign-in statistics (excluding test users)
+   * Returns total signed in participants broken down by type
+   */
+  async getSignInStats(): Promise<SignInStats> {
+    try {
+      const { data, error } = await supabase
+        .from('signin_stats')
+        .select('*')
+        .single()
+
+      if (error) {
+        throw error
+      }
+
+      return {
+        total: data?.total_signed_in || 0,
+        offline: data?.offline_signed_in || 0,
+        online: data?.online_signed_in || 0,
+      }
+    } catch (error) {
+      this.handleError(error, 'getSignInStats')
     }
   }
 }

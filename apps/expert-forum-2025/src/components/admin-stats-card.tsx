@@ -92,7 +92,7 @@ function AdminStatsCard({
       {/* Accent Line */}
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${styles.gradient} opacity-90`} />
 
-      <CardHeader className="relative flex flex-row items-center justify-between space-y-0">
+      <CardHeader className="relative flex flex-row items-center justify-between space-y-0 px-4">
         <CardTitle className="text-sm font-medium text-foreground">
           {title}
         </CardTitle>
@@ -103,7 +103,7 @@ function AdminStatsCard({
         )}
       </CardHeader>
 
-      <CardContent className="relative">
+      <CardContent className="relative px-4">
         <div className="text-3xl font-bold mb-3">
           <span className={`${styles.accentColor}`}>
             {value.toLocaleString('en-US')}
@@ -111,7 +111,7 @@ function AdminStatsCard({
         </div>
 
         {badges.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1">
             {badges.map((badge, index) => (
               <Badge
                 key={index}

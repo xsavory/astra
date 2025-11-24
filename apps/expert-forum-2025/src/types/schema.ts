@@ -305,6 +305,13 @@ export interface Stats {
   }
 }
 
+// Sign-in statistics (excluding test users)
+export interface SignInStats {
+  total: number
+  offline: number
+  online: number
+}
+
 // ==================== Pagination Types ====================
 
 export interface Pagination {

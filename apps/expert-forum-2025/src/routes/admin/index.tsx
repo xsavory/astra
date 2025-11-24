@@ -4,7 +4,7 @@
 
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download, Award, QrCodeIcon } from 'lucide-react'
+import { Users, UserCheck, Trophy, FileText, RefreshCw, Plus, Download, Award, QrCodeIcon, LogIn } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { toast, Switch, Label, Button } from '@repo/react-components/ui'
 
@@ -24,7 +24,7 @@ import AdminBoothCheckinsDialog from 'src/components/admin-booth-checkins-dialog
 import PageLoader from 'src/components/page-loader'
 import api from 'src/lib/api'
 import { exportParticipantsToCSV, exportSubmissionsToCSV } from 'src/lib/csv-export'
-import type { Stats, ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
+import type { Stats, SignInStats, ParticipantType, User, CreateUserInput, UpdateUserInput } from 'src/types/schema'
 
 export const Route = createFileRoute('/admin/')({
   component: AdminIndexPage,
@@ -86,6 +86,13 @@ function AdminIndexPage() {
   const { data: stats, isLoading: isStatsLoading, refetch, isFetching } = useQuery<Stats>({
     queryKey: ['adminStats'],
     queryFn: () => api.stats.getStats(),
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  })
+
+  // Fetch sign-in stats
+  const { data: signInStats, isLoading: isSignInStatsLoading, refetch: refetchSignInStats } = useQuery<SignInStats>({
+    queryKey: ['adminSignInStats'],
+    queryFn: () => api.stats.getSignInStats(),
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   })
 
@@ -373,6 +380,7 @@ function AdminIndexPage() {
             size="sm"
             onClick={() => {
               refetch()
+              refetchSignInStats()
               refetchParticipants()
             }}
             disabled={isFetching}
@@ -384,7 +392,7 @@ function AdminIndexPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         {/* Total Participants */}
         <AdminStatsCard
           title="Total Participants"
@@ -395,6 +403,18 @@ function AdminIndexPage() {
           ]}
           icon={Users}
           isLoading={isStatsLoading}
+        />
+        
+        {/* Signed In */}
+        <AdminStatsCard
+          title="Signed In"
+          value={signInStats?.total || 0}
+          badges={[
+            { label: 'Offline', value: signInStats?.offline || 0 },
+            { label: 'Online', value: signInStats?.online || 0 },
+          ]}
+          icon={LogIn}
+          isLoading={isSignInStatsLoading}
         />
 
         {/* Checked In */}

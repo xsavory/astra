@@ -525,6 +525,14 @@ export type Database = {
         }
         Relationships: []
       }
+      signin_stats: {
+        Row: {
+          total_signed_in: number | null
+          online_signed_in: number | null
+          offline_signed_in: number | null
+        }
+        Relationships: []
+      }
       users_with_auth: {
         Row: {
           auth_id: string | null
