@@ -152,9 +152,9 @@ function StaffVotesPage() {
     sessionStorage.setItem('previous-booth-votes', JSON.stringify(boothsWithVotes))
   }, [boothsWithVotes])
 
-  // Get top 3 booths
-  const topThree = boothsWithVotes.slice(0, 3)
-  const remainingBooths = boothsWithVotes.slice(3)
+  // Get winner (rank 1) and all other booths
+  const winner = boothsWithVotes[0]
+  const remainingBooths = boothsWithVotes.slice(1)
 
   if (isLoading) {
     return <PageLoader />
@@ -256,7 +256,7 @@ function StaffVotesPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="container px-4 py-4 mx-auto h-screen relative z-10 flex flex-col">
+      <div className="container py-4 mx-auto h-screen relative z-10 flex flex-col">
         {/* Logo */}
         <div className="flex justify-center shrink-0">
           <img
@@ -291,43 +291,22 @@ function StaffVotesPage() {
         </div>
 
         {/* Content Area - Fixed Height */}
-        <div className="flex-1 max-w-7xl mx-auto w-full overflow-hidden flex flex-col gap-6">
-          {/* Top 3 Podium */}
+        <div className="flex-1 mx-auto w-full overflow-hidden flex flex-col gap-6">
+          {/* Winner Podium - Rank 1 Only */}
           <div className="shrink-0">
-            <div className="grid grid-cols-3 gap-3 items-end">
-              {/* 2nd Place - Left */}
-              {topThree[1] && (
+            {winner && (
+              <div className="max-w-md mx-auto">
                 <PodiumCard
-                  booth={topThree[1]}
-                  rank={2}
-                  color="silver"
-                  isAnimating={animatingBoothIds.has(topThree[1].id)}
-                />
-              )}
-
-              {/* 1st Place - Center (Tallest) */}
-              {topThree[0] && (
-                <PodiumCard
-                  booth={topThree[0]}
+                  booth={winner}
                   rank={1}
                   color="gold"
-                  isAnimating={animatingBoothIds.has(topThree[0].id)}
+                  isAnimating={animatingBoothIds.has(winner.id)}
                 />
-              )}
-
-              {/* 3rd Place - Right */}
-              {topThree[2] && (
-                <PodiumCard
-                  booth={topThree[2]}
-                  rank={3}
-                  color="bronze"
-                  isAnimating={animatingBoothIds.has(topThree[2].id)}
-                />
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Remaining Booths - Compact Grid */}
+          {/* All Other Booths - Compact Grid */}
           {remainingBooths.length > 0 && (
             <div className="flex-1 min-h-0">
               <div className="grid grid-cols-3 gap-3 h-[calc(100%-2rem)] content-start overflow-hidden">
@@ -384,22 +363,22 @@ function PodiumCard({ booth, rank, color, isAnimating }: PodiumCardProps) {
       boothNameFont: 'text-3xl', 
     },
     silver: {
-      gradient: 'from-slate-300 via-gray-200 to-slate-400',
+      gradient: 'bg-gradient-to-r from-primary to-cyan-600/80 border-gray-300',
       gradientHover: 'from-slate-400 via-gray-300 to-slate-500',
       shadow: 'shadow-slate-500/50',
       glow: 'shadow-slate-400/30',
-      text: 'text-slate-800',
-      height: 'h-[130px]',
+      text: 'text-white',
+      height: 'h-[100px]',
       rankFont: 'text-[120px] leading-[100px]',
       boothNameFont: 'text-xl',
     },
     bronze: {
-      gradient: 'from-slate-300 via-gray-200 to-slate-400',
+      gradient: 'bg-gradient-to-r from-primary to-cyan-600/80 border-gray-300',
       gradientHover: 'from-slate-400 via-gray-300 to-slate-500',
       shadow: 'shadow-slate-500/50',
       glow: 'shadow-slate-400/30',
-      text: 'text-slate-800',
-      height: 'h-[130px]',
+      text: 'text-white',
+      height: 'h-[100px]',
       rankFont: 'text-[120px] leading-[100px]',
       boothNameFont: 'text-xl',
     },
