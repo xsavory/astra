@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react'
 import { Check, RotateCcw } from 'lucide-react'
-import { Button } from '@repo/react-components/ui'
+import { Button, Badge } from '@repo/react-components/ui'
 import { cn } from '@repo/react-components/lib'
-import type { User } from 'src/types/schema'
+import type { User, PrizeInfo } from 'src/types/schema'
 import { DrawSlotCard } from './draw-slot-card'
 
 interface MultiSlotRevealProps {
-  winners: Array<{ slotNumber: number; participant: User }>
+  winners: Array<{
+    slotNumber: number
+    participant: User
+    prizeInfo?: PrizeInfo // Prize info for this winner (online draws)
+  }>
   templateName: string
+  prizeName?: string // Single prize name for offline draws
   onConfirm: () => void
   onRedraw: () => void
 }
 
 export function MultiSlotReveal({
   winners,
+  prizeName,
   onConfirm,
   onRedraw,
 }: MultiSlotRevealProps) {
@@ -38,22 +44,57 @@ export function MultiSlotReveal({
     return 'text-xl'
   }
 
+  // Category badge colors for online multi-prize draws
+  const getCategoryColor = (category?: string) => {
+    switch (category) {
+      case 'grand':
+        return 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white'
+      case 'major':
+        return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+      case 'minor':
+        return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+      default:
+        return 'bg-gray-500 text-white'
+    }
+  }
+
   return (
     <div className="space-y-6 w-full">
+      {/* Single Prize Name (for offline draws) */}
+      {prizeName && winners.length === 1 && (
+        <div className="text-center">
+          <h3 className="text-4xl font-bold bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">
+            {prizeName}
+          </h3>
+        </div>
+      )}
+
       {/* Winner Cards */}
       <div
         className={cn(
-          `w-full grid gap-2 mx-auto ${getWinnerFontSize(winners.length)} ${getGridColumns(winners.length)}`,
+          `w-full grid gap-6 mx-auto ${getWinnerFontSize(winners.length)} ${getGridColumns(winners.length)}`,
           'transition-all duration-700 delay-300',
         )}
       >
-        {winners.map(({ slotNumber, participant }) => (
-          <DrawSlotCard
-            key={slotNumber}
-            participant={participant}
-            isAnimating={false}
-            isRevealed={true}
-          />
+        {winners.map(({ slotNumber, participant, prizeInfo }) => (
+          <div key={slotNumber} className="space-y-2">
+            {/* Prize name for each winner (for online multi-prize draws) */}
+            {prizeInfo && (
+              <div className="text-center space-y-1">
+                <p className="text-sm font-semibold text-gray-700">
+                  <Badge className={`text-base ${getCategoryColor(prizeInfo.category)}`}>
+                    {prizeInfo.prizeName}
+                  </Badge>
+                </p>
+              </div>
+            )}
+
+            <DrawSlotCard
+              participant={participant}
+              isAnimating={false}
+              isRevealed={true}
+            />
+          </div>
         ))}
       </div>
 

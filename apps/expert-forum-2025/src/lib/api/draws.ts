@@ -1,6 +1,6 @@
 import { supabase } from './client'
 import { BaseAPI } from './base'
-import type { User, DrawLog, DrawLogWithDetails } from 'src/types/schema'
+import type { User, DrawLog, DrawLogWithDetails, ParticipantType, WinnerWithDetails } from 'src/types/schema'
 
 /**
  * Draws API with Supabase
@@ -52,6 +52,52 @@ export class DrawsAPI extends BaseAPI {
   }
 
   /**
+   * Get eligible participants for draw by participant type (online/offline)
+   * Returns participants who:
+   * - Have is_eligible_to_draw = true
+   * - Have NOT won in any previous draws
+   * - Match the specified participant_type
+   */
+  async getEligibleParticipantsByType(type: ParticipantType): Promise<User[]> {
+    try {
+      // Get all participant IDs who have won before
+      const { data: winners, error: winnersError } = await supabase
+        .from('draw_winners')
+        .select('participant_id')
+
+      if (winnersError) {
+        throw winnersError
+      }
+
+      const previousWinnerIds = (winners || []).map((w) => w.participant_id)
+
+      // Get eligible participants, excluding previous winners and filtering by type
+      let query = supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'participant')
+        .eq('is_eligible_to_draw', true)
+        .eq('participant_type', type)
+        .order('name', { ascending: true })
+
+      // Exclude previous winners if any exist
+      if (previousWinnerIds.length > 0) {
+        query = query.not('id', 'in', `(${previousWinnerIds.join(',')})`)
+      }
+
+      const { data, error } = await query
+
+      if (error) {
+        throw error
+      }
+
+      return (data || []) as User[]
+    } catch (error) {
+      this.handleError(error, 'getEligibleParticipantsByType')
+    }
+  }
+
+  /**
    * Submit draw results
    * Creates a draw_log entry and inserts winners into draw_winners table
    */
@@ -60,7 +106,10 @@ export class DrawsAPI extends BaseAPI {
     staffId?: string,
     prizeTemplate?: string,
     prizeName?: string,
-    slotCount?: number
+    slotCount?: number,
+    participantType?: ParticipantType,
+    prizeCategory?: string,
+    prizeNames?: (string | null)[] // Array of prize names per winner (for online multi-prize draws)
   ): Promise<DrawLog> {
     try {
       // Validate winners array
@@ -87,6 +136,8 @@ export class DrawsAPI extends BaseAPI {
           prize_template: prizeTemplate || null,
           prize_name: prizeName || null,
           slot_count: slotCount || winnerIds.length,
+          participant_type: participantType || null,
+          prize_category: prizeCategory || null,
         })
         .select()
         .single()
@@ -100,9 +151,12 @@ export class DrawsAPI extends BaseAPI {
       }
 
       // Insert winners into draw_winners table
-      const winnersData = winnerIds.map((participantId) => ({
+      const winnersData = winnerIds.map((participantId, index) => ({
         draw_log_id: drawLogData.id,
         participant_id: participantId,
+        // For offline: use the main prize_name for all winners
+        // For online: use specific prize name for each winner
+        prize_name: prizeNames && prizeNames[index] ? prizeNames[index] : prizeName || null,
       }))
 
       const { error: winnersError } = await supabase
@@ -161,21 +215,22 @@ export class DrawsAPI extends BaseAPI {
         throw new Error('Draw log not found')
       }
 
-      // Get winners with user details using join
+      // Get winners with prize_name from draw_winners
       const { data: winnersData, error: winnersError } = await supabase
         .from('draw_winners')
-        .select('participant_id')
+        .select('participant_id, prize_name')
         .eq('draw_log_id', drawLogId)
 
       if (winnersError) {
         throw winnersError
       }
 
-      // Get full user details for each winner
-      const winnerIds = (winnersData || []).map((w) => w.participant_id)
-      let winners: User[] = []
+      // Get full user details for each winner and attach prize_name
+      const winnerRecords = winnersData || []
+      let winners: WinnerWithDetails[] = []
 
-      if (winnerIds.length > 0) {
+      if (winnerRecords.length > 0) {
+        const winnerIds = winnerRecords.map((w) => w.participant_id)
         const { data: usersData, error: usersError } = await supabase
           .from('users')
           .select('*')
@@ -185,7 +240,14 @@ export class DrawsAPI extends BaseAPI {
           throw usersError
         }
 
-        winners = (usersData || []) as User[]
+        // Combine user data with prize_name
+        winners = (usersData || []).map((user) => {
+          const winnerRecord = winnerRecords.find(w => w.participant_id === user.id)
+          return {
+            ...user,
+            prize_name: winnerRecord?.prize_name || null,
+          } as WinnerWithDetails
+        })
       }
 
       // Get staff details if staff_id exists

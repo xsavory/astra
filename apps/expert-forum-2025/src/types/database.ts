@@ -104,6 +104,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "booth_votes_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
       booth_votes_results: {
@@ -156,6 +163,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "booth_votes_results_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
       booths: {
@@ -195,6 +209,10 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          participant_type:
+            | Database["public"]["Enums"]["participant_type"]
+            | null
+          prize_category: string | null
           prize_name: string | null
           prize_template: string | null
           slot_count: number | null
@@ -203,6 +221,10 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          participant_type?:
+            | Database["public"]["Enums"]["participant_type"]
+            | null
+          prize_category?: string | null
           prize_name?: string | null
           prize_template?: string | null
           slot_count?: number | null
@@ -211,6 +233,10 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          participant_type?:
+            | Database["public"]["Enums"]["participant_type"]
+            | null
+          prize_category?: string | null
           prize_name?: string | null
           prize_template?: string | null
           slot_count?: number | null
@@ -224,6 +250,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "draw_logs_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
       draw_winners: {
@@ -232,18 +265,21 @@ export type Database = {
           draw_log_id: string
           id: string
           participant_id: string
+          prize_name: string | null
         }
         Insert: {
           created_at?: string
           draw_log_id: string
           id?: string
           participant_id: string
+          prize_name?: string | null
         }
         Update: {
           created_at?: string
           draw_log_id?: string
           id?: string
           participant_id?: string
+          prize_name?: string | null
         }
         Relationships: [
           {
@@ -260,12 +296,20 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "draw_winners_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
       events: {
         Row: {
           created_at: string
           date: string
+          event_dates: string | null
           id: string
           is_active: boolean
           is_votes_lock: boolean
@@ -277,6 +321,7 @@ export type Database = {
         Insert: {
           created_at?: string
           date: string
+          event_dates?: string | null
           id?: string
           is_active?: boolean
           is_votes_lock?: boolean
@@ -288,6 +333,7 @@ export type Database = {
         Update: {
           created_at?: string
           date?: string
+          event_dates?: string | null
           id?: string
           is_active?: boolean
           is_votes_lock?: boolean
@@ -332,6 +378,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "group_members_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
       groups: {
@@ -368,6 +421,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "groups_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
             referencedColumns: ["id"]
           },
         ]
@@ -418,6 +478,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ideations_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
             referencedColumns: ["id"]
           },
           {
@@ -501,6 +568,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "users_checked_in_by_fkey"
+            columns: ["checked_in_by"]
+            isOneToOne: false
+            referencedRelation: "users_with_auth"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -517,19 +591,19 @@ export type Database = {
         }
         Relationships: []
       }
+      signin_stats: {
+        Row: {
+          offline_signed_in: number | null
+          online_signed_in: number | null
+          total_signed_in: number | null
+        }
+        Relationships: []
+      }
       submission_stats: {
         Row: {
           group_submissions: number | null
           individual_submissions: number | null
           total_submissions: number | null
-        }
-        Relationships: []
-      }
-      signin_stats: {
-        Row: {
-          total_signed_in: number | null
-          online_signed_in: number | null
-          offline_signed_in: number | null
         }
         Relationships: []
       }

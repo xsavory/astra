@@ -230,6 +230,8 @@ export interface CreateIdeationInput {
 
 // ==================== Draw Log Types ====================
 
+export type PrizeCategory = 'grand' | 'major' | 'minor'
+
 // Prize Template
 export interface PrizeTemplate {
   id: string
@@ -237,6 +239,16 @@ export interface PrizeTemplate {
   slotCount: number
   description: string
   icon: string
+  participantType: ParticipantType // 'online' | 'offline'
+  category: PrizeCategory // 'grand' | 'major' | 'minor'
+  prizeId: string // Unique prize identifier (e.g., "ipad_11_2025")
+}
+
+// Individual Prize Info (for online multi-prize draws)
+export interface PrizeInfo {
+  prizeId: string
+  prizeName: string
+  category: PrizeCategory
 }
 
 // Draw Slot for tracking individual slot state
@@ -245,6 +257,7 @@ export interface DrawSlot {
   selectedWinnerId: string | null
   animatingParticipantId: string | null
   isRevealed: boolean
+  prizeInfo?: PrizeInfo // Prize info for this specific slot (used in online draws)
 }
 
 // Cached Draw Session for localStorage
@@ -253,9 +266,12 @@ export interface CachedDrawSession {
   templateId: string
   templateName: string
   slotCount: number
+  participantType: ParticipantType // 'online' | 'offline'
+  prizeCategory: PrizeCategory // 'grand' | 'major' | 'minor'
   winners: Array<{
     slotNumber: number
     participant: User
+    prizeInfo?: PrizeInfo // Prize info for this winner (used in online draws)
   }>
   createdAt: string
   status: 'pending' | 'submitted'
@@ -267,6 +283,8 @@ export interface DrawLog {
   prize_template?: string | null // Template ID (e.g., "motor-5")
   prize_name?: string | null // Prize display name (e.g., "Motor")
   slot_count?: number | null // Number of winners in this session
+  participant_type?: ParticipantType | null // Type of participant (online/offline)
+  prize_category?: string | null // Category of prize (grand/major/minor)
   created_at: string
 }
 
@@ -275,12 +293,18 @@ export interface DrawWinner {
   id: string
   draw_log_id: string
   participant_id: string
+  prize_name?: string | null // Specific prize this winner received
   created_at: string
+}
+
+// Winner with User details and prize info
+export interface WinnerWithDetails extends User {
+  prize_name?: string | null // Prize name from draw_winners table
 }
 
 // Draw Log with populated winners
 export interface DrawLogWithDetails extends DrawLog {
-  winners?: User[]
+  winners?: WinnerWithDetails[]
   staff?: User
 }
 

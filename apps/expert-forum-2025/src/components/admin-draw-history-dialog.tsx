@@ -42,7 +42,7 @@ export function AdminDrawHistoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh]">
+      <DialogContent className="max-w-6xl! max-h-[85vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-primary" />
@@ -82,6 +82,28 @@ export function AdminDrawHistoryDialog({
                               {draw.prize_name}
                             </Badge>
                           )}
+                          {draw.participant_type && (
+                            <Badge
+                              variant="outline"
+                              className={draw.participant_type === 'online' ? 'border-cyan-500 text-cyan-700' : 'border-purple-500 text-purple-700'}
+                            >
+                              {draw.participant_type}
+                            </Badge>
+                          )}
+                          {draw.prize_category && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                draw.prize_category === 'grand'
+                                  ? 'border-amber-500 text-amber-700'
+                                  : draw.prize_category === 'major'
+                                  ? 'border-blue-500 text-blue-700'
+                                  : 'border-green-500 text-green-700'
+                              }
+                            >
+                              {draw.prize_category}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {new Date(draw.created_at).toLocaleString('en-US', {
@@ -111,6 +133,11 @@ export function AdminDrawHistoryDialog({
                             {winner.company && (
                               <p className="text-xs text-muted-foreground truncate">
                                 {winner.company}
+                              </p>
+                            )}
+                            {winner.prize_name && (
+                              <p className="text-xs font-semibold text-primary mt-1 truncate">
+                                {winner.prize_name}
                               </p>
                             )}
                           </div>

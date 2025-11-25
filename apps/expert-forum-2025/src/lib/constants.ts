@@ -200,38 +200,130 @@ export const DATE_FORMATS = {
   ISO: "yyyy-MM-dd'T'HH:mm:ss.SSSxxx",
 } as const
 
-export const PRIZE_TEMPLATES: PrizeTemplate[] = [
+// ==================== Prize Templates ====================
+// Offline Prizes (Individual draws - 1 winner per draw)
+export const OFFLINE_PRIZE_TEMPLATES: PrizeTemplate[] = [
   {
-    id: 'motor-5',
-    name: 'Motor',
-    slotCount: 5,
-    description: '5 Pemenang Motor',
-    icon: 'Bike',
-  },
-  {
-    id: 'handphone-10',
-    name: 'Handphone',
-    slotCount: 10,
-    description: '10 Pemenang Handphone',
-    icon: 'Smartphone',
-  },
-  {
-    id: 'mobil-1',
-    name: 'Mobil',
+    id: 'offline-ipad-11-2025',
+    name: 'iPad 11 2025 128GB',
+    prizeId: 'ipad_11_2025',
     slotCount: 1,
-    description: '1 Pemenang Mobil',
-    icon: 'Car',
+    description: 'Grand Prize - iPad 11 2025 128GB',
+    icon: 'Tablet',
+    participantType: 'offline',
+    category: 'grand',
   },
   {
-    id: 'voucher-3',
-    name: 'Voucher',
-    slotCount: 3,
-    description: '3 Pemenang Voucher',
-    icon: 'Gift',
+    id: 'offline-tcl-qled-40',
+    name: 'TCL Ultimate QLED FHD TV 40 inch',
+    prizeId: 'tcl_qled_40',
+    slotCount: 1,
+    description: 'Major Prize - TCL TV 40"',
+    icon: 'Tv',
+    participantType: 'offline',
+    category: 'major',
+  },
+  {
+    id: 'offline-huawei-freeclip',
+    name: 'HUAWEI FreeClip Open-Ear',
+    prizeId: 'huawei_freeclip',
+    slotCount: 1,
+    description: 'Major Prize - HUAWEI FreeClip',
+    icon: 'Headphones',
+    participantType: 'offline',
+    category: 'major',
+  },
+  {
+    id: 'offline-xiaomi-robot-e5',
+    name: 'Xiaomi Robot Vacuum E5',
+    prizeId: 'xiaomi_robot_e5',
+    slotCount: 1,
+    description: 'Major Prize - Xiaomi Robot Vacuum',
+    icon: 'Bot',
+    participantType: 'offline',
+    category: 'major',
+  },
+  {
+    id: 'offline-hydroflask-24',
+    name: 'Hydro Flask 24oz',
+    prizeId: 'hydroflask_24',
+    slotCount: 1,
+    description: 'Minor Prize - Hydro Flask 24oz',
+    icon: 'Coffee',
+    participantType: 'offline',
+    category: 'minor',
+  },
+  {
+    id: 'offline-bolde-coffee-maker',
+    name: 'BOLDe Digital Coffee Maker Fontana',
+    prizeId: 'bolde_coffee_maker',
+    slotCount: 1,
+    description: 'Minor Prize - BOLDe Coffee Maker',
+    icon: 'Coffee',
+    participantType: 'offline',
+    category: 'minor',
+  },
+  {
+    id: 'offline-huawei-band-10',
+    name: 'HUAWEI Band 10',
+    prizeId: 'huawei_band_10',
+    slotCount: 1,
+    description: 'Minor Prize - HUAWEI Band 10',
+    icon: 'Watch',
+    participantType: 'offline',
+    category: 'minor',
   },
 ]
 
-export const DEFAULT_TEMPLATE = PRIZE_TEMPLATES[0]!
+// Online Prizes (Simultaneous draw - all prizes drawn at once)
+// Each slot in the online template represents a different prize
+export const ONLINE_PRIZES_DATA = [
+  {
+    prizeId: 'xiaomi_google_tv_32',
+    prizeName: 'Xiaomi Google TV A 32 Pro',
+    category: 'major' as const,
+  },
+  {
+    prizeId: 'shokz_openmove',
+    prizeName: 'Shokz OpenMove',
+    category: 'major' as const,
+  },
+  {
+    prizeId: 'samsung_fit3',
+    prizeName: 'Samsung Galaxy Fit3',
+    category: 'major' as const,
+  },
+  {
+    prizeId: 'hydroflask_21',
+    prizeName: 'Hydro Flask 21oz',
+    category: 'minor' as const,
+  },
+  {
+    prizeId: 'bolde_air_fryer',
+    prizeName: 'BOLDe Smart Air Fryer',
+    category: 'minor' as const,
+  },
+]
+
+// Online template - draws all 5 prizes simultaneously
+export const ONLINE_PRIZE_TEMPLATE: PrizeTemplate = {
+  id: 'online-all-prizes',
+  name: 'Online Prizes',
+  prizeId: 'online_all_prizes',
+  slotCount: 5,
+  description: '5 Online Winners - Multiple Prizes',
+  icon: 'Gift',
+  participantType: 'online',
+  category: 'major', // Mixed category (has both major and minor)
+}
+
+// Combined prize templates for selector
+export const PRIZE_TEMPLATES: PrizeTemplate[] = [
+  ...OFFLINE_PRIZE_TEMPLATES,
+  ONLINE_PRIZE_TEMPLATE,
+]
+
+export const DEFAULT_TEMPLATE = OFFLINE_PRIZE_TEMPLATES[0]!
 
 // Helper function to check if email is admin
 export const isAdminEmail = (email: string): boolean => {

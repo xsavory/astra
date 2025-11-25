@@ -36,7 +36,7 @@ export function DrawSlotCard({
             <div className="text-center space-y-1">
               <p className="font-bold text-white">{participant.name}</p>
               {participant.company && (
-                <p className="text-slate-100 text-lg">
+                <p className="text-slate-100 text-base">
                   {participant.company}
                 </p>
               )}
@@ -58,7 +58,7 @@ export function DrawSlotCard({
           <div className="text-center space-y-1">
             <p className="font-bold text-white">{participant.name}</p>
             {participant.company && (
-              <p className="text-slate-100 text-lg">
+              <p className="text-slate-100 text-base">
                 {participant.company}
               </p>
             )}

@@ -24,7 +24,7 @@ import PageLoader from 'src/components/page-loader'
 import { TemplateSelector } from 'src/components/draw-template-selector'
 import { MultiSlotDrawing } from 'src/components/draw-multi-slot-drawing'
 import { MultiSlotReveal } from 'src/components/draw-multi-slot-reveal'
-import { PRIZE_TEMPLATES, DEFAULT_TEMPLATE } from 'src/lib/constants'
+import { ONLINE_PRIZES_DATA, ONLINE_PRIZE_TEMPLATE } from 'src/lib/constants'
 
 import bgImage from 'src/assets/background.webp'
 import bgMobileImage from 'src/assets/background-mobile.webp'
@@ -47,16 +47,20 @@ function StaffDrawPage() {
 
   // State
   const [drawState, setDrawState] = useState<DrawState>('idle')
-  const [selectedTemplate, setSelectedTemplate] = useState<PrizeTemplate>(DEFAULT_TEMPLATE)
+  const [selectedTemplate, setSelectedTemplate] = useState<PrizeTemplate | null>(null)
   const [drawSlots, setDrawSlots] = useState<DrawSlot[]>([])
   const [cachedSessions, setCachedSessions] = useState<CachedDrawSession[]>([])
   const [showHistoryDialog, setShowHistoryDialog] = useState(false)
   const [showWinnersDialog, setShowWinnersDialog] = useState(false)
 
-  // Queries
+  // Queries - fetch eligible participants by type when template is selected
   const { data: eligibleParticipants = [], isLoading: isLoadingParticipants } = useQuery<User[]>({
-    queryKey: ['eligible-participants'],
-    queryFn: () => api.draws.getEligibleParticipants(),
+    queryKey: ['eligible-participants', selectedTemplate?.participantType],
+    queryFn: () => {
+      if (!selectedTemplate) return Promise.resolve([])
+      return api.draws.getEligibleParticipantsByType(selectedTemplate.participantType)
+    },
+    enabled: !!selectedTemplate,
   })
 
   const { data: drawHistory = [], isLoading: isLoadingHistory } = useQuery<DrawLogWithDetails[]>({
@@ -70,12 +74,18 @@ function StaffDrawPage() {
       const session = cachedSessions.find(s => s.id === params.sessionId)
       if (!session) throw new Error('Session not found')
 
+      // Extract prize names per winner (for online draws)
+      const prizeNames = session.winners.map(w => w.prizeInfo?.prizeName || null)
+
       return api.draws.submitDraw(
         session.winners.map(w => w.participant.id),
         user?.id,
         session.templateId,
         session.templateName,
-        session.slotCount
+        session.slotCount,
+        session.participantType,
+        session.prizeCategory,
+        prizeNames
       )
     },
     onSuccess: (_, variables) => {
@@ -119,8 +129,18 @@ function StaffDrawPage() {
     p => !allCachedWinnerIds.includes(p.id)
   )
 
-  // Start draw animation (multi-slot)
+  // Handle template selection
+  const handleSelectTemplate = (template: PrizeTemplate) => {
+    setSelectedTemplate(template)
+    setShowWinnersDialog(false)
+    setDrawState('idle')
+    setDrawSlots([])
+  }
+
+  // Start draw animation
   const handleStartDraw = useCallback(() => {
+    if (!selectedTemplate) return
+
     // Validation
     if (availableParticipants.length < selectedTemplate.slotCount) {
       alert(`Not enough participants! Need ${selectedTemplate.slotCount}, available ${availableParticipants.length}`)
@@ -129,12 +149,15 @@ function StaffDrawPage() {
 
     setDrawState('drawing')
 
-    // Initialize slots
+    // For online template, create slots with prize info
+    const isOnline = selectedTemplate.id === ONLINE_PRIZE_TEMPLATE.id
     const slots: DrawSlot[] = Array.from({ length: selectedTemplate.slotCount }, (_, i) => ({
       slotNumber: i + 1,
       selectedWinnerId: null,
       animatingParticipantId: null,
       isRevealed: false,
+      // Add prize info for online draws
+      prizeInfo: isOnline ? ONLINE_PRIZES_DATA[i] : undefined,
     }))
 
     setDrawSlots(slots)
@@ -218,10 +241,11 @@ function StaffDrawPage() {
   // Keyboard handler for spacebar
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      // Only trigger if spacebar is pressed and we're in idle state
+      // Only trigger if spacebar is pressed, template is selected, and we're in idle state
       if (
         e.code === 'Space' &&
         drawState === 'idle' &&
+        selectedTemplate &&
         availableParticipants.length >= selectedTemplate.slotCount
       ) {
         e.preventDefault() // Prevent page scroll
@@ -231,11 +255,11 @@ function StaffDrawPage() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [drawState, availableParticipants.length, selectedTemplate.slotCount, handleStartDraw])
+  }, [drawState, availableParticipants.length, selectedTemplate, handleStartDraw])
 
   // Confirm winners and cache session
   const handleConfirmWinners = () => {
-    if (drawSlots.length === 0) return
+    if (drawSlots.length === 0 || !selectedTemplate) return
 
     // Get all winners from slots
     const winners = drawSlots
@@ -245,6 +269,7 @@ function StaffDrawPage() {
         return {
           slotNumber: slot.slotNumber,
           participant: participant!,
+          prizeInfo: slot.prizeInfo, // Include prize info for online draws
         }
       })
 
@@ -256,6 +281,8 @@ function StaffDrawPage() {
       templateId: selectedTemplate.id,
       templateName: selectedTemplate.name,
       slotCount: selectedTemplate.slotCount,
+      participantType: selectedTemplate.participantType,
+      prizeCategory: selectedTemplate.category,
       winners,
       createdAt: new Date().toISOString(),
       status: 'pending',
@@ -267,6 +294,7 @@ function StaffDrawPage() {
     // Reset for next draw
     setDrawSlots([])
     setDrawState('idle')
+    setSelectedTemplate(null) // Reset template selection for next draw
   }
 
   // Redraw
@@ -304,10 +332,11 @@ function StaffDrawPage() {
       .map(slot => ({
         slotNumber: slot.slotNumber,
         participant: eligibleParticipants.find(p => p.id === slot.selectedWinnerId)!,
+        prizeInfo: slot.prizeInfo, // Include prize info for online draws
       }))
   }
 
-  if (isLoadingParticipants) {
+  if (isLoadingParticipants && selectedTemplate) {
     return <PageLoader />
   }
 
@@ -343,44 +372,44 @@ function StaffDrawPage() {
                 className="h-auto w-full max-w-[250px]"
               />
             </div>
-            <Card className="bg-transparentfrom-primary to-cyan-600 border-2 border-cyan-200 backdrop-blur shadow-2xl flex-1 flex flex-col overflow-hidden">
-              <div className="flex justify-between items-center shrink-0 z-15 px-6">
-                <h2 className='relative text-5xl bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent font-bold'>DOORPRIZE</h2>
+            <Card className="bg-transparent from-primary to-cyan-600 border-2 border-cyan-200 backdrop-blur shadow-2xl flex-1 flex flex-col overflow-hidden">
 
-                {/* Template Selector */}
-                <TemplateSelector
-                  templates={PRIZE_TEMPLATES}
-                  selectedTemplate={selectedTemplate}
-                  onSelectTemplate={setSelectedTemplate}
-                  disabled={drawState !== 'idle'}
-                />
-              </div>
+              <CardContent className="flex-1 flex flex-col justify-start overflow-hidden p-4 pt-24">
+                {/* No template selected - show instruction */}
+                {!selectedTemplate && drawState === 'idle' && (
+                  <div className="text-center space-y-4">
+                    
+                  </div>
+                )}
 
-              <CardContent className="flex-1 flex flex-col justify-center overflow-hidden p-4 pt-0">
-                {drawState === 'idle' && (
+                {/* Template selected but not enough participants */}
+                {selectedTemplate && drawState === 'idle' && availableParticipants.length < selectedTemplate.slotCount && (
                   <div className="space-y-8">
-                    {availableParticipants.length < selectedTemplate.slotCount ? (
-                      <Alert className="border-cyan-200 bg-white/90">
-                        <AlertDescription className="text-center">
-                          Not enough eligible participants. Need {selectedTemplate.slotCount}, available {availableParticipants.length}.
-                          {cachedSessions.length > 0 && " Please submit existing sessions."}
-                        </AlertDescription>
-                      </Alert>
-                    ) : (
-                      <>
-                        {/* Empty slot frames */}
-                        <MultiSlotDrawing
-                          slots={Array.from({ length: selectedTemplate.slotCount }, (_, i) => ({
-                            slotNumber: i + 1,
-                            selectedWinnerId: null,
-                            animatingParticipantId: null,
-                            isRevealed: false,
-                          }))}
-                          participants={new Map()}
-                          isDrawing={false}
-                        />
-                      </>
-                    )}
+                    <Alert className="border-cyan-200 bg-white/90">
+                      <AlertDescription className="text-center">
+                        Not enough eligible participants. Need {selectedTemplate.slotCount}, available {availableParticipants.length}.
+                        {cachedSessions.length > 0 && " Please submit existing sessions."}
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                )}
+
+                {/* Template selected and ready to draw */}
+                {selectedTemplate && drawState === 'idle' && availableParticipants.length >= selectedTemplate.slotCount && (
+                  <div className="space-y-8">
+                    {/* Empty slot frames */}
+                    <MultiSlotDrawing
+                      slots={Array.from({ length: selectedTemplate.slotCount }, (_, i) => ({
+                        slotNumber: i + 1,
+                        selectedWinnerId: null,
+                        animatingParticipantId: null,
+                        isRevealed: false,
+                        prizeInfo: selectedTemplate.id === ONLINE_PRIZE_TEMPLATE.id ? ONLINE_PRIZES_DATA[i] : undefined,
+                      }))}
+                      participants={new Map()}
+                      isDrawing={false}
+                      prizeName={selectedTemplate.participantType === 'offline' ? selectedTemplate.name : undefined}
+                    />
                   </div>
                 )}
 
@@ -389,13 +418,15 @@ function StaffDrawPage() {
                     slots={drawSlots}
                     participants={getParticipantsMap()}
                     isDrawing={true}
+                    prizeName={selectedTemplate?.participantType === 'offline' ? selectedTemplate.name : undefined}
                   />
                 )}
 
                 {drawState === 'revealed' && (
                   <MultiSlotReveal
                     winners={getWinnersArray()}
-                    templateName={selectedTemplate.name}
+                    templateName={selectedTemplate?.name || ''}
+                    prizeName={selectedTemplate?.participantType === 'offline' ? selectedTemplate.name : undefined}
                     onConfirm={handleConfirmWinners}
                     onRedraw={handleRedraw}
                   />
@@ -405,24 +436,39 @@ function StaffDrawPage() {
           </div>
         </div>
 
-        {/* Winners Dialog */}
+        {/* Winners Dialog (with Template Selector) */}
         <Dialog open={showWinnersDialog} onOpenChange={setShowWinnersDialog}>
-          <DialogContent className="max-w-2xl max-h-[85vh]">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Trophy className="size-5 text-cyan-600" />
-                Pending Sessions & Stats
+                Prize Selection & Pending Sessions
               </DialogTitle>
             </DialogHeader>
 
             <div className="space-y-4">
+              {/* Template Selector Section */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm">Select Prize to Draw</h3>
+                <TemplateSelector
+                  selectedTemplate={selectedTemplate}
+                  onSelectTemplate={handleSelectTemplate}
+                  disabled={drawState !== 'idle'}
+                />
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200" />
+
               {/* Stats Card */}
               <Card className="p-2 border border-cyan-200 bg-white/80 backdrop-blur">
                 <CardContent>
                   <div className="grid grid-cols-3 gap-2">
                     <div className="text-center">
                       <p className="text-[10px] font-medium text-muted-foreground">Eligible</p>
-                      <p className="text-lg font-bold text-primary">{availableParticipants.length}</p>
+                      <p className="text-lg font-bold text-primary">
+                        {selectedTemplate ? availableParticipants.length : '-'}
+                      </p>
                     </div>
                     <div className="text-center border-x border-cyan-200">
                       <p className="text-[10px] font-medium text-muted-foreground">Pending Sessions</p>
@@ -457,7 +503,7 @@ function StaffDrawPage() {
                 {cachedSessions.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground text-sm">
                     No pending sessions yet.<br />
-                    <span className="text-xs">Start a draw to select winners.</span>
+                    <span className="text-xs">Select a prize and start a draw.</span>
                   </div>
                 ) : (
                   <div className="max-h-[50vh] overflow-y-auto space-y-3 pr-1">
@@ -470,6 +516,9 @@ function StaffDrawPage() {
                               <div className="flex items-center gap-2 mb-1">
                                 <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600">
                                   {session.templateName}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {session.participantType}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground">
                                   {session.slotCount} Winner{session.slotCount > 1 ? 's' : ''}
@@ -507,6 +556,11 @@ function StaffDrawPage() {
                                   <p className="text-[10px] text-muted-foreground truncate">
                                     {winner.participant.company}
                                   </p>
+                                  {winner.prizeInfo && (
+                                    <p className="text-[10px] text-cyan-600 font-medium truncate">
+                                      {winner.prizeInfo.prizeName}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -537,7 +591,7 @@ function StaffDrawPage() {
 
         {/* History Dialog */}
         <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
-          <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogContent className="max-w-6xl! max-h-[80vh]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <History className="size-5 text-cyan-600" />
@@ -548,7 +602,7 @@ function StaffDrawPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="overflow-y-auto max-h-[60vh] pr-2">
+            <div className="overflow-y-auto max-h-[60vh] pr-2 w-full">
               {isLoadingHistory ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map(i => (
@@ -573,6 +627,11 @@ function StaffDrawPage() {
                               {draw.prize_name && (
                                 <Badge className="bg-gradient-to-r from-cyan-600 to-blue-600">
                                   {draw.prize_name}
+                                </Badge>
+                              )}
+                              {draw.participant_type && (
+                                <Badge variant="outline" className="text-xs">
+                                  {draw.participant_type}
                                 </Badge>
                               )}
                             </div>
@@ -602,6 +661,11 @@ function StaffDrawPage() {
                               >
                                 <p className="font-medium text-sm">{winner.name}</p>
                                 <p className="text-xs text-muted-foreground">{winner.company}</p>
+                                {winner.prize_name && (
+                                  <p className="text-xs font-semibold text-cyan-600 mt-1 truncate">
+                                    {winner.prize_name}
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
