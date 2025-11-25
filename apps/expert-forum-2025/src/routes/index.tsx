@@ -76,20 +76,20 @@ function Landing() {
         </header>
 
         {/* Hero Section */}
-        <div className="flex flex-1 items-center sm:items-start sm:items-star mb-32 sm:mb-0 mt-0 sm:mt-32 px-6 sm:px-8">
+        <div className="flex flex-1 items-center sm:items-start mb-16 sm:mb-0 mt-0 sm:mt-16 lg:mt-24 px-6 sm:px-8">
           <div className="mx-auto w-full max-w-7xl">
-            <div className="max-w-2xl space-y-6 lg:space-y-8">
+            <div className="max-w-2xl space-y-4 sm:space-y-6 lg:space-y-8">
               {/* Event Logo/Headline */}
               <div>
                 <img
                   src={logoHeadline}
                   alt="The 9th Expert Forum"
-                  className="h-auto w-full max-w-lg"
+                  className="h-auto w-full max-w-md sm:max-w-lg max-h-[22vh] sm:max-h-[28vh] object-contain"
                 />
               </div>
 
               {/* Login Section */}
-              <div className='w-full sm:w-3/4'>
+              <div className='w-full md:w-3/4'>
                 <LoginDialog />
               </div>
             </div>
