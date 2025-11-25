@@ -27,6 +27,7 @@ import { useIsMobile } from '@repo/react-components/hooks'
 import BoothCheckinDialog from './booth-checkin-dialog'
 import api from 'src/lib/api'
 import { getBoothVisualImage } from 'src/lib/utils'
+import { getBoothContent } from 'src/lib/booth-contents'
 import type { Booth, User, BoothCheckin } from 'src/types/schema'
 
 interface BoothDetailDialogProps {
@@ -106,6 +107,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     if (!booth) return null
 
     const boothVisualImage = getBoothVisualImage(booth.id)
+    const boothContentData = getBoothContent(booth.id)
 
     return (
       <div className="space-y-4">
@@ -173,13 +175,58 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
           </Button>
         </div>
 
-        {/* Company Description */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold">About {booth.name}</h3>
-          <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
-            {booth.description || 'Booth description not available'}
+        {/* Booth Projects/Works */}
+        {boothContentData && boothContentData.projects.length > 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Karya & Inovasi</h3>
+            <div className="space-y-4">
+              {boothContentData.projects.map((project, index) => (
+                <Card key={index} className="overflow-hidden">
+                  <CardHeader>
+                    <CardTitle className="text-base font-bold leading-tight">
+                      {project.namaKarya}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Deskripsi Singkat */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold text-primary">Deskripsi</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                        {project.deskripsiSingkat}
+                      </p>
+                    </div>
+
+                    {/* Benefit */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold text-primary">Benefit</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                        {project.benefit}
+                      </p>
+                    </div>
+
+                    {/* Expert yang Terlibat */}
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold text-primary">Expert yang Terlibat</h4>
+                      <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+                        {project.expertYangTerlibat}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Company Description - Fallback */}
+        {(!boothContentData || boothContentData.projects.length === 0) && booth.description && (
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold">About {booth.name}</h3>
+            <div className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">
+              {booth.description}
+            </div>
+          </div>
+        )}
 
         {/* Poster CTA Button - Only show if booth has poster */}
         {booth.poster_url && (
@@ -203,7 +250,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     if (!isMobile) {
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Building2 className="size-5" />
@@ -228,7 +275,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
 
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="min-h-[500px]">
+        <DrawerContent className="min-h-[85vh]">
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center gap-2">
               <Building2 className="size-5" />
@@ -265,7 +312,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
     return (
       <>
         <Dialog open={open} onOpenChange={onOpenChange}>
-          <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[700px] max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Building2 className="size-5" />
@@ -322,7 +369,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent>
+        <DrawerContent className="min-h-[90vh]">
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center gap-2">
               <Building2 className="size-5" />
@@ -331,7 +378,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
             <DrawerDescription>
             </DrawerDescription>
           </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[70vh]">
+          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(90vh-180px)]">
             {boothContent}
           </div>
           <DrawerFooter className="pt-4 border-t">
@@ -355,7 +402,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
 
       {/* Nested Poster Drawer */}
       <Drawer open={isPosterOpen} onOpenChange={setIsPosterOpen}>
-        <DrawerContent>
+        <DrawerContent className="min-h-[85vh]">
           <DrawerHeader className="text-left">
             <DrawerTitle className="flex items-center gap-2">
               <Image className="size-5" />
@@ -365,39 +412,7 @@ function BoothDetailDialog({ open, onOpenChange, user, existingCheckin = null }:
               Swipe to close
             </DrawerDescription>
           </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
-            {booth?.poster_url && (
-              <img
-                src={booth.poster_url}
-                alt={`Poster ${booth.name}`}
-                className="w-full h-auto rounded-lg"
-              />
-            )}
-          </div>
-          <DrawerFooter className="pt-4">
-            <DrawerClose asChild>
-              <Button variant="outline" className="w-full">
-                <X className="size-4 mr-2" />
-                Close
-              </Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-
-      {/* Nested Poster Drawer */}
-      <Drawer open={isPosterOpen} onOpenChange={setIsPosterOpen}>
-        <DrawerContent>
-          <DrawerHeader className="text-left">
-            <DrawerTitle className="flex items-center gap-2">
-              <Image className="size-5" />
-              Poster {booth?.name}
-            </DrawerTitle>
-            <DrawerDescription>
-              Swipe to close
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="px-4 pb-4 overflow-y-auto max-h-[75vh]">
+          <div className="px-4 pb-4 overflow-y-auto max-h-[calc(85vh-120px)]">
             {booth?.poster_url && (
               <img
                 src={booth.poster_url}
