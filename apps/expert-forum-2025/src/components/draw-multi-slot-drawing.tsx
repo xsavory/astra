@@ -34,11 +34,11 @@ export function MultiSlotDrawing({
   const getCategoryColor = (category?: string) => {
     switch (category) {
       case 'grand':
-        return 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white'
+        return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
       case 'major':
         return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
       case 'minor':
-        return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+        return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
       default:
         return 'bg-gray-500 text-white'
     }
