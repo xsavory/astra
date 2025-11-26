@@ -21,7 +21,7 @@ import {
 } from '@repo/react-components/ui'
 
 // Import PDF file
-import pdfFile from '../assets/wall-of-expert.pdf'
+import pdfFile from '../assets/wall-of-expert2.pdf'
 
 // Set worker path for react-pdf using CDN
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`

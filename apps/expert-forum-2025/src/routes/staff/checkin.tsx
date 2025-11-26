@@ -49,6 +49,8 @@ function StaffCheckinPage() {
       return api.checkins.checkinEvent(data.participantId, 'qr', data.staffId)
     },
     onSuccess: (user) => {
+      // Clear any previous errors before showing greeting
+      setErrorData(null)
       // Show greeting dialog with VIP status
       setGreetingData({
         name: user.name,
@@ -58,6 +60,8 @@ function StaffCheckinPage() {
     onError: (error, variables) => {
       console.error('Check-in error:', error)
       const errorMessage = error instanceof Error ? error.message : 'An error occurred during check-in'
+      // Clear any previous greeting before showing error
+      setGreetingData(null)
       // Show error dialog
       setErrorData({
         message: errorMessage,

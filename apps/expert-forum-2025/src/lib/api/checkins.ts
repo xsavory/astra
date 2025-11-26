@@ -94,7 +94,7 @@ export class CheckinsAPI extends BaseAPI {
 
       return updatedUser as User
     } catch (error) {
-      this.handleError(error, 'checkinEvent')
+      return this.handleError(error, 'checkinEvent')
     }
   }
 
@@ -197,7 +197,7 @@ export class CheckinsAPI extends BaseAPI {
         user: this.ensureData(updatedUserData, 'Failed to update user eligibility') as User,
       }
     } catch (error) {
-      this.handleError(error, 'checkinBooth')
+      return this.handleError(error, 'checkinBooth')
     }
   }
 
@@ -220,7 +220,7 @@ export class CheckinsAPI extends BaseAPI {
 
       return (data || []).map((checkin) => checkin as BoothCheckin)
     } catch (error) {
-      this.handleError(error, 'getParticipantBoothCheckins')
+      return this.handleError(error, 'getParticipantBoothCheckins')
     }
   }
 
@@ -240,7 +240,7 @@ export class CheckinsAPI extends BaseAPI {
 
       return count || 0
     } catch (error) {
-      this.handleError(error, 'getBoothCheckinCount')
+      return this.handleError(error, 'getBoothCheckinCount')
     }
   }
 
@@ -265,7 +265,7 @@ export class CheckinsAPI extends BaseAPI {
 
       return data !== null
     } catch (error) {
-      this.handleError(error, 'hasVisitedBooth')
+      return this.handleError(error, 'hasVisitedBooth')
     }
   }
 
@@ -318,7 +318,7 @@ export class CheckinsAPI extends BaseAPI {
 
       return stats
     } catch (error) {
-      this.handleError(error, 'getBoothCheckinsStats')
+      return this.handleError(error, 'getBoothCheckinsStats')
     }
   }
 
