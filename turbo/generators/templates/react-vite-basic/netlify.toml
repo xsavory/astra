@@ -1,7 +1,0 @@
-[build]
-  ignore = "npx turbo-ignore {{ name }}"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

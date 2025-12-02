@@ -1,0 +1,7 @@
+name = "astra-website"
+compatibility_date = "2025-12-02"
+
+# Static assets
+[assets]
+directory = "dist"
+not_found_handling = "single-page-application"

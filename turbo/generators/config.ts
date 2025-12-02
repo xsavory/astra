@@ -31,6 +31,13 @@ const modifyPackageJsonName = {
   template: `"name": "{{ name }}"`,
 };
 
+const modifyWranglerTomlName = {
+  type: "modify" as const,
+  path: "{{ turbo.paths.root }}/apps/{{ name }}/wrangler.toml",
+  pattern: /name = ".*"/g,
+  template: `name = "astra-{{ name }}"`,
+};
+
 const modifyTsConfigActions = [
   {
     type: "modify" as const,
@@ -113,6 +120,7 @@ export default function generator(plop: PlopTypes.NodePlopAPI): void {
     actions: [
       createAddManyAction("react-vite-basic"),
       modifyPackageJsonName,
+      modifyWranglerTomlName,
       ...modifyTsConfigActions,
       installDependenciesAction("Basic React Vite"),
     ],
